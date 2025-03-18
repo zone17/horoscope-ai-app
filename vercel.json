@@ -19,5 +19,11 @@
     "FEATURE_FLAG_USE_RATE_LIMITING": "true"
   },
   "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/cron/daily-horoscope",
+      "schedule": "0 0 * * *"
+    }
+  ]
 } 
