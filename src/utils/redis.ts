@@ -6,12 +6,12 @@ const getRedisClient = () => {
     throw new Error('Redis credentials not configured');
   }
 
-  // Create and return Redis client with specific database name
+  // Create and return Redis client for horoscope-prod-cache
   return new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
     automaticDeserialization: true,
-    name: 'horoscope-prod-cache', // Specify the database name
+    // Use prefix for keys instead of the name parameter
   });
 };
 
