@@ -39,6 +39,13 @@ module.exports = {
           900: '#581c87',
           950: '#3b0764',
         },
+        amber: {
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+        },
       },
       animation: {
         'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',

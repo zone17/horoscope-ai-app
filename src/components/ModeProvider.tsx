@@ -28,23 +28,14 @@ export function ModeProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Initialize from localStorage and apply theme class
+  // Initialize from localStorage
   useEffect(() => {
     // Get saved preference from localStorage
     const savedMode = localStorage.getItem('horoscopeMode') as Mode | null;
     if (savedMode) {
       setMode(savedMode);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setMode('night');
     }
-    
-    // Apply dark mode class to document
-    if (mode === 'night') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [mode]);
+  }, []);
 
   return (
     <ModeContext.Provider value={{ mode, toggleMode }}>
