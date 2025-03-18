@@ -20,6 +20,22 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Redis Caching Setup
+
+This application uses Upstash Redis for caching and rate limiting. Follow these steps to set it up:
+
+1. Create an account on [Upstash](https://upstash.com/)
+2. Create a new Redis database named `horoscope-prod-cache`
+3. Get your REST API credentials from the Upstash dashboard
+4. Add them to your environment variables:
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
+
+The caching system supports:
+- API response caching with configurable TTL
+- Rate limiting for API endpoints
+- Feature flags to control caching behavior
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
@@ -34,3 +50,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## OpenAI Integration
+
+This project uses OpenAI's API for generating horoscopes. For developers working on this codebase, please refer to the following resources:
+
+- [OpenAI API Best Practices](./docs/api/OPENAI_BEST_PRACTICES.md) - Comprehensive guide for integrating with OpenAI
+- [OpenAI Integration Checklist](./docs/api/OPENAI_CHECKLIST.md) - Use this checklist when implementing or reviewing OpenAI features
+
+The OpenAI API key is managed through Vercel environment variables and all API requests are made server-side to ensure security.
