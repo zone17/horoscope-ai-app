@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "eslint": {
+          "ignoreDuringBuilds": true
+        },
+        "typescript": {
+          "ignoreBuildErrors": true
+        }
+      }
+    }
+  ],
+  "env": {
+    "FEATURE_FLAG_USE_REDIS_CACHE": "true",
+    "FEATURE_FLAG_USE_RATE_LIMITING": "true"
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next"
+} 

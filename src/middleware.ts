@@ -15,6 +15,36 @@ const RATE_LIMITS = {
 const RATE_LIMIT_PREFIX = 'horoscope-prod:ratelimit';
 
 /**
+ * Get the client IP address from request headers
+ * @param req - Next.js request object
+ * @returns Client IP address or 'anonymous' if not found
+ */
+function getClientIp(req: NextRequest): string {
+  // Check x-forwarded-for header first (standard for proxies)
+  const forwarded = req.headers.get('x-forwarded-for');
+  
+  if (forwarded) {
+    // Get the first IP if there are multiple
+    return forwarded.split(',')[0].trim();
+  }
+  
+  // Check for Vercel-specific headers
+  const vercelForwardedFor = req.headers.get('x-vercel-forwarded-for');
+  if (vercelForwardedFor) {
+    return vercelForwardedFor.split(',')[0].trim();
+  }
+  
+  // Check for real IP header
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp;
+  }
+  
+  // Return anonymous if no IP found
+  return 'anonymous';
+}
+
+/**
  * Apply rate limiting for API requests
  * @param req - The incoming request
  * @param path - The path being requested
@@ -28,7 +58,7 @@ async function applyRateLimit(req: NextRequest, path: string): Promise<NextRespo
     }
 
     // Get client IP
-    const ip = req.ip || 'anonymous';
+    const ip = getClientIp(req);
     
     // Create a redis key for the IP and path
     const ipKey = `${RATE_LIMIT_PREFIX}:${ip}:${path}`;
