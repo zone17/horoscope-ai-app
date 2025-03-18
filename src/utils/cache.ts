@@ -1,4 +1,5 @@
-import { redis, CACHE_DURATIONS } from './redis';
+import { CACHE_DURATIONS } from './redis';
+import { safelyStoreInRedis, safelyRetrieveForUI, invalidateRedisKey } from './redis-helpers';
 
 /**
  * Interface for cache options
@@ -6,6 +7,7 @@ import { redis, CACHE_DURATIONS } from './redis';
 interface CacheOptions {
   ttl?: number; // Time to live in seconds
   invalidateOnError?: boolean; // Whether to invalidate cache on error
+  namespace?: string; // Optional namespace
 }
 
 /**
@@ -19,9 +21,12 @@ export async function cacheData<T>(
   data: T,
   options: CacheOptions = {}
 ): Promise<void> {
-  const { ttl = CACHE_DURATIONS.ONE_HOUR } = options;
+  const { 
+    ttl = CACHE_DURATIONS.ONE_HOUR,
+    namespace = 'horoscope-prod'
+  } = options;
   
-  await redis.set(key, JSON.stringify(data), { ex: ttl });
+  await safelyStoreInRedis(key, data, { ttl, namespace });
 }
 
 /**
@@ -29,22 +34,16 @@ export async function cacheData<T>(
  * @param key - Cache key
  * @returns Cached data or null if not found
  */
-export async function getCachedData<T>(key: string): Promise<T | null> {
-  const cachedData = await redis.get<string>(key);
-  
-  if (!cachedData) {
-    return null;
-  }
-  
-  return JSON.parse(cachedData) as T;
+export async function getCachedData<T>(key: string, namespace: string = 'horoscope-prod'): Promise<T | null> {
+  return await safelyRetrieveForUI<T>(key, { namespace });
 }
 
 /**
  * Delete cached data by key
  * @param key - Cache key
  */
-export async function invalidateCache(key: string): Promise<void> {
-  await redis.del(key);
+export async function invalidateCache(key: string, namespace: string = 'horoscope-prod'): Promise<void> {
+  await invalidateRedisKey(key, namespace);
 }
 
 /**
@@ -59,10 +58,14 @@ export async function withCache<T>(
   fetchFunction: () => Promise<T>,
   options: CacheOptions = {}
 ): Promise<T> {
-  const { ttl = CACHE_DURATIONS.ONE_HOUR, invalidateOnError = true } = options;
+  const { 
+    ttl = CACHE_DURATIONS.ONE_HOUR, 
+    invalidateOnError = true,
+    namespace = 'horoscope-prod'
+  } = options;
   
   // Try to get data from cache
-  const cachedData = await getCachedData<T>(key);
+  const cachedData = await getCachedData<T>(key, namespace);
   
   // Return cached data if it exists
   if (cachedData) {
@@ -74,13 +77,13 @@ export async function withCache<T>(
     const freshData = await fetchFunction();
     
     // Cache the fresh data
-    await cacheData(key, freshData, { ttl });
+    await cacheData(key, freshData, { ttl, namespace });
     
     return freshData;
   } catch (error) {
     // Invalidate cache on error if specified
     if (invalidateOnError) {
-      await invalidateCache(key);
+      await invalidateCache(key, namespace);
     }
     
     throw error;

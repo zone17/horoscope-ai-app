@@ -4,6 +4,7 @@ import { withCache } from '@/utils/cache';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 import { CACHE_DURATIONS } from '@/utils/redis';
 import { CACHE_KEY_PREFIXES, generateCacheKey } from '@/utils/cache-keys';
+import { safelyStoreInRedis, safelyRetrieveForUI } from '@/utils/redis-helpers';
 
 // Set route to be publicly accessible but dynamic to avoid edge caching
 export const dynamic = 'force-dynamic';
@@ -124,17 +125,32 @@ export async function GET(request: NextRequest) {
     if (isCachingEnabled) {
       console.log('Using Redis cache for OpenAI response');
       
-      // Fetch with caching, using appropriate TTL
-      const result = await withCache(
+      // Check if we have cached data
+      const cachedResult = await safelyRetrieveForUI<any>(cacheKey);
+      
+      if (cachedResult) {
+        console.log('Cache hit for OpenAI response');
+        return NextResponse.json({ 
+          ...cachedResult, 
+          cached: true,
+          cache_key: cacheKey,
+        });
+      }
+      
+      // If no cached data, fetch fresh data
+      console.log('Cache miss for OpenAI response');
+      const freshResult = await fetchFromOpenAI();
+      
+      // Store the result in cache
+      await safelyStoreInRedis(
         cacheKey,
-        fetchFromOpenAI,
+        freshResult,
         { ttl: CACHE_DURATIONS.ONE_DAY }
       );
       
-      // Add cache info to the response
       return NextResponse.json({ 
-        ...result, 
-        cached: true,
+        ...freshResult, 
+        cached: false,
         cache_key: cacheKey,
       });
     } else {
