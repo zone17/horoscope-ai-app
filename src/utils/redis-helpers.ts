@@ -18,6 +18,8 @@ interface RedisRetrieveOptions {
   defaultValue?: any;
   /** Whether to log cache misses */
   logMisses?: boolean;
+  /** Namespace for the key to avoid collisions */
+  namespace?: string;
 }
 
 /**
@@ -40,8 +42,10 @@ export async function safelyStoreInRedis<T>(
       namespace = 'horoscope-prod'
     } = options;
     
-    // Create namespaced key
-    const namespacedKey = `${namespace}:${key}`;
+    // Create namespaced key - don't add namespace prefix if already included
+    const namespacedKey = key.startsWith(`${namespace}:`) 
+      ? key 
+      : `${namespace}:${key}`;
     
     // Handle null/undefined case
     if (data === null || data === undefined) {
@@ -52,7 +56,19 @@ export async function safelyStoreInRedis<T>(
     // Safely stringify data with error handling for circular references
     let stringifiedData: string;
     try {
-      stringifiedData = JSON.stringify(data);
+      // Use a replacer function to handle circular references
+      stringifiedData = JSON.stringify(data, (key, value) => {
+        // Convert special types that don't serialize well
+        if (value instanceof Map) {
+          return Object.fromEntries(value);
+        }
+        if (value instanceof Set) {
+          return Array.from(value);
+        }
+        return value;
+      });
+      
+      console.log(`Serialized data (first 100 chars): ${stringifiedData.substring(0, 100)}...`);
     } catch (error) {
       console.error(`JSON serialization error for key ${namespacedKey}:`, error);
       return false;
@@ -60,6 +76,7 @@ export async function safelyStoreInRedis<T>(
     
     // Store in Redis
     await redis.set(namespacedKey, stringifiedData, { ex: ttl });
+    console.log(`Successfully stored data with key: ${namespacedKey}`);
     
     return true;
   } catch (error) {
@@ -87,8 +104,12 @@ export async function safelyRetrieveForUI<T>(
       namespace = 'horoscope-prod'
     } = options;
     
-    // Create namespaced key
-    const namespacedKey = `${namespace}:${key}`;
+    // Create namespaced key - don't add namespace prefix if already included
+    const namespacedKey = key.startsWith(`${namespace}:`) 
+      ? key 
+      : `${namespace}:${key}`;
+    
+    console.log(`Retrieving data with key: ${namespacedKey}`);
     
     // Retrieve from Redis
     const cachedData = await redis.get<string>(namespacedKey);
@@ -101,9 +122,18 @@ export async function safelyRetrieveForUI<T>(
       return defaultValue;
     }
     
+    console.log(`Raw cached data (first 100 chars): ${typeof cachedData === 'string' ? cachedData.substring(0, 100) : 'not a string'}...`);
+    
+    // Check if the cached data is already a non-string value (some Redis clients auto-deserialize)
+    if (typeof cachedData !== 'string') {
+      return cachedData as T;
+    }
+    
     // Parse JSON with error handling
     try {
-      return JSON.parse(cachedData) as T;
+      const parsedData = JSON.parse(cachedData) as T;
+      console.log('Successfully parsed cached data');
+      return parsedData;
     } catch (error) {
       console.error(`JSON parsing error for key ${namespacedKey}:`, error);
       // If parsing fails, invalidate the cache
@@ -128,7 +158,11 @@ export async function checkRedisKey(
   namespace: string = 'horoscope-prod'
 ): Promise<boolean> {
   try {
-    const namespacedKey = `${namespace}:${key}`;
+    // Don't add namespace prefix if already included
+    const namespacedKey = key.startsWith(`${namespace}:`) 
+      ? key 
+      : `${namespace}:${key}`;
+      
     const exists = await redis.exists(namespacedKey);
     return exists === 1;
   } catch (error) {
@@ -149,8 +183,13 @@ export async function invalidateRedisKey(
   namespace: string = 'horoscope-prod'
 ): Promise<boolean> {
   try {
-    const namespacedKey = `${namespace}:${key}`;
+    // Don't add namespace prefix if already included
+    const namespacedKey = key.startsWith(`${namespace}:`) 
+      ? key 
+      : `${namespace}:${key}`;
+      
     await redis.del(namespacedKey);
+    console.log(`Invalidated cache key: ${namespacedKey}`);
     return true;
   } catch (error) {
     console.error('Redis invalidation error:', error);
