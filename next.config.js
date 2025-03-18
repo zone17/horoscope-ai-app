@@ -2,8 +2,8 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'horoscope-ai-app.vercel.app', '*.vercel.app']
-    }
+      allowedOrigins: ['localhost:3000', 'horoscope-ai-app.vercel.app'],
+    },
   }
 };
 
