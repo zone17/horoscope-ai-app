@@ -33,14 +33,14 @@ export async function GET() {
       message: 'OpenAI API key is working correctly!',
       response: response.choices[0].message,
     });
-  } catch (error: any) {
+  } catch (error: Error | unknown) {
     console.error('OpenAI API error:', error);
     
     // Return error response
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || 'An error occurred with the OpenAI API'
+        error: error instanceof Error ? error.message : 'An error occurred with the OpenAI API'
       },
       { status: 500 }
     );
