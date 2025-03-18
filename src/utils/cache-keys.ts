@@ -9,12 +9,17 @@ export const CACHE_KEY_PREFIXES = {
 };
 
 /**
+ * Define acceptable parameter value types for cache keys
+ */
+export type CacheParamValue = string | number | boolean | null | undefined | string[] | number[] | Record<string, string | number | boolean>;
+
+/**
  * Generates a cache key with appropriate prefix and parameters
  * @param prefix - The cache key prefix
  * @param params - Object containing parameters to include in the key
  * @returns A cache key string
  */
-export function generateCacheKey(prefix: string, params: Record<string, any> = {}): string {
+export function generateCacheKey(prefix: string, params: Record<string, CacheParamValue> = {}): string {
   // Start with the prefix
   let key = prefix;
   
