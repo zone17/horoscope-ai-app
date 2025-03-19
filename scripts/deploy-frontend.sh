@@ -50,9 +50,11 @@ cp -r public/* $TEMP_DIR/public/ 2>/dev/null || :
 # Copy config files
 echo "Copying configuration files..."
 cp package.frontend.json $TEMP_DIR/package.json
-cp next.config.js $TEMP_DIR/
+cp next.config.frontend.js $TEMP_DIR/next.config.js
 cp tailwind.config.js $TEMP_DIR/ 2>/dev/null || :
 cp postcss.config.js $TEMP_DIR/ 2>/dev/null || :
+cp tsconfig.json $TEMP_DIR/ 2>/dev/null || :
+cp jsconfig.json $TEMP_DIR/ 2>/dev/null || :
 
 # Create a mock API proxy for local development (empty directory)
 mkdir -p $TEMP_DIR/src/app/api
@@ -79,8 +81,26 @@ cat > $TEMP_DIR/.env.production << 'EOF'
 NEXT_PUBLIC_API_URL=https://api.gettodayshoroscope.com
 EOF
 
+# Create jsconfig.json if it doesn't exist
+if [ ! -f "$TEMP_DIR/jsconfig.json" ] && [ ! -f "$TEMP_DIR/tsconfig.json" ]; then
+  cat > $TEMP_DIR/jsconfig.json << 'EOF'
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+EOF
+fi
+
 # Navigate to the temp directory
 cd $TEMP_DIR
+
+# List all files for debugging
+echo "Deployment directory contents:"
+find . -type f | sort
 
 # Deploy to production
 echo "Deploying frontend-only codebase..."
