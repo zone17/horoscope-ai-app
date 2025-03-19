@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Script to deploy the API backend to Vercel
+# Script to deploy a pure API backend to Vercel without any UI components
 
-echo "Deploying API backend to api.gettodayshoroscope.com"
-echo "=================================================="
+echo "Deploying API to api.gettodayshoroscope.com"
+echo "============================================"
 
 # Check if Vercel CLI is installed
 if ! command -v vercel &> /dev/null; then
@@ -12,45 +12,103 @@ if ! command -v vercel &> /dev/null; then
     exit 1
 fi
 
-# Back up existing files
-if [ -f vercel.json ]; then
-    cp vercel.json vercel.json.bak
-fi
-if [ -f package.json ]; then
-    cp package.json package.json.bak
-fi
-if [ -f .env.production ]; then
-    cp .env.production .env.production.bak
-fi
+# Create a temp directory for deployment
+TEMP_DIR=$(mktemp -d)
+echo "Created temporary directory: $TEMP_DIR"
 
-# Copy backend-specific files
-cp vercel.backend.json vercel.json
-cp package.backend.json package.json
-cp .env.backend.production .env.production
+# Create the API-only directory structure
+mkdir -p $TEMP_DIR/src/app/api
+mkdir -p $TEMP_DIR/src/utils
 
-echo "Using backend-specific configuration files"
+# Copy only API routes
+echo "Copying API routes..."
+cp -r src/app/api/* $TEMP_DIR/src/app/api/
 
-# Deploy to production with API-specific configuration
+# Copy only backend utility files
+echo "Copying backend utility files..."
+cp -r src/utils/openai.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/redis.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/redis-helpers.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/tokens.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/date-utils.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/signs.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/feature-flags.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/horoscope-service.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/cache.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/cache-keys.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+
+# Copy backend configuration files
+echo "Copying configuration files..."
+cp package.backend.json $TEMP_DIR/package.json
+cp next.config.backend.js $TEMP_DIR/next.config.js
+
+# Create a minimal Next.js app structure (no UI, just basic routing)
+mkdir -p $TEMP_DIR/src/app
+cat > $TEMP_DIR/src/app/layout.js << 'EOF'
+export const metadata = {
+  title: 'API Only',
+  description: 'API Only Backend',
+};
+
+export default function RootLayout({ children }) {
+  return children;
+}
+EOF
+
+cat > $TEMP_DIR/src/app/page.js << 'EOF'
+export default function Home() {
+  return null;
+}
+EOF
+
+# Create vercel.json for API configuration
+cat > $TEMP_DIR/vercel.json << 'EOF'
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/cron/generate-horoscopes",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
+EOF
+
+# Create .env file with environment variable placeholders
+cat > $TEMP_DIR/.env.production << 'EOF'
+# API-only environment variables
+# Configure these in the Vercel dashboard
+# UPSTASH_REDIS_REST_URL=
+# UPSTASH_REDIS_REST_TOKEN=
+# OPENAI_API_KEY=
+# CRON_SECRET=
+EOF
+
+# Navigate to the temp directory
+cd $TEMP_DIR
+
+# Deploy to production
+echo "Deploying API-only codebase..."
 vercel deploy --prod \
   --name horoscope-ai-api \
-  --confirm
+  --yes
+
+# Return to the original directory
+cd -
+
+# Clean up
+echo "Cleaning up temporary directory..."
+rm -rf $TEMP_DIR
 
 echo ""
-echo "Deployment completed. Make sure to configure these environment variables in the Vercel dashboard:"
-echo "- UPSTASH_REDIS_REST_URL"
-echo "- UPSTASH_REDIS_REST_TOKEN" 
-echo "- OPENAI_API_KEY"
-echo "- CRON_SECRET (c8b2a1f5e7d3c6a9b2e5d8f1a4c7b3e6)"
+echo "Deployment completed."
+echo "IMPORTANT: Configure the following environment variables in the Vercel dashboard:"
+echo "  - UPSTASH_REDIS_REST_URL"
+echo "  - UPSTASH_REDIS_REST_TOKEN"
+echo "  - OPENAI_API_KEY"
+echo "  - CRON_SECRET"
 echo ""
-echo "Don't forget to add the domain 'api.gettodayshoroscope.com' in the Vercel project settings."
-
-# Restore original files
-if [ -f vercel.json.bak ]; then
-    mv vercel.json.bak vercel.json
-fi
-if [ -f package.json.bak ]; then
-    mv package.json.bak package.json
-fi
-if [ -f .env.production.bak ]; then
-    mv .env.production.bak .env.production
-fi 
+echo "Don't forget to add the domain 'api.gettodayshoroscope.com' in the Vercel project settings." 
