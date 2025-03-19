@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "chmod +x scripts/frontend-build.sh && ./scripts/frontend-build.sh",
+  "buildCommand": "next build",
   "outputDirectory": ".next",
   "rewrites": [
     {
