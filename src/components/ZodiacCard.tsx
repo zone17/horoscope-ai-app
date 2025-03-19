@@ -62,7 +62,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             </div>
             
             <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
                   <p className="font-medium text-white text-base sm:text-lg">0</p>
@@ -75,10 +75,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   </div>
                 </div>
               </div>
-              
-              <div className="text-center text-indigo-300 text-xs sm:text-sm pb-2">
-                Loading insights...
-              </div>
+            </div>
+            
+            {/* Loading text outside of flex layout */}
+            <div className="text-center text-indigo-200 font-medium text-xs sm:text-sm mt-4 pb-1 absolute bottom-1 left-0 right-0">
+              Loading insights...
             </div>
           </div>
         </div>
@@ -110,7 +111,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto mb-3 sm:mb-4 pr-1">
+          <div className="flex-1 overflow-y-auto mb-3 sm:mb-4 pr-1 pb-8">
             {showNightContent ? (
               <div>
                 <div className={`${isExpanded ? '' : 'line-clamp-4 sm:line-clamp-6'} text-white text-xs sm:text-sm`}>
