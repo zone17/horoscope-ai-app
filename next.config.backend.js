@@ -15,7 +15,6 @@ const nextConfig = {
   },
   // Only include API routes
   output: 'standalone',
-  outputFileTracing: true,
   distDir: '.next',
   // Optimization
   compiler: {

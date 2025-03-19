@@ -24,23 +24,16 @@ mkdir -p $TEMP_DIR/src/utils
 echo "Copying API routes..."
 cp -r src/app/api/* $TEMP_DIR/src/app/api/
 
-# Copy only backend utility files
+# Copy utility files
 echo "Copying backend utility files..."
-cp -r src/utils/openai.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/redis.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/redis-helpers.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/tokens.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/date-utils.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/signs.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/feature-flags.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/horoscope-service.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/cache.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp -r src/utils/cache-keys.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/* $TEMP_DIR/src/utils/
 
-# Copy backend configuration files
+# Copy configuration files
 echo "Copying configuration files..."
 cp package.backend.json $TEMP_DIR/package.json
 cp next.config.backend.js $TEMP_DIR/next.config.js
+cp tsconfig.json $TEMP_DIR/tsconfig.json
+cp jsconfig.json $TEMP_DIR/ 2>/dev/null || :
 
 # Create a minimal Next.js app structure (no UI, just basic routing)
 mkdir -p $TEMP_DIR/src/app
@@ -77,6 +70,20 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
 }
 EOF
 
+# Create jsconfig.json if it doesn't exist
+if [ ! -f "$TEMP_DIR/jsconfig.json" ] && [ ! -f "$TEMP_DIR/tsconfig.json" ]; then
+  cat > $TEMP_DIR/jsconfig.json << 'EOF'
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+EOF
+fi
+
 # Create .env file with environment variable placeholders
 cat > $TEMP_DIR/.env.production << 'EOF'
 # API-only environment variables
@@ -89,6 +96,10 @@ EOF
 
 # Navigate to the temp directory
 cd $TEMP_DIR
+
+# List all files for debugging
+echo "Deployment directory contents:"
+find . -type f | sort
 
 # Deploy to production
 echo "Deploying API-only codebase..."
