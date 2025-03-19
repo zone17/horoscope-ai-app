@@ -26,22 +26,22 @@ interface HoroscopeResponse {
 
 // Helper function to get base URL for API calls
 function getBaseUrl(): string {
-  // Use NEXT_PUBLIC_API_BASE_URL if defined
-  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  // Use explicit API URL for production
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
   }
   
-  // Handle Vercel deployments
+  // For Vercel preview deployments
   if (process.env.NEXT_PUBLIC_VERCEL_URL) {
     return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
   }
   
-  // If running in browser, use window.location.origin
+  // If running in browser, use window.location.origin for development
   if (typeof window !== 'undefined') {
     return window.location.origin;
   }
   
-  // Fallback for server-side rendering where we're making absolute URL calls
+  // Fallback for server-side rendering in development
   return 'http://localhost:3000';
 }
 

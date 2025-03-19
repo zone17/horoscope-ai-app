@@ -156,12 +156,6 @@ export async function GET(request: NextRequest) {
       success: true,
       cached: isCachingEnabled,
       data: horoscope
-    }, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-      }
     });
   } catch (error) {
     console.error('Horoscope API error:', error);
@@ -175,12 +169,7 @@ export async function GET(request: NextRequest) {
         error: errorMessage
       },
       { 
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        }
+        status: 500
       }
     );
   }

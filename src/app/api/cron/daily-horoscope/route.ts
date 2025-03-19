@@ -126,12 +126,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { 
-          status: 401,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-          }
+          status: 401
         }
       );
     }
@@ -145,12 +140,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       date: getTodayDate(),
       ...result
-    }, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-      }
     });
   } catch (error) {
     console.error('Cron job error:', error);
@@ -162,12 +151,7 @@ export async function GET(request: NextRequest) {
         error: error instanceof Error ? error.message : 'An error occurred during horoscope generation'
       },
       { 
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        }
+        status: 500
       }
     );
   }

@@ -59,3 +59,60 @@ This project uses OpenAI's API for generating horoscopes. For developers working
 - [OpenAI Integration Checklist](./docs/api/OPENAI_CHECKLIST.md) - Use this checklist when implementing or reviewing OpenAI features
 
 The OpenAI API key is managed through Vercel environment variables and all API requests are made server-side to ensure security.
+
+## Domain Architecture Setup
+
+This application is deployed using a subdomain-based architecture to separate frontend and backend:
+
+- **Frontend**: `https://www.gettodayshoroscope.com`
+- **Backend API**: `https://api.gettodayshoroscope.com`
+
+### Deployment Instructions
+
+#### Step 1: Create Two Vercel Projects
+
+1. Create a frontend project for the website (www subdomain)
+2. Create a backend project for the API (api subdomain)
+
+#### Step 2: Environment Variables
+
+**Frontend Project**:
+```
+NEXT_PUBLIC_API_URL=https://api.gettodayshoroscope.com
+```
+
+**Backend Project**:
+```
+# Redis connection
+UPSTASH_REDIS_REST_URL=your-redis-url
+UPSTASH_REDIS_REST_TOKEN=your-redis-token
+
+# OpenAI
+OPENAI_API_KEY=your-openai-key
+
+# Feature flags
+FEATURE_FLAG_USE_REDIS_CACHE=true
+FEATURE_FLAG_USE_RATE_LIMITING=true
+
+# Security (optional)
+CRON_SECRET=your-secret-for-cron-jobs
+```
+
+#### Step 3: Domain Configuration
+
+1. Add your custom domain to both Vercel projects:
+   - Frontend: `www.gettodayshoroscope.com`
+   - Backend: `api.gettodayshoroscope.com`
+
+2. Configure DNS settings with your domain provider:
+   - Add CNAME records pointing to Vercel's DNS targets
+   - Follow Vercel's domain verification steps
+
+#### Step 4: Deployment Order
+
+1. Deploy the backend (API) project first
+2. Deploy the frontend project after the backend is working
+
+### Local Development
+
+For local development, the application uses environment variables to determine API URLs. In development mode, both frontend and backend run on the same server (localhost:3000).

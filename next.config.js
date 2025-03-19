@@ -2,7 +2,7 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'horoscope-ai-app.vercel.app'],
+      allowedOrigins: ['localhost:3000', 'horoscope-ai-app.vercel.app', 'www.gettodayshoroscope.com', 'api.gettodayshoroscope.com'],
     },
   },
   // Disable TypeScript type checking for deployment
