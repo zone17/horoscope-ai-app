@@ -10,7 +10,7 @@ interface HoroscopeData {
   type: string;
   date: string;
   message: string;
-  lucky_number: string;
+  lucky_number: string | number;
   lucky_color: string;
   peaceful_thought?: string;
   mood?: string;
@@ -37,11 +37,15 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
     hasData: Boolean(horoscope),
     dataType: horoscope ? typeof horoscope : 'null',
     isObject: horoscope ? typeof horoscope === 'object' : false,
-    keys: horoscope ? Object.keys(horoscope) : []
+    keys: horoscope ? Object.keys(horoscope) : [],
+    messageField: horoscope?.message ? typeof horoscope.message : 'missing',
+    luckyNumberField: horoscope?.lucky_number !== undefined ? typeof horoscope.lucky_number : 'missing',
+    luckyColorField: horoscope?.lucky_color ? typeof horoscope.lucky_color : 'missing',
+    fullData: horoscope ? JSON.stringify(horoscope).substring(0, 100) + '...' : 'null'
   });
   
-  // Display loading state if horoscope data is not available
-  if (!horoscope) {
+  // Display loading state if horoscope data is not available or has missing required fields
+  if (!horoscope || !horoscope.message || horoscope.lucky_number === undefined || !horoscope.lucky_color) {
     return (
       <div className="group transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
         <div className="relative rounded-xl overflow-hidden shadow-xl h-[370px] sm:h-[380px] md:h-[400px] backdrop-blur-md bg-indigo-950/30 border border-indigo-500/20">
@@ -157,7 +161,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                <p className="font-medium text-white text-base sm:text-lg">{horoscope.lucky_number}</p>
+                <p className="font-medium text-white text-base sm:text-lg">{String(horoscope.lucky_number)}</p>
               </div>
               <div>
                 <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>

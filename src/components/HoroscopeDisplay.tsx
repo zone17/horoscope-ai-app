@@ -32,11 +32,35 @@ export function HoroscopeDisplay() {
         setLoading(true);
         const data = await getHoroscopesForAllSigns();
         
-        // Check if all horoscopes failed to load
-        const allFailed = Object.values(data).every(h => h === null);
-        if (allFailed) {
+        // Debug log the entire data structure
+        console.log('Raw horoscope data received:', {
+          type: typeof data,
+          isArray: Array.isArray(data),
+          isObject: typeof data === 'object' && data !== null,
+          keys: Object.keys(data),
+          samplesign: data['aries'] ? JSON.stringify(data['aries']).substring(0, 100) : 'No aries data'
+        });
+        
+        // Check if all horoscopes failed to load or if data is empty
+        const isEmpty = Object.keys(data).length === 0;
+        const allFailed = !isEmpty && Object.values(data).every(h => h === null);
+        
+        if (isEmpty || allFailed) {
           setErrorMessage('Unable to load any horoscopes. Please try again later.');
-          console.error('All horoscopes failed to load');
+          console.error(isEmpty ? 'Empty horoscope data' : 'All horoscopes failed to load');
+        } else {
+          console.log('Horoscope data loaded successfully:', { 
+            count: Object.keys(data).length,
+            keys: Object.keys(data),
+            validData: Object.values(data).filter(Boolean).length 
+          });
+          
+          // Validate data structure for each sign
+          Object.entries(data).forEach(([sign, horoscope]) => {
+            if (horoscope && (!horoscope.message || horoscope.lucky_number === undefined || !horoscope.lucky_color)) {
+              console.error(`Invalid horoscope data structure for ${sign}:`, horoscope);
+            }
+          });
         }
         
         setHoroscopes(data);
@@ -57,13 +81,39 @@ export function HoroscopeDisplay() {
       setLoading(true);
       setErrorMessage('');
       const data = await getHoroscopesForAllSigns();
-      setHoroscopes(data);
       
-      // Check if all horoscopes failed to load
-      const allFailed = Object.values(data).every(h => h === null);
-      if (allFailed) {
+      // Debug log the entire data structure
+      console.log('Retry: Raw horoscope data received:', {
+        type: typeof data,
+        isArray: Array.isArray(data),
+        isObject: typeof data === 'object' && data !== null,
+        keys: Object.keys(data),
+        samplesign: data['aries'] ? JSON.stringify(data['aries']).substring(0, 100) : 'No aries data'
+      });
+      
+      // Check if all horoscopes failed to load or if data is empty
+      const isEmpty = Object.keys(data).length === 0;
+      const allFailed = !isEmpty && Object.values(data).every(h => h === null);
+      
+      if (isEmpty || allFailed) {
         setErrorMessage('Unable to load any horoscopes. Please try again later.');
+        console.error(isEmpty ? 'Empty horoscope data' : 'All horoscopes failed to load');
+      } else {
+        console.log('Horoscope data loaded successfully on retry:', { 
+          count: Object.keys(data).length,
+          keys: Object.keys(data),
+          validData: Object.values(data).filter(Boolean).length 
+        });
+        
+        // Validate data structure for each sign
+        Object.entries(data).forEach(([sign, horoscope]) => {
+          if (horoscope && (!horoscope.message || horoscope.lucky_number === undefined || !horoscope.lucky_color)) {
+            console.error(`Invalid horoscope data structure for ${sign}:`, horoscope);
+          }
+        });
       }
+      
+      setHoroscopes(data);
     } catch (error) {
       setErrorMessage('An error occurred while loading horoscopes. Please try again later.');
       console.error('Error loading horoscopes:', error);

@@ -74,7 +74,21 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
       return null;
     }
     
-    return data.data;
+    // Make sure the returned data structure matches HoroscopeData interface
+    const horoscopeData: HoroscopeData = data.data;
+    console.log(`Returning horoscope data for ${sign}:`, {
+      type: typeof horoscopeData,
+      keys: Object.keys(horoscopeData),
+      hasRequiredFields: horoscopeData.message && horoscopeData.lucky_number && horoscopeData.lucky_color
+    });
+    
+    // Ensure all required fields are present and of the right type
+    if (!horoscopeData.message || horoscopeData.lucky_number === undefined || !horoscopeData.lucky_color) {
+      console.error(`Missing required fields in horoscope data for ${sign}`, horoscopeData);
+      return null;
+    }
+    
+    return horoscopeData;
   } catch (error) {
     console.error(`Error fetching horoscope for ${sign}:`, error);
     return null;
