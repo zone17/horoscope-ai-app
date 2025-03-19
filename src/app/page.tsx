@@ -3,6 +3,9 @@ import { HoroscopeDisplay } from '@/components/HoroscopeDisplay';
 import { Header } from '@/components/Header';
 import { ModeProvider } from '@/components/ModeProvider';
 
+// Disable static generation
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   return (
     <ModeProvider>

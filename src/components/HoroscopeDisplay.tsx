@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { ZodiacCard } from './ZodiacCard';
 import { getHoroscopesForAllSigns } from '@/utils/horoscope-service';
 
@@ -17,25 +20,57 @@ const ZODIAC_SIGNS = [
   { sign: 'pisces', symbol: '♓', dateRange: 'Feb 19 - Mar 20', element: 'Water' },
 ];
 
-export async function HoroscopeDisplay() {
-  // Fetch horoscopes for all zodiac signs with error handling
-  let horoscopes = {};
-  let errorMessage = '';
+export function HoroscopeDisplay() {
+  const [horoscopes, setHoroscopes] = useState({});
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  try {
-    horoscopes = await getHoroscopesForAllSigns();
+  // Fetch horoscopes on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const data = await getHoroscopesForAllSigns();
+        
+        // Check if all horoscopes failed to load
+        const allFailed = Object.values(data).every(h => h === null);
+        if (allFailed) {
+          setErrorMessage('Unable to load any horoscopes. Please try again later.');
+          console.error('All horoscopes failed to load');
+        }
+        
+        setHoroscopes(data);
+      } catch (error) {
+        setErrorMessage('An error occurred while loading horoscopes. Please try again later.');
+        console.error('Error loading horoscopes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    // Check if all horoscopes failed to load
-    const allFailed = Object.values(horoscopes).every(h => h === null);
-    if (allFailed) {
-      errorMessage = 'Unable to load any horoscopes. Please try again later.';
-      console.error('All horoscopes failed to load');
+    fetchData();
+  }, []);
+
+  // Retry loading horoscopes
+  const handleRetry = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage('');
+      const data = await getHoroscopesForAllSigns();
+      setHoroscopes(data);
+      
+      // Check if all horoscopes failed to load
+      const allFailed = Object.values(data).every(h => h === null);
+      if (allFailed) {
+        setErrorMessage('Unable to load any horoscopes. Please try again later.');
+      }
+    } catch (error) {
+      setErrorMessage('An error occurred while loading horoscopes. Please try again later.');
+      console.error('Error loading horoscopes:', error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    errorMessage = 'An error occurred while loading horoscopes. Please try again later.';
-    console.error('Error loading horoscopes:', error);
-    horoscopes = {}; // Reset to empty object on error
-  }
+  };
 
   return (
     <div className="container mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-10">
@@ -46,12 +81,24 @@ export async function HoroscopeDisplay() {
         <div className="absolute bottom-1/4 left-1/3 w-1/4 sm:w-1/3 h-1/4 sm:h-1/3 bg-blue-500/20 rounded-full blur-[90px] sm:blur-[120px]"></div>
       </div>
       
+      {/* Loading state */}
+      {loading && (
+        <div className="text-center py-20 text-white">
+          <div className="inline-flex space-x-2 items-center">
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            <span className="ml-2">Loading cosmic insights...</span>
+          </div>
+        </div>
+      )}
+      
       {/* Display error message if any */}
-      {errorMessage && (
+      {!loading && errorMessage && (
         <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-4 mb-6 text-white text-center">
           <p>{errorMessage}</p>
           <button 
-            onClick={() => window.location.reload()}
+            onClick={handleRetry}
             className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md text-sm font-medium transition-colors"
           >
             Retry
@@ -59,18 +106,21 @@ export async function HoroscopeDisplay() {
         </div>
       )}
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-7 relative z-10">
-        {ZODIAC_SIGNS.map(({ sign, symbol, dateRange, element }) => (
-          <ZodiacCard
-            key={sign}
-            sign={sign}
-            symbol={symbol}
-            dateRange={dateRange}
-            element={element}
-            horoscope={horoscopes[sign] || null}
-          />
-        ))}
-      </div>
+      {/* Display horoscopes */}
+      {!loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-7 relative z-10">
+          {ZODIAC_SIGNS.map(({ sign, symbol, dateRange, element }) => (
+            <ZodiacCard
+              key={sign}
+              sign={sign}
+              symbol={symbol}
+              dateRange={dateRange}
+              element={element}
+              horoscope={horoscopes[sign] || null}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 } 
