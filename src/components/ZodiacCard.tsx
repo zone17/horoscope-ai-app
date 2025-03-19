@@ -32,6 +32,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   // Functions to capitalize first letter of a string
   const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
   
+  // Log horoscope data for debugging
+  console.log(`ZodiacCard ${sign} rendering:`, { 
+    hasData: Boolean(horoscope),
+    dataType: horoscope ? typeof horoscope : 'null',
+    isObject: horoscope ? typeof horoscope === 'object' : false,
+    keys: horoscope ? Object.keys(horoscope) : []
+  });
+  
   // Display loading state if horoscope data is not available
   if (!horoscope) {
     return (

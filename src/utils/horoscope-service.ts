@@ -49,8 +49,11 @@ function getBaseUrl(): string {
 async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<HoroscopeData | null> {
   try {
     const baseUrl = getBaseUrl();
+    const url = `${baseUrl}/api/horoscope?sign=${sign}&type=${type}`;
+    console.log(`Fetching horoscope from: ${url}`);
+    
     // Call the API endpoint to fetch horoscope data with complete URL
-    const response = await fetch(`${baseUrl}/api/horoscope?sign=${sign}&type=${type}`, {
+    const response = await fetch(url, {
       cache: 'no-store', // Ensure we always get the latest data
     });
     
@@ -58,7 +61,13 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
       throw new Error(`Failed to fetch horoscope: ${response.status}`);
     }
     
-    const data: HoroscopeResponse = await response.json();
+    const data = await response.json();
+    console.log(`API response for ${sign}:`, {
+      success: data.success,
+      cached: data.cached,
+      hasData: Boolean(data.data),
+      dataPreview: data.data ? JSON.stringify(data.data).substring(0, 100) + '...' : 'No data'
+    });
     
     if (!data.success || !data.data) {
       console.error(`Error fetching horoscope for ${sign}:`, data);
