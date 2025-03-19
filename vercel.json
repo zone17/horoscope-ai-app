@@ -16,7 +16,8 @@
   ],
   "env": {
     "FEATURE_FLAG_USE_REDIS_CACHE": "true",
-    "FEATURE_FLAG_USE_RATE_LIMITING": "true"
+    "FEATURE_FLAG_USE_RATE_LIMITING": "true",
+    "NEXT_PUBLIC_VERCEL_URL": "${VERCEL_URL}"
   },
   "buildCommand": "npm run build",
   "outputDirectory": ".next",

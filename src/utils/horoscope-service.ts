@@ -24,11 +24,33 @@ interface HoroscopeResponse {
   data: HoroscopeData;
 }
 
+// Helper function to get base URL for API calls
+function getBaseUrl(): string {
+  // Use NEXT_PUBLIC_API_BASE_URL if defined
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  
+  // Handle Vercel deployments
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+  }
+  
+  // If running in browser, use window.location.origin
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  
+  // Fallback for server-side rendering where we're making absolute URL calls
+  return 'http://localhost:3000';
+}
+
 // Function to fetch a horoscope for a specific sign
 async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<HoroscopeData | null> {
   try {
-    // Call the API endpoint to fetch horoscope data
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/horoscope?sign=${sign}&type=${type}`, {
+    const baseUrl = getBaseUrl();
+    // Call the API endpoint to fetch horoscope data with complete URL
+    const response = await fetch(`${baseUrl}/api/horoscope?sign=${sign}&type=${type}`, {
       cache: 'no-store', // Ensure we always get the latest data
     });
     
@@ -53,8 +75,9 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
 // Function to generate horoscopes if they don't exist
 async function triggerHoroscopeGeneration(): Promise<boolean> {
   try {
+    const baseUrl = getBaseUrl();
     console.log('Triggering horoscope generation job...');
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/cron/daily-horoscope`, {
+    const response = await fetch(`${baseUrl}/api/cron/daily-horoscope`, {
       cache: 'no-store',
       method: 'GET',
       headers: {

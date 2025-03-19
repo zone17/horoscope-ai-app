@@ -18,8 +18,24 @@ const ZODIAC_SIGNS = [
 ];
 
 export async function HoroscopeDisplay() {
-  // Fetch horoscopes for all zodiac signs
-  const horoscopes = await getHoroscopesForAllSigns();
+  // Fetch horoscopes for all zodiac signs with error handling
+  let horoscopes = {};
+  let errorMessage = '';
+
+  try {
+    horoscopes = await getHoroscopesForAllSigns();
+    
+    // Check if all horoscopes failed to load
+    const allFailed = Object.values(horoscopes).every(h => h === null);
+    if (allFailed) {
+      errorMessage = 'Unable to load any horoscopes. Please try again later.';
+      console.error('All horoscopes failed to load');
+    }
+  } catch (error) {
+    errorMessage = 'An error occurred while loading horoscopes. Please try again later.';
+    console.error('Error loading horoscopes:', error);
+    horoscopes = {}; // Reset to empty object on error
+  }
 
   return (
     <div className="container mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-10">
@@ -30,6 +46,19 @@ export async function HoroscopeDisplay() {
         <div className="absolute bottom-1/4 left-1/3 w-1/4 sm:w-1/3 h-1/4 sm:h-1/3 bg-blue-500/20 rounded-full blur-[90px] sm:blur-[120px]"></div>
       </div>
       
+      {/* Display error message if any */}
+      {errorMessage && (
+        <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-4 mb-6 text-white text-center">
+          <p>{errorMessage}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md text-sm font-medium transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-7 relative z-10">
         {ZODIAC_SIGNS.map(({ sign, symbol, dateRange, element }) => (
           <ZodiacCard
@@ -38,7 +67,7 @@ export async function HoroscopeDisplay() {
             symbol={symbol}
             dateRange={dateRange}
             element={element}
-            horoscope={horoscopes[sign]}
+            horoscope={horoscopes[sign] || null}
           />
         ))}
       </div>
