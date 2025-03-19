@@ -44,7 +44,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           </div>
           
           {/* Card content */}
-          <div className="px-5 py-4 relative z-10 h-[calc(100%-10rem)]">
+          <div className="px-5 py-4 relative z-10 h-[calc(100%-10rem)] flex flex-col">
             <div className="flex items-center mb-3">
               <div className="bg-purple-500/30 p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
                 <div className="text-2xl">{symbol}</div>
@@ -61,22 +61,24 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               <div className="bg-indigo-700/50 h-3 rounded w-3/4"></div>
             </div>
             
-            <div className="mt-4 pt-4 border-t border-indigo-700/30 grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                <p className="font-medium text-white text-lg">0</p>
-              </div>
-              <div>
-                <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
-                <div className="flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full mr-2 bg-indigo-700/50"></span>
-                  <p className="font-medium text-white">Unknown</p>
+            <div className="mt-auto pt-4 border-t border-indigo-700/30">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                  <p className="font-medium text-white text-lg">0</p>
+                </div>
+                <div>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                  <div className="flex items-center">
+                    <span className="inline-block w-3 h-3 rounded-full mr-2 bg-indigo-700/50"></span>
+                    <p className="font-medium text-white">Unknown</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="text-center text-indigo-300 text-sm mt-3">
-              Loading insights...
+              
+              <div className="text-center text-indigo-300 text-sm pb-1">
+                Loading insights...
+              </div>
             </div>
           </div>
         </div>
@@ -97,7 +99,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         </div>
         
         {/* Card content */}
-        <div className="px-5 py-4 relative z-10 h-[calc(100%-10rem)] overflow-y-auto">
+        <div className="px-5 py-4 relative z-10 h-[calc(100%-10rem)] flex flex-col">
           <div className="flex items-center mb-3">
             <div className="bg-purple-500/30 p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
               <div className="text-2xl">{symbol}</div>
@@ -108,9 +110,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             </div>
           </div>
           
-          <div className="mb-4">
+          <div className="flex-1 overflow-y-auto mb-4">
             {showNightContent ? (
-              <div className="flex-1">
+              <div>
                 <div className={`${isExpanded ? '' : 'line-clamp-6'} text-white text-sm`}>
                   {horoscope.peaceful_thought}
                 </div>
@@ -125,7 +127,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 )}
               </div>
             ) : (
-              <div className="flex-1">
+              <div>
                 <div className={`${isExpanded ? '' : 'line-clamp-6'} text-white text-sm`}>
                   {horoscope.message}
                 </div>
@@ -142,19 +144,21 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             )}
           </div>
           
-          <div className="mt-4 pt-4 border-t border-indigo-700/30 grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-              <p className="font-medium text-white text-lg">{horoscope.lucky_number}</p>
-            </div>
-            <div>
-              <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
-              <div className="flex items-center">
-                <span 
-                  className="inline-block w-3 h-3 rounded-full mr-2"
-                  style={{ backgroundColor: horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') }}
-                ></span>
-                <p className="font-medium text-white">{horoscope.lucky_color}</p>
+          <div className="mt-auto pt-4 border-t border-indigo-700/30">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                <p className="font-medium text-white text-lg">{horoscope.lucky_number}</p>
+              </div>
+              <div>
+                <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                <div className="flex items-center">
+                  <span 
+                    className="inline-block w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') }}
+                  ></span>
+                  <p className="font-medium text-white">{horoscope.lucky_color}</p>
+                </div>
               </div>
             </div>
           </div>
