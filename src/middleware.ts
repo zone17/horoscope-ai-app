@@ -7,12 +7,33 @@ export async function middleware(req: NextRequest) {
   // Log request path for debugging
   console.log(`Middleware processing request to: ${req.nextUrl.pathname}`);
   
-  // For API calls, ensure we have valid URLs for fetch operations
+  // For API calls, ensure CORS headers are set properly
   if (req.nextUrl.pathname.startsWith('/api/')) {
-    // No need to modify the request - just ensuring middleware doesn't interfere with API routes
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Max-Age': '86400'
+        }
+      });
+    }
+    
+    // Handle regular API requests
+    const response = NextResponse.next();
+    
+    // Add CORS headers to all API responses
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    return response;
   }
   
-  // Allow the request to proceed without modifications
+  // Allow other requests to proceed without modifications
   return NextResponse.next();
 }
 

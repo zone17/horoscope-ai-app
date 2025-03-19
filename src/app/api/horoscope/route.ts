@@ -26,14 +26,23 @@ const getTodayDate = () => new Date().toISOString().split('T')[0];
  * Generate a horoscope using OpenAI for the given sign and type
  */
 async function generateHoroscope(sign: string, type: string) {
-  // Check if API key is configured
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OpenAI API key not configured');
+  // Improved check for API key configuration
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey || apiKey === 'your_openai_api_key_here') {
+    console.error('OpenAI API key not configured or using default placeholder value');
+    throw new Error('OpenAI API key not properly configured');
   }
 
   // Initialize OpenAI client
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: apiKey,
+  });
+
+  // Log model information for debugging
+  console.log('Making OpenAI request with:', {
+    sign,
+    type,
+    model: 'gpt-3.5-turbo',
   });
 
   const timeframe = type === 'daily' ? 'today' : type;
@@ -147,6 +156,12 @@ export async function GET(request: NextRequest) {
       success: true,
       cached: isCachingEnabled,
       data: horoscope
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
     });
   } catch (error) {
     console.error('Horoscope API error:', error);
@@ -159,7 +174,14 @@ export async function GET(request: NextRequest) {
         success: false, 
         error: errorMessage
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
     );
   }
 } 

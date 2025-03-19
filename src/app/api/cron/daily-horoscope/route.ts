@@ -125,30 +125,50 @@ export async function GET(request: NextRequest) {
     if (!isAuthorized) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
+        }
       );
     }
     
     // Generate and cache all horoscopes
     const result = await generateAllHoroscopes();
     
-    // Return success response
+    // Return success response with CORS headers
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: getTodayDate(),
       ...result
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
     });
   } catch (error) {
     console.error('Cron job error:', error);
     
-    // Return error response
+    // Return error response with CORS headers
     return NextResponse.json(
       { 
         success: false, 
         error: error instanceof Error ? error.message : 'An error occurred during horoscope generation'
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
     );
   }
 } 

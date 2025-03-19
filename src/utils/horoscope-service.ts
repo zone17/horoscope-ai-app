@@ -11,7 +11,7 @@ interface HoroscopeData {
   type: string;
   date: string;
   message: string;
-  lucky_number: string;
+  lucky_number: string | number; // Accept both string and number types
   lucky_color: string;
   peaceful_thought?: string;
   mood?: string;
