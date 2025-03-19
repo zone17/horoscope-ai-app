@@ -88,7 +88,15 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
       return null;
     }
     
-    return horoscopeData;
+    // Normalize data types to ensure consistency
+    return {
+      ...horoscopeData,
+      message: String(horoscopeData.message),
+      lucky_color: String(horoscopeData.lucky_color),
+      peaceful_thought: horoscopeData.peaceful_thought ? String(horoscopeData.peaceful_thought) : undefined,
+      mood: horoscopeData.mood ? String(horoscopeData.mood) : undefined,
+      compatibility: horoscopeData.compatibility ? String(horoscopeData.compatibility) : undefined,
+    };
   } catch (error) {
     console.error(`Error fetching horoscope for ${sign}:`, error);
     return null;

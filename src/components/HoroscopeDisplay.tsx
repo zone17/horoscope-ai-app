@@ -57,8 +57,25 @@ export function HoroscopeDisplay() {
           
           // Validate data structure for each sign
           Object.entries(data).forEach(([sign, horoscope]) => {
-            if (horoscope && (!horoscope.message || horoscope.lucky_number === undefined || !horoscope.lucky_color)) {
-              console.error(`Invalid horoscope data structure for ${sign}:`, horoscope);
+            if (horoscope) {
+              // Check for missing required fields
+              if (!horoscope.message) {
+                console.error(`Missing message field for ${sign}:`, horoscope);
+              }
+              if (horoscope.lucky_number === undefined) {
+                console.error(`Missing lucky_number field for ${sign}:`, horoscope);
+              }
+              if (!horoscope.lucky_color) {
+                console.error(`Missing lucky_color field for ${sign}:`, horoscope);
+              }
+              
+              // Check for incorrect data types
+              if (horoscope.message && typeof horoscope.message !== 'string') {
+                console.error(`Invalid message data type for ${sign}: expected string, got ${typeof horoscope.message}`);
+              }
+              if (horoscope.lucky_color && typeof horoscope.lucky_color !== 'string') {
+                console.error(`Invalid lucky_color data type for ${sign}: expected string, got ${typeof horoscope.lucky_color}`);
+              }
             }
           });
         }
@@ -107,8 +124,25 @@ export function HoroscopeDisplay() {
         
         // Validate data structure for each sign
         Object.entries(data).forEach(([sign, horoscope]) => {
-          if (horoscope && (!horoscope.message || horoscope.lucky_number === undefined || !horoscope.lucky_color)) {
-            console.error(`Invalid horoscope data structure for ${sign}:`, horoscope);
+          if (horoscope) {
+            // Check for missing required fields
+            if (!horoscope.message) {
+              console.error(`Missing message field for ${sign}:`, horoscope);
+            }
+            if (horoscope.lucky_number === undefined) {
+              console.error(`Missing lucky_number field for ${sign}:`, horoscope);
+            }
+            if (!horoscope.lucky_color) {
+              console.error(`Missing lucky_color field for ${sign}:`, horoscope);
+            }
+            
+            // Check for incorrect data types
+            if (horoscope.message && typeof horoscope.message !== 'string') {
+              console.error(`Invalid message data type for ${sign}: expected string, got ${typeof horoscope.message}`);
+            }
+            if (horoscope.lucky_color && typeof horoscope.lucky_color !== 'string') {
+              console.error(`Invalid lucky_color data type for ${sign}: expected string, got ${typeof horoscope.lucky_color}`);
+            }
           }
         });
       }

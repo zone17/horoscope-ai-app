@@ -168,9 +168,15 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 <div className="flex items-center">
                   <span 
                     className="inline-block w-3 h-3 rounded-full mr-2"
-                    style={{ backgroundColor: horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') }}
+                    style={{ backgroundColor: typeof horoscope.lucky_color === 'string' 
+                      ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
+                      : '#indigo700' }}
                   ></span>
-                  <p className="font-medium text-white">{horoscope.lucky_color}</p>
+                  <p className="font-medium text-white">{
+                    typeof horoscope.lucky_color === 'string' 
+                      ? horoscope.lucky_color 
+                      : String(horoscope.lucky_color || 'Unknown')
+                  }</p>
                 </div>
               </div>
             </div>
