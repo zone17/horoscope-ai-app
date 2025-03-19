@@ -12,15 +12,23 @@ if ! command -v vercel &> /dev/null; then
     exit 1
 fi
 
-# Back up existing vercel.json if it exists
+# Back up existing files
 if [ -f vercel.json ]; then
     cp vercel.json vercel.json.bak
 fi
+if [ -f package.json ]; then
+    cp package.json package.json.bak
+fi
+if [ -f .env.production ]; then
+    cp .env.production .env.production.bak
+fi
 
-# Copy backend config to vercel.json
+# Copy backend-specific files
 cp vercel.backend.json vercel.json
+cp package.backend.json package.json
+cp .env.backend.production .env.production
 
-echo "Using backend-specific Vercel configuration"
+echo "Using backend-specific configuration files"
 
 # Deploy to production with API-specific configuration
 vercel deploy --prod \
@@ -36,9 +44,13 @@ echo "- CRON_SECRET (c8b2a1f5e7d3c6a9b2e5d8f1a4c7b3e6)"
 echo ""
 echo "Don't forget to add the domain 'api.gettodayshoroscope.com' in the Vercel project settings."
 
-# Restore original vercel.json if it exists
+# Restore original files
 if [ -f vercel.json.bak ]; then
     mv vercel.json.bak vercel.json
-else
-    rm vercel.json
+fi
+if [ -f package.json.bak ]; then
+    mv package.json.bak package.json
+fi
+if [ -f .env.production.bak ]; then
+    mv .env.production.bak .env.production
 fi 

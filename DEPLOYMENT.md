@@ -31,6 +31,63 @@ The codebase has been updated to support a subdomain-based architecture with sep
    - Updated README.md with deployment instructions
    - Added detailed steps for setting up domains and environment variables
 
+## Architecture Separation
+
+The application has been separated into two distinct deployments:
+
+### Frontend (www.gettodayshoroscope.com)
+- Contains only UI components and frontend logic
+- Connects to the backend API via environment variables
+- Uses API proxying via rewrites in vercel.json
+- Dependencies:
+  - Next.js
+  - React
+  - React DOM
+  - No backend-specific dependencies like Redis or OpenAI
+
+### Backend API (api.gettodayshoroscope.com)
+- Contains all API endpoints and server-side logic
+- Handles Redis caching and OpenAI integration
+- Includes cron jobs for daily horoscope generation
+- Dependencies:
+  - Next.js (for API routes)
+  - Redis (@upstash/redis, @vercel/kv)
+  - OpenAI
+  - No frontend-specific dependencies like React DOM
+
+### Deployment Process
+
+Each project has its own set of configuration files:
+
+#### Frontend:
+- package.frontend.json - Contains only frontend dependencies
+- vercel.frontend.json - Contains frontend-specific Vercel configuration
+- .env.frontend.production - Contains frontend environment variables
+- scripts/deploy-frontend.sh - Deployment script for frontend
+
+#### Backend:
+- package.backend.json - Contains only backend dependencies
+- vercel.backend.json - Contains backend-specific Vercel configuration
+- .env.backend.production - Contains backend environment variables
+- scripts/deploy-api.sh - Deployment script for backend API
+
+### Clean Separation Benefits
+
+1. Independent scaling - Each deployment can be scaled according to its needs
+2. Focused dependencies - No unnecessary packages in each deployment
+3. Simplified maintenance - Changes to one part don't require redeploying the other
+4. Improved security - Backend has its own environment and configuration
+
+### Cross-Origin Resource Sharing (CORS)
+
+The middleware.ts file in the backend API explicitly allows requests from the frontend domain:
+```typescript
+// CORS headers for the frontend domain
+response.headers.set('Access-Control-Allow-Origin', 'https://www.gettodayshoroscope.com');
+```
+
+This ensures proper security while allowing the necessary communication between frontend and backend.
+
 ## Next Steps
 
 To complete the deployment process:

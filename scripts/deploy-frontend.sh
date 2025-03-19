@@ -19,17 +19,16 @@ fi
 if [ -f package.json ]; then
     cp package.json package.json.bak
 fi
+if [ -f .env.production ]; then
+    cp .env.production .env.production.bak
+fi
 
-# Copy frontend config to vercel.json
+# Copy frontend-specific files
 cp vercel.frontend.json vercel.json
+cp package.frontend.json package.json
+cp .env.frontend.production .env.production
 
-echo "Using frontend-specific Vercel configuration"
-
-# Create frontend-specific package.json without Redis dependencies
-cat package.json | jq 'del(.dependencies."@upstash/redis") | del(.dependencies."@vercel/kv")' > package.json.frontend
-mv package.json.frontend package.json
-
-echo "Created frontend-specific package.json without Redis dependencies"
+echo "Using frontend-specific configuration files"
 
 # Deploy to production with frontend-specific configuration
 vercel deploy --prod \
@@ -48,4 +47,7 @@ if [ -f vercel.json.bak ]; then
 fi
 if [ -f package.json.bak ]; then
     mv package.json.bak package.json
+fi
+if [ -f .env.production.bak ]; then
+    mv .env.production.bak .env.production
 fi 
