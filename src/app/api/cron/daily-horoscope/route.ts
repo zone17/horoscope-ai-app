@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { redis, CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
+import { safelyStoreInRedis } from '@/utils/redis-helpers';
 
 // Valid zodiac signs
 const VALID_SIGNS = [
@@ -92,12 +93,12 @@ async function generateAllHoroscopes() {
       // Generate cache key
       const cacheKey = horoscopeKeys.daily(sign, date);
       
-      // Store in Redis with TTL of one day
-      await redis.set(cacheKey, horoscope, {
-        ex: CACHE_DURATIONS.ONE_DAY
+      // Store in Redis using the helper function for proper serialization
+      const storeSuccess = await safelyStoreInRedis(cacheKey, horoscope, {
+        ttl: CACHE_DURATIONS.ONE_DAY
       });
       
-      results.push({ sign, success: true });
+      results.push({ sign, success: storeSuccess });
     } catch (error) {
       console.error(`Error generating horoscope for ${sign}:`, error);
       errors.push({ sign, error: error instanceof Error ? error.message : 'Unknown error' });
