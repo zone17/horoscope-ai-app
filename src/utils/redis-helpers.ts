@@ -68,13 +68,16 @@ export async function safelyStoreInRedis<T>(
         return value;
       });
       
+      // Verify the result is a valid JSON string
+      JSON.parse(stringifiedData); // This will throw if the result isn't valid JSON
+      
       console.log(`Serialized data (first 100 chars): ${stringifiedData.substring(0, 100)}...`);
     } catch (error) {
       console.error(`JSON serialization error for key ${namespacedKey}:`, error);
       return false;
     }
     
-    // Store in Redis
+    // Store in Redis (ensuring we're storing a string value)
     await redis.set(namespacedKey, stringifiedData, { ex: ttl });
     console.log(`Successfully stored data with key: ${namespacedKey}`);
     
@@ -112,31 +115,36 @@ export async function safelyRetrieveForUI<T>(
     console.log(`Retrieving data with key: ${namespacedKey}`);
     
     // Retrieve from Redis
-    const cachedData = await redis.get<string>(namespacedKey);
+    const cachedData = await redis.get(namespacedKey);
     
     // Handle cache miss
-    if (!cachedData) {
+    if (cachedData === null || cachedData === undefined) {
       if (logMisses) {
         console.log(`Cache miss for key: ${namespacedKey}`);
       }
       return defaultValue;
     }
     
-    console.log(`Raw cached data (first 100 chars): ${typeof cachedData === 'string' ? cachedData.substring(0, 100) : 'not a string'}...`);
+    console.log(`Retrieved from Redis - type: ${typeof cachedData}`);
     
-    // Check if the cached data is already a non-string value (some Redis clients auto-deserialize)
-    if (typeof cachedData !== 'string') {
-      return cachedData as T;
-    }
-    
-    // Parse JSON with error handling
-    try {
-      const parsedData = JSON.parse(cachedData) as T;
-      console.log('Successfully parsed cached data');
-      return parsedData;
-    } catch (error) {
-      console.error(`JSON parsing error for key ${namespacedKey}:`, error);
-      // If parsing fails, invalidate the cache
+    // Now with automaticDeserialization disabled, we should always get string data
+    if (typeof cachedData === 'string') {
+      // Log the first part of the string data for debugging
+      console.log(`Raw cached data (first 100 chars): ${cachedData.substring(0, 100)}...`);
+      
+      try {
+        const parsedData = JSON.parse(cachedData) as T;
+        console.log('Successfully parsed cached data');
+        return parsedData;
+      } catch (error) {
+        console.error(`JSON parsing error for key ${namespacedKey}:`, error);
+        // If parsing fails, invalidate the cache
+        await redis.del(namespacedKey);
+        return defaultValue;
+      }
+    } else {
+      // This shouldn't happen with automaticDeserialization disabled
+      console.error(`Unexpected data type from Redis: ${typeof cachedData}`, cachedData);
       await redis.del(namespacedKey);
       return defaultValue;
     }
