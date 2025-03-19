@@ -22,15 +22,15 @@ export async function HoroscopeDisplay() {
   const horoscopes = await getHoroscopesForAllSigns();
 
   return (
-    <div className="container mx-auto px-4 py-10">
+    <div className="container mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-10">
       {/* Background glow effects */}
       <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none z-0">
-        <div className="absolute top-1/4 left-1/4 w-1/2 h-1/2 bg-purple-500/20 rounded-full blur-[100px]"></div>
-        <div className="absolute top-1/3 right-1/4 w-1/3 h-1/3 bg-indigo-600/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-1/3 h-1/3 bg-blue-500/20 rounded-full blur-[120px]"></div>
+        <div className="absolute top-1/4 left-1/4 w-1/3 sm:w-1/2 h-1/3 sm:h-1/2 bg-purple-500/20 rounded-full blur-[80px] sm:blur-[100px]"></div>
+        <div className="absolute top-1/3 right-1/4 w-1/4 sm:w-1/3 h-1/4 sm:h-1/3 bg-indigo-600/20 rounded-full blur-[90px] sm:blur-[120px]"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-1/4 sm:w-1/3 h-1/4 sm:h-1/3 bg-blue-500/20 rounded-full blur-[90px] sm:blur-[120px]"></div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-7 relative z-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-7 relative z-10">
         {ZODIAC_SIGNS.map(({ sign, symbol, dateRange, element }) => (
           <ZodiacCard
             key={sign}

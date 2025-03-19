@@ -36,36 +36,36 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   if (!horoscope) {
     return (
       <div className="group transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-        <div className="relative rounded-xl overflow-hidden shadow-xl h-[400px] backdrop-blur-md bg-indigo-950/30 border border-indigo-500/20">
+        <div className="relative rounded-xl overflow-hidden shadow-xl h-[370px] sm:h-[380px] md:h-[400px] backdrop-blur-md bg-indigo-950/30 border border-indigo-500/20">
           {/* Top section with video projection */}
-          <div className="relative h-40 overflow-hidden">
+          <div className="relative h-36 sm:h-40 overflow-hidden">
             <VideoBanner sign={sign} />
             <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-indigo-950/90 to-transparent z-20"></div>
           </div>
           
           {/* Card content */}
-          <div className="px-5 py-4 relative z-10 h-[calc(100%-10rem)] flex flex-col">
-            <div className="flex items-center mb-3">
-              <div className="bg-purple-500/30 p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
-                <div className="text-2xl">{symbol}</div>
+          <div className="px-4 sm:px-5 py-3 sm:py-4 relative z-10 flex flex-col h-[calc(100%-9rem)] sm:h-[calc(100%-10rem)]">
+            <div className="flex items-center mb-2 sm:mb-3">
+              <div className="bg-purple-500/30 p-1.5 sm:p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
+                <div className="text-xl sm:text-2xl">{symbol}</div>
               </div>
-              <div className="ml-3">
-                <h2 className="text-xl font-bold text-white capitalize">{capitalize(sign)}</h2>
+              <div className="ml-2 sm:ml-3">
+                <h2 className="text-lg sm:text-xl font-bold text-white capitalize">{capitalize(sign)}</h2>
                 <p className="text-indigo-200 text-xs">{dateRange} • {element}</p>
               </div>
             </div>
             
-            <div className="flex-1 flex flex-col space-y-2 animate-pulse mb-4">
-              <div className="bg-indigo-700/50 h-3 rounded w-full"></div>
-              <div className="bg-indigo-700/50 h-3 rounded w-full"></div>
-              <div className="bg-indigo-700/50 h-3 rounded w-3/4"></div>
+            <div className="flex-1 flex flex-col space-y-2 animate-pulse mb-3 sm:mb-4">
+              <div className="bg-indigo-700/50 h-2.5 sm:h-3 rounded w-full"></div>
+              <div className="bg-indigo-700/50 h-2.5 sm:h-3 rounded w-full"></div>
+              <div className="bg-indigo-700/50 h-2.5 sm:h-3 rounded w-3/4"></div>
             </div>
             
-            <div className="mt-auto pt-4 border-t border-indigo-700/30">
-              <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
                 <div>
                   <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                  <p className="font-medium text-white text-lg">0</p>
+                  <p className="font-medium text-white text-base sm:text-lg">0</p>
                 </div>
                 <div>
                   <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
@@ -76,7 +76,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 </div>
               </div>
               
-              <div className="text-center text-indigo-300 text-sm pb-1">
+              <div className="text-center text-indigo-300 text-xs sm:text-sm pb-2">
                 Loading insights...
               </div>
             </div>
@@ -91,35 +91,35 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   
   return (
     <div className="group transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-      <div className="relative rounded-xl overflow-hidden shadow-xl h-[400px] backdrop-blur-md bg-indigo-950/30 border border-indigo-500/20">
+      <div className="relative rounded-xl overflow-hidden shadow-xl h-[370px] sm:h-[380px] md:h-[400px] backdrop-blur-md bg-indigo-950/30 border border-indigo-500/20">
         {/* Top section with video projection */}
-        <div className="relative h-40 overflow-hidden">
+        <div className="relative h-36 sm:h-40 overflow-hidden">
           <VideoBanner sign={sign} />
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-indigo-950/90 to-transparent z-20"></div>
         </div>
         
         {/* Card content */}
-        <div className="px-5 py-4 relative z-10 h-[calc(100%-10rem)] flex flex-col">
-          <div className="flex items-center mb-3">
-            <div className="bg-purple-500/30 p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
-              <div className="text-2xl">{symbol}</div>
+        <div className="px-4 sm:px-5 py-3 sm:py-4 relative z-10 flex flex-col h-[calc(100%-9rem)] sm:h-[calc(100%-10rem)]">
+          <div className="flex items-center mb-2 sm:mb-3">
+            <div className="bg-purple-500/30 p-1.5 sm:p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
+              <div className="text-xl sm:text-2xl">{symbol}</div>
             </div>
-            <div className="ml-3">
-              <h2 className="text-xl font-bold text-white capitalize">{capitalize(sign)}</h2>
+            <div className="ml-2 sm:ml-3">
+              <h2 className="text-lg sm:text-xl font-bold text-white capitalize">{capitalize(sign)}</h2>
               <p className="text-indigo-200 text-xs">{dateRange} • {element}</p>
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto mb-4">
+          <div className="flex-1 overflow-y-auto mb-3 sm:mb-4 pr-1">
             {showNightContent ? (
               <div>
-                <div className={`${isExpanded ? '' : 'line-clamp-6'} text-white text-sm`}>
+                <div className={`${isExpanded ? '' : 'line-clamp-4 sm:line-clamp-6'} text-white text-xs sm:text-sm`}>
                   {horoscope.peaceful_thought}
                 </div>
                 
                 {horoscope.peaceful_thought && horoscope.peaceful_thought.length > 120 && (
                   <button 
-                    className="text-indigo-300 text-xs font-medium mt-2 hover:text-indigo-100 transition-colors"
+                    className="text-indigo-300 text-xs font-medium mt-1 sm:mt-2 hover:text-indigo-100 transition-colors"
                     onClick={() => setIsExpanded(!isExpanded)}
                   >
                     {isExpanded ? 'Read less' : 'Read more'}
@@ -128,13 +128,13 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               </div>
             ) : (
               <div>
-                <div className={`${isExpanded ? '' : 'line-clamp-6'} text-white text-sm`}>
+                <div className={`${isExpanded ? '' : 'line-clamp-4 sm:line-clamp-6'} text-white text-xs sm:text-sm`}>
                   {horoscope.message}
                 </div>
                 
                 {horoscope.message && horoscope.message.length > 120 && (
                   <button 
-                    className="text-indigo-300 text-xs font-medium mt-2 hover:text-indigo-100 transition-colors"
+                    className="text-indigo-300 text-xs font-medium mt-1 sm:mt-2 hover:text-indigo-100 transition-colors"
                     onClick={() => setIsExpanded(!isExpanded)}
                   >
                     {isExpanded ? 'Read less' : 'Read more'}
@@ -144,11 +144,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             )}
           </div>
           
-          <div className="mt-auto pt-4 border-t border-indigo-700/30">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                <p className="font-medium text-white text-lg">{horoscope.lucky_number}</p>
+                <p className="font-medium text-white text-base sm:text-lg">{horoscope.lucky_number}</p>
               </div>
               <div>
                 <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
