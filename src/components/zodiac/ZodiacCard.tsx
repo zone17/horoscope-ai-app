@@ -98,10 +98,31 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
     }
   };
 
-  // Function to get first sentence of text
+  // Standardize content processing for all zodiac signs
   const getFirstSentence = (text: string) => {
+    if (!text) return '';
     const match = text.match(/^[^.!?]+[.!?]/);
-    return match ? match[0].trim() : text;
+    return match ? match[0].trim() : text.split(' ').slice(0, 15).join(' ') + '...';
+  };
+  
+  // Ensure consistent handling of horoscope data
+  const processHoroscopeData = (data: HoroscopeData | null) => {
+    if (!data) return null;
+    
+    // Normalize lucky number
+    const luckyNumber = typeof data.lucky_number === 'object' ? '7' : String(data.lucky_number || '7');
+    
+    // Normalize lucky color
+    const luckyColor = typeof data.lucky_color === 'object' ? 'Indigo' : 
+                      typeof data.lucky_color === 'string' ? data.lucky_color : 'Indigo';
+    
+    return {
+      ...data,
+      lucky_number: luckyNumber,
+      lucky_color: luckyColor,
+      // Ensure message exists
+      message: data.message || 'Your horoscope for today is being written in the stars...',
+    };
   };
   
   // Display loading state if horoscope data is not available or has missing required fields
@@ -115,7 +136,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <Card className="h-[550px] relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
+        <Card className="h-[480px] relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
           <motion.div 
             className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
             variants={glowVariants}
@@ -182,9 +203,19 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
     );
   }
 
+  // Process the horoscope data for consistency
+  const processedHoroscope = processHoroscopeData(horoscope) || {
+    message: '',
+    lucky_number: '7',
+    lucky_color: 'Indigo',
+    peaceful_thought: undefined,
+    mood: undefined,
+    compatibility: undefined
+  };
+  
   // Determine what content to show based on mode (day/night)
-  const showNightContent = mode === 'night' && horoscope.peaceful_thought;
-  const content = showNightContent ? horoscope.peaceful_thought : horoscope.message;
+  const showNightContent = mode === 'night' && processedHoroscope.peaceful_thought;
+  const content = showNightContent ? processedHoroscope.peaceful_thought : processedHoroscope.message;
   const firstSentence = getFirstSentence(content || '');
   
   return (
@@ -201,7 +232,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <Card className="h-[550px] relative flex flex-col overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
+            <Card className="h-[480px] relative flex flex-col overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
               <motion.div 
                 className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
                 variants={glowVariants}
@@ -245,7 +276,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               
               {/* Content - with fixed height for consistent card sizing */}
               <CardContent className="p-4 pt-2 pb-0 bg-transparent flex-grow">
-                <div className="h-[140px] flex flex-col">
+                <div className="h-[120px] flex flex-col">
                   <p className="text-white/90 text-[15px] font-normal leading-relaxed tracking-normal text-left mx-auto w-full card-content font-satoshi">
                     {firstSentence}
                   </p>
@@ -268,9 +299,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   <div>
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
                     <p className="font-light text-white text-lg leading-none">
-                      {typeof horoscope.lucky_number === 'object' 
+                      {typeof processedHoroscope.lucky_number === 'object' 
                         ? '7' // Fallback value if it's an object
-                        : String(horoscope.lucky_number)}
+                        : String(processedHoroscope.lucky_number)}
                     </p>
                   </div>
                   <div>
@@ -280,17 +311,17 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                         whileHover={{ scale: 1.2 }}
                         className="inline-block w-4 h-4 rounded-full mr-2"
                         style={{ 
-                          backgroundColor: typeof horoscope.lucky_color === 'string' 
-                            ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
+                          backgroundColor: typeof processedHoroscope.lucky_color === 'string' 
+                            ? processedHoroscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
                             : '#6366F1' // Default to indigo if not a string
                         }}
                       ></motion.span>
                       <p className="font-light text-white truncate">
-                        {typeof horoscope.lucky_color === 'object'
+                        {typeof processedHoroscope.lucky_color === 'object'
                           ? 'Indigo' // Fallback value if it's an object
-                          : typeof horoscope.lucky_color === 'string'
-                            ? horoscope.lucky_color
-                            : String(horoscope.lucky_color || 'Indigo')
+                          : typeof processedHoroscope.lucky_color === 'string'
+                            ? processedHoroscope.lucky_color
+                            : String(processedHoroscope.lucky_color || 'Indigo')
                         }
                       </p>
                     </div>
@@ -299,17 +330,17 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 
                 {/* Additional metadata - conditionally rendered but with consistent spacing */}
                 <div className="space-y-3">
-                  {(horoscope.mood && typeof horoscope.mood === 'string') && (
+                  {(processedHoroscope.mood && typeof processedHoroscope.mood === 'string') && (
                     <div className="w-full">
                       <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Mood</h3>
-                      <p className="font-light text-white text-sm truncate">{horoscope.mood}</p>
+                      <p className="font-light text-white text-sm truncate">{processedHoroscope.mood}</p>
                     </div>
                   )}
                   
-                  {(horoscope.compatibility && typeof horoscope.compatibility === 'string') && (
+                  {(processedHoroscope.compatibility && typeof processedHoroscope.compatibility === 'string') && (
                     <div className="w-full">
                       <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Compatibility</h3>
-                      <p className="font-light text-white text-sm truncate">{horoscope.compatibility}</p>
+                      <p className="font-light text-white text-sm truncate">{processedHoroscope.compatibility}</p>
                     </div>
                   )}
                 </div>
@@ -386,12 +417,12 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     {content}
                   </p>
                   
-                  {horoscope.peaceful_thought && (
+                  {processedHoroscope.peaceful_thought && (
                     <>
                       <div className="my-4 border-t border-white/10"></div>
                       <h3 className="text-sm uppercase tracking-wider text-indigo-200/80 mb-2 font-light">Peaceful Thought</h3>
                       <p className="text-white/90 text-base italic font-light leading-relaxed tracking-normal text-left mx-auto font-satoshi">
-                        "{horoscope.peaceful_thought}"
+                        "{processedHoroscope.peaceful_thought}"
                       </p>
                     </>
                   )}
@@ -402,9 +433,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     <div>
                       <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
                       <p className="font-light text-white text-lg leading-none">
-                        {typeof horoscope.lucky_number === 'object' 
+                        {typeof processedHoroscope.lucky_number === 'object' 
                           ? '7' // Fallback value if it's an object
-                          : String(horoscope.lucky_number)}
+                          : String(processedHoroscope.lucky_number)}
                       </p>
                     </div>
                     <div>
@@ -414,34 +445,34 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                           whileHover={{ scale: 1.2 }}
                           className="inline-block w-4 h-4 rounded-full mr-2"
                           style={{ 
-                            backgroundColor: typeof horoscope.lucky_color === 'string' 
-                              ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
+                            backgroundColor: typeof processedHoroscope.lucky_color === 'string' 
+                              ? processedHoroscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
                               : '#6366F1' // Default to indigo if not a string
                           }}
                         ></motion.span>
                         <p className="font-light text-white truncate">
-                          {typeof horoscope.lucky_color === 'object'
+                          {typeof processedHoroscope.lucky_color === 'object'
                             ? 'Indigo' // Fallback value if it's an object
-                            : typeof horoscope.lucky_color === 'string'
-                              ? horoscope.lucky_color
-                              : String(horoscope.lucky_color || 'Indigo')
+                            : typeof processedHoroscope.lucky_color === 'string'
+                              ? processedHoroscope.lucky_color
+                              : String(processedHoroscope.lucky_color || 'Indigo')
                           }
                         </p>
                       </div>
                     </div>
                     
-                    {(horoscope.mood && typeof horoscope.mood === 'string') && (
+                    {(processedHoroscope.mood && typeof processedHoroscope.mood === 'string') && (
                       <div>
                         <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Mood</h3>
-                        <p className="font-light text-white text-sm">{horoscope.mood}</p>
+                        <p className="font-light text-white text-sm">{processedHoroscope.mood}</p>
                       </div>
                     )}
                   </div>
                   
-                  {(horoscope.compatibility && typeof horoscope.compatibility === 'string') && (
+                  {(processedHoroscope.compatibility && typeof processedHoroscope.compatibility === 'string') && (
                     <div className="w-full pt-2">
                       <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Compatibility</h3>
-                      <p className="font-light text-white text-sm">{horoscope.compatibility}</p>
+                      <p className="font-light text-white text-sm">{processedHoroscope.compatibility}</p>
                     </div>
                   )}
                 </CardFooter>
