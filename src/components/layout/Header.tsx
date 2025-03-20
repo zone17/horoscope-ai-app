@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ModeToggle } from '@/components/ModeToggle';
+import { ModeToggle } from '../ModeToggle';
 import { SparklesIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useMode } from '@/hooks/useMode';

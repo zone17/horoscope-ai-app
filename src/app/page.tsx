@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { HoroscopeDisplay } from '@/components/zodiac/HoroscopeDisplay';
+import HoroscopeDisplay from '@/components/zodiac/HoroscopeDisplay';
 import { Header } from '@/components/layout/Header';
 
 // Disable static generation
@@ -24,7 +24,7 @@ export default function Home() {
       </Suspense>
       
       <footer className="text-center py-6 text-indigo-300/60 text-sm">
-        <p>© {new Date().getFullYear()} Cosmic Insights. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Get Today's Horoscope. All rights reserved.</p>
       </footer>
     </main>
   );

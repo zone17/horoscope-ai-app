@@ -2,7 +2,7 @@
 
 import { MoonIcon, SunIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useMode } from '@/hooks/useMode';
+import { useMode } from '@/contexts/ModeContext';
 
 export function ModeToggle() {
   const { mode, toggleMode } = useMode();

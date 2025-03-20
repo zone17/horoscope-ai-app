@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "../styles/animations.css";
+import { ModeProvider } from "@/contexts/ModeContext";
+import { AllHoroscopesProvider } from "@/contexts/AllHoroscopesContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cosmic Insights - Daily Horoscope for Mindful Living",
+  title: "Get Today's Horoscope - Daily Celestial Guidance",
   description: "Get daily horoscope guidance for mindful, spiritual reflection and self-awareness rather than predictions.",
   keywords: "horoscope, mindfulness, spiritual reflection, zodiac, self-awareness, daily guidance",
 };
@@ -29,7 +31,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-br from-indigo-950 via-[#0f0b30] to-[#0c0921] text-white`}
       >
-        {children}
+        <ModeProvider>
+          <AllHoroscopesProvider>
+            {children}
+          </AllHoroscopesProvider>
+        </ModeProvider>
       </body>
     </html>
   );

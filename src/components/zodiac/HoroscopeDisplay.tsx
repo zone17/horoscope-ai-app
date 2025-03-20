@@ -26,6 +26,22 @@ const ZODIAC_SIGNS = [
   { sign: 'pisces', symbol: '♓', dateRange: 'Feb 19 - Mar 20', element: 'Water' },
 ];
 
+// Helper functions to get zodiac sign information
+function getZodiacSymbol(sign: string): string {
+  const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
+  return zodiacSign ? zodiacSign.symbol : '';
+}
+
+function getZodiacDateRange(sign: string): string {
+  const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
+  return zodiacSign ? zodiacSign.dateRange : '';
+}
+
+function getZodiacElement(sign: string): string {
+  const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
+  return zodiacSign ? zodiacSign.element : '';
+}
+
 export default function HoroscopeDisplay() {
   const { mode } = useMode();
   const { data: allHoroscopes, isLoading, isError } = useAllHoroscopes();
