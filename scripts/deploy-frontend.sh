@@ -22,7 +22,7 @@ mkdir -p $TEMP_DIR/public
 mkdir -p $TEMP_DIR/src/components
 mkdir -p $TEMP_DIR/src/utils
 
-# Copy frontend code (excluding API routes)
+# Copy frontend code (explicitly excluding API routes)
 echo "Copying frontend files..."
 cp -r src/app/page.tsx $TEMP_DIR/src/app/
 cp -r src/app/layout.tsx $TEMP_DIR/src/app/
@@ -36,7 +36,7 @@ cp -r src/app/loading.tsx $TEMP_DIR/src/app/ 2>/dev/null || :
 echo "Copying components..."
 cp -r src/components/* $TEMP_DIR/src/components/
 
-# Copy utility files (only frontend-related)
+# Copy utility files (only frontend-related, explicitly excluding Redis/API utilities)
 echo "Copying utility files..."
 cp src/utils/horoscope-service.ts $TEMP_DIR/src/utils/
 cp src/utils/feature-flags.ts $TEMP_DIR/src/utils/
@@ -47,19 +47,75 @@ cp src/utils/date-utils.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
 echo "Copying public assets..."
 cp -r public/* $TEMP_DIR/public/ 2>/dev/null || :
 
+# Fix CSS configuration
+echo "Setting up proper Tailwind CSS configuration..."
+cat > $TEMP_DIR/src/app/globals.css << 'EOF'
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+@layer utilities {
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+  }
+  
+  .backdrop-blur-lg {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
+EOF
+
+# Set up proper PostCSS config
+cat > $TEMP_DIR/postcss.config.js << 'EOF'
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+EOF
+
 # Copy config files
 echo "Copying configuration files..."
 cp package.frontend.json $TEMP_DIR/package.json
 cp next.config.frontend.js $TEMP_DIR/next.config.js
 cp tailwind.config.js $TEMP_DIR/ 2>/dev/null || :
-cp postcss.config.js $TEMP_DIR/ 2>/dev/null || :
 cp tsconfig.json $TEMP_DIR/ 2>/dev/null || :
 cp jsconfig.json $TEMP_DIR/ 2>/dev/null || :
 
-# Create a mock API proxy for local development (empty directory)
-mkdir -p $TEMP_DIR/src/app/api
+# IMPORTANT: Do NOT create any API directories
+echo "Ensuring no API routes are included..."
 
-# Create vercel.json for frontend
+# Create vercel.json for frontend with explicit builds section
 cat > $TEMP_DIR/vercel.json << 'EOF'
 {
   "version": 2,
@@ -70,6 +126,18 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
     {
       "source": "/api/:path*",
       "destination": "https://api.gettodayshoroscope.com/api/:path*"
+    }
+  ],
+  "builds": [
+    {
+      "src": "next.config.js",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://api.gettodayshoroscope.com/api/$1"
     }
   ]
 }
@@ -94,6 +162,37 @@ if [ ! -f "$TEMP_DIR/jsconfig.json" ] && [ ! -f "$TEMP_DIR/tsconfig.json" ]; the
 }
 EOF
 fi
+
+# Add packages for CSS processing
+cat > $TEMP_DIR/package.json << 'EOF'
+{
+  "name": "horoscope-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.2.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.2.73",
+    "@types/react-dom": "^18.2.22",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.2.3",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.2"
+  }
+}
+EOF
 
 # Navigate to the temp directory
 cd $TEMP_DIR
