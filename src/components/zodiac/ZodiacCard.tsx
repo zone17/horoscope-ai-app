@@ -271,7 +271,8 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <Card className="h-[480px] relative flex flex-col overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
+            <Card className="h-[480px] relative flex flex-col overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5 cursor-pointer transition-all hover:border-white/20 hover:shadow-lg"
+                 onClick={() => setIsExpanded(true)}>
               <motion.div 
                 className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
                 variants={glowVariants}
@@ -321,10 +322,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   </p>
                   <div className="mt-auto mb-0 flex justify-center">
                     <Button 
-                      onClick={() => setIsExpanded(true)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent double triggering
+                        setIsExpanded(true);
+                      }}
                       variant="cosmic"
                       size="sm"
                       className="px-4 py-1.5 text-xs bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-full"
+                      aria-label={`Read full horoscope for ${sign}`}
                     >
                       Read More <ArrowRightIcon className="ml-2 h-3 w-3" />
                     </Button>
