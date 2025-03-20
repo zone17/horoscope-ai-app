@@ -13,8 +13,8 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        glow: "bg-indigo-600/90 text-white hover:bg-indigo-500/90 shadow-[0_0_15px_rgba(79,70,229,0.5)] hover:shadow-[0_0_25px_rgba(79,70,229,0.7)] transition-all duration-300",
-        cosmic: "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg hover:from-purple-700 hover:to-indigo-700 hover:shadow-xl transition-all duration-300",
+        glow: "bg-indigo-600/30 text-white hover:bg-indigo-500/40 shadow-[0_0_15px_rgba(79,70,229,0.2)] hover:shadow-[0_0_25px_rgba(79,70,229,0.3)] transition-all duration-300 border-0",
+        cosmic: "bg-white/5 text-white hover:bg-white/10 shadow-lg transition-all duration-300 border-0 backdrop-blur-sm font-extralight tracking-wide",
       },
       size: {
         default: "h-10 px-4 py-2",

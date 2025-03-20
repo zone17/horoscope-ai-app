@@ -109,9 +109,10 @@ export function HoroscopeDisplay() {
   return (
     <div className="container mx-auto px-4 pt-24 pb-20">
       {/* Hero section */}
-      <section className="relative py-16 mb-10 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl"></div>
+      <section className="relative py-12 mb-16 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/3 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-600/3 rounded-full blur-3xl"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-white/3 to-indigo-950/3 backdrop-blur-[1px] mix-blend-overlay pointer-events-none"></div>
         
         <motion.div 
           className="max-w-3xl mx-auto text-center relative z-10"
@@ -119,30 +120,48 @@ export function HoroscopeDisplay() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-indigo-300 to-indigo-400">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extralight mb-4 leading-tight tracking-tight">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-200 via-indigo-200 to-indigo-300">
               Cosmic Insights
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-indigo-100/80 mb-8">
+          <p className="text-lg md:text-xl text-indigo-100/80 mb-4 font-extralight tracking-wide max-w-2xl mx-auto">
             Explore your celestial guidance and discover what the cosmos has aligned for you today.
           </p>
+          
+          <div className="flex justify-center mt-4">
+            <motion.div
+              className="glassmorphic px-5 py-2 rounded-full"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <span className="text-sm font-extralight text-indigo-100/90 tracking-wider">
+                {new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </span>
+            </motion.div>
+          </div>
         </motion.div>
       </section>
       
       {/* Error display */}
       {errorMessage && (
         <motion.div 
-          className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-10 max-w-2xl mx-auto text-center"
+          className="glassmorphic p-5 mb-10 max-w-2xl mx-auto text-center rounded-xl"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <p className="text-red-200 mb-3">{errorMessage}</p>
+          <p className="text-red-200 mb-3 font-extralight">{errorMessage}</p>
           <Button 
             variant="cosmic"
             onClick={handleRetry}
-            className="mx-auto"
+            className="mx-auto bg-white/5 hover:bg-white/10"
           >
             <RefreshCwIcon className="h-4 w-4 mr-2" />
             Try Again
@@ -150,32 +169,49 @@ export function HoroscopeDisplay() {
         </motion.div>
       )}
       
-      {/* Grid of zodiac cards */}
+      {/* Data refresh indicator */}
+      {!errorMessage && !loading && (
+        <motion.div
+          className="glassmorphic p-2 mb-8 max-w-md mx-auto text-center rounded-full flex items-center justify-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.5 }}
+        >
+          <div className="bg-green-500/20 p-1 rounded-full mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <span className="text-xs font-extralight text-indigo-100/90">
+            Data refresh complete! New horoscopes loaded.
+          </span>
+        </motion.div>
+      )}
+      
+      {/* Zodiac Cards Grid */}
       <motion.div 
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 px-4 md:px-8 pb-16"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <AnimatePresence>
-          {ZODIAC_SIGNS.map((zodiacSign) => (
-            <motion.div 
-              key={zodiacSign.sign}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
-              <ZodiacCard
-                sign={zodiacSign.sign}
-                symbol={zodiacSign.symbol}
-                dateRange={zodiacSign.dateRange}
-                element={zodiacSign.element}
-                horoscope={horoscopes[zodiacSign.sign] || null}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {ZODIAC_SIGNS.map((zodiacSign, index) => (
+          <motion.div
+            key={zodiacSign.sign}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 * index }}
+          >
+            <ZodiacCard
+              sign={zodiacSign.sign}
+              symbol={zodiacSign.symbol}
+              dateRange={zodiacSign.dateRange}
+              element={zodiacSign.element}
+              horoscope={horoscopes[zodiacSign.sign] || null}
+              isLoading={loading}
+            />
+          </motion.div>
+        ))}
       </motion.div>
     </div>
   );
