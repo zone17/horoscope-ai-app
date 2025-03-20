@@ -1,29 +1,31 @@
 import { Suspense } from 'react';
-import { HoroscopeDisplay } from '@/components/HoroscopeDisplay';
-import { Header } from '@/components/Header';
-import { ModeProvider } from '@/components/ModeProvider';
+import { HoroscopeDisplay } from '@/components/zodiac/HoroscopeDisplay';
+import { Header } from '@/components/layout/Header';
 
 // Disable static generation
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
-    <ModeProvider>
-      <main className="min-h-screen bg-gradient-to-br from-indigo-950 via-[#0f0b30] to-[#0c0921] text-white">
-        <Header />
-        <Suspense fallback={
-          <div className="text-center py-20 text-white">
-            <div className="inline-flex space-x-2 items-center">
-              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></div>
-              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              <span className="ml-2">Loading cosmic insights...</span>
-            </div>
+    <main className="min-h-screen">
+      <Header />
+      
+      <Suspense fallback={
+        <div className="text-center py-32 text-white">
+          <div className="inline-flex space-x-2 items-center">
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            <span className="ml-2">Loading cosmic insights...</span>
           </div>
-        }>
-          <HoroscopeDisplay />
-        </Suspense>
-      </main>
-    </ModeProvider>
+        </div>
+      }>
+        <HoroscopeDisplay />
+      </Suspense>
+      
+      <footer className="text-center py-6 text-indigo-300/60 text-sm">
+        <p>© {new Date().getFullYear()} Cosmic Insights. All rights reserved.</p>
+      </footer>
+    </main>
   );
 }

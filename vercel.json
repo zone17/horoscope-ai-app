@@ -3,14 +3,20 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "outputDirectory": ".next",
-  "rewrites": [
+  "functions": {
+    "src/app/api/**/*": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "crons": [
     {
-      "source": "/api/:path*",
-      "destination": "https://api.gettodayshoroscope.com/api/:path*"
+      "path": "/api/cron/daily-horoscope",
+      "schedule": "0 0 * * *"
     }
   ],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://api.gettodayshoroscope.com"
-  },
-  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; else exit 0; fi"
+    "FEATURE_FLAG_USE_REDIS_CACHE": "true",
+    "FEATURE_FLAG_USE_RATE_LIMITING": "true"
+  }
 } 
