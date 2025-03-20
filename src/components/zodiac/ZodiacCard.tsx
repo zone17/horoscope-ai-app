@@ -6,6 +6,8 @@ import { useMode } from '@/hooks/useMode';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { capitalize, getColorFromString } from '@/lib/utils';
+import { ArrowRightIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 // Define the horoscope data interface
 interface HoroscopeData {
@@ -26,9 +28,10 @@ interface ZodiacCardProps {
   dateRange: string;
   element?: string;
   horoscope: HoroscopeData | null;
+  isLoading?: boolean;
 }
 
-export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscope }: ZodiacCardProps) {
+export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscope, isLoading }: ZodiacCardProps) {
   const { mode } = useMode();
   const [isHovered, setIsHovered] = useState(false);
   
@@ -84,7 +87,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <Card className="h-auto relative overflow-hidden backdrop-blur-md bg-black/30 border border-indigo-500/20">
+        <Card className="h-auto relative overflow-hidden card-glassmorphic border-0 shadow-xl">
           <motion.div 
             className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-600 to-indigo-600 blur-xl z-0"
             variants={glowVariants}
@@ -94,51 +97,51 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           
           {/* Card video/image container */}
           <div className="relative h-40 overflow-hidden rounded-t-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-700 to-indigo-900">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-700/30 to-indigo-900/30">
               <div className="absolute inset-0 opacity-30 mix-blend-overlay bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/40 via-transparent to-transparent"></div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/40 to-transparent z-10"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl">{symbol}</div>
           </div>
           
-          <CardHeader className="pt-3 pb-1">
+          <CardHeader className="pt-3 pb-1 bg-transparent">
             <div className="flex items-center gap-3">
               <div className="text-2xl text-indigo-200">{symbol}</div>
               <div>
-                <h2 className="text-xl font-light text-white capitalize tracking-wide">{capitalize(sign)}</h2>
+                <h2 className="text-xl font-extralight text-white capitalize tracking-wide">{capitalize(sign)}</h2>
                 <p className="text-indigo-200/70 text-xs font-light tracking-wider">{dateRange} • {element}</p>
               </div>
             </div>
           </CardHeader>
           
-          <CardContent className="pb-0">
+          <CardContent className="pb-0 bg-transparent">
             <div className="space-y-1.5 animate-pulse">
-              <div className="bg-indigo-700/30 h-3 rounded w-full"></div>
-              <div className="bg-indigo-700/30 h-3 rounded w-full"></div>
-              <div className="bg-indigo-700/30 h-3 rounded w-3/4"></div>
+              <div className="bg-indigo-700/20 h-3 rounded w-full"></div>
+              <div className="bg-indigo-700/20 h-3 rounded w-full"></div>
+              <div className="bg-indigo-700/20 h-3 rounded w-3/4"></div>
             </div>
           </CardContent>
           
-          <CardFooter className="pt-3 border-t border-indigo-700/30 mt-3 flex-col items-stretch space-y-2">
+          <CardFooter className="pt-3 border-t border-white/5 mt-3 flex-col items-stretch space-y-2 bg-transparent">
             <div className="grid grid-cols-2 gap-3 w-full">
               <div>
-                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Number</h3>
+                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-extralight tracking-wider">Lucky Number</h3>
                 <motion.p 
-                  className="font-light text-white text-lg"
+                  className="font-extralight text-white text-lg"
                   animate={{ opacity: [0.4, 0.8, 0.4] }}
                   transition={{ repeat: Infinity, duration: 2 }}
                 >?</motion.p>
               </div>
               <div>
-                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Color</h3>
+                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-extralight tracking-wider">Lucky Color</h3>
                 <div className="flex items-center">
                   <motion.span 
-                    className="inline-block w-4 h-4 rounded-full mr-2 bg-indigo-700/30"
+                    className="inline-block w-4 h-4 rounded-full mr-2 bg-indigo-700/20"
                     animate={{ opacity: [0.4, 0.8, 0.4] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   ></motion.span>
                   <motion.p 
-                    className="font-light text-white"
+                    className="font-extralight text-white"
                     animate={{ opacity: [0.4, 0.8, 0.4] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   >Loading...</motion.p>
@@ -165,9 +168,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Card className="h-auto pb-3 relative overflow-hidden backdrop-blur-md bg-black/30 border border-indigo-500/20">
+      <Card className="h-auto pb-4 relative overflow-hidden card-glassmorphic border-0 shadow-xl">
         <motion.div 
-          className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-600 to-indigo-600 blur-xl z-0"
+          className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 blur-xl z-0"
           variants={glowVariants}
           initial="initial"
           animate="animate"
@@ -185,41 +188,45 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <source src={`/videos/zodiac/${sign}.mp4`} type="video/mp4" />
           </video>
           
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 to-indigo-900/30 mix-blend-overlay"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-transparent to-black/40"></div>
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-transparent to-black/20"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/40 to-transparent z-10"></div>
         </div>
         
-        <CardHeader className="pt-3 pb-1">
+        <CardHeader className="pt-3 pb-1 bg-transparent">
           <div className="flex items-center gap-3">
             <motion.div 
               whileHover={{ rotate: [0, -5, 5, -5, 0] }}
               transition={{ duration: 0.5 }}
-              className="text-2xl text-indigo-200"
+              className="text-2xl text-indigo-100"
             >
               {symbol}
             </motion.div>
             <div>
-              <h2 className="text-xl font-light text-white capitalize tracking-wide">{capitalize(sign)}</h2>
-              <p className="text-indigo-200/70 text-xs font-light tracking-wider">{dateRange} • {element}</p>
+              <h2 className="text-xl font-extralight text-white capitalize tracking-wide">{capitalize(sign)}</h2>
+              <p className="text-indigo-200/80 text-xs font-extralight tracking-wider">{dateRange} • {element}</p>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="pb-0">
-          <p className="text-white/90 text-sm font-light leading-relaxed tracking-wide">
+        <CardContent className="pb-0 bg-transparent">
+          <p className="text-white/90 text-sm font-extralight leading-relaxed tracking-wide">
             {content}
           </p>
         </CardContent>
         
-        <CardFooter className="pt-3 border-t border-indigo-700/30 mt-3 flex-col items-stretch space-y-2">
+        <CardFooter className="pt-3 border-t border-white/5 mt-3 flex-col items-stretch space-y-2 bg-transparent">
           <div className="grid grid-cols-2 gap-3 w-full">
             <div>
-              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Number</h3>
-              <p className="font-light text-white text-lg">{String(horoscope.lucky_number)}</p>
+              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Lucky Number</h3>
+              <p className="font-extralight text-white text-lg">
+                {typeof horoscope.lucky_number === 'object' 
+                  ? '7' // Fallback value if it's an object
+                  : String(horoscope.lucky_number)}
+              </p>
             </div>
             <div>
-              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Color</h3>
+              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Lucky Color</h3>
               <div className="flex items-center">
                 <motion.span 
                   whileHover={{ scale: 1.2 }}
@@ -227,30 +234,32 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   style={{ 
                     backgroundColor: typeof horoscope.lucky_color === 'string' 
                       ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
-                      : getColorFromString(String(horoscope.lucky_color))
+                      : '#6366F1' // Default to indigo if not a string
                   }}
                 ></motion.span>
-                <p className="font-light text-white truncate">
-                  {typeof horoscope.lucky_color === 'string' 
-                    ? horoscope.lucky_color 
-                    : String(horoscope.lucky_color || 'Unknown')
+                <p className="font-extralight text-white truncate">
+                  {typeof horoscope.lucky_color === 'object'
+                    ? 'Indigo' // Fallback value if it's an object
+                    : typeof horoscope.lucky_color === 'string'
+                      ? horoscope.lucky_color
+                      : String(horoscope.lucky_color || 'Indigo')
                   }
                 </p>
               </div>
             </div>
           </div>
 
-          {horoscope.mood && (
-            <div className="border-t border-indigo-700/30 pt-2 mt-1 w-full">
-              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Mood</h3>
-              <p className="font-light text-white text-sm">{horoscope.mood}</p>
+          {(horoscope.mood && typeof horoscope.mood === 'string') && (
+            <div className="border-t border-white/5 pt-2 mt-1 w-full">
+              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Mood</h3>
+              <p className="font-extralight text-white text-sm">{horoscope.mood}</p>
             </div>
           )}
           
-          {horoscope.compatibility && (
+          {(horoscope.compatibility && typeof horoscope.compatibility === 'string') && (
             <div className="w-full">
-              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Compatibility</h3>
-              <p className="font-light text-white text-sm">{horoscope.compatibility}</p>
+              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Compatibility</h3>
+              <p className="font-extralight text-white text-sm">{horoscope.compatibility}</p>
             </div>
           )}
         </CardFooter>
