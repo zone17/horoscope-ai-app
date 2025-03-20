@@ -245,16 +245,16 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               
               {/* Content - with fixed height for consistent card sizing */}
               <CardContent className="p-4 pt-2 pb-0 bg-transparent flex-grow">
-                <div className="h-[160px] flex flex-col">
+                <div className="h-[140px] flex flex-col">
                   <p className="text-white/90 text-[15px] font-normal leading-relaxed tracking-normal text-left mx-auto w-full card-content font-satoshi">
                     {firstSentence}
                   </p>
-                  <div className="mt-auto flex justify-center">
+                  <div className="mt-auto mb-0 flex justify-center">
                     <Button 
                       onClick={() => setIsExpanded(true)}
                       variant="cosmic"
                       size="sm"
-                      className="px-4 py-2 text-xs bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-full"
+                      className="px-4 py-1.5 text-xs bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-full"
                     >
                       Read More <ArrowRightIcon className="ml-2 h-3 w-3" />
                     </Button>
@@ -263,7 +263,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               </CardContent>
               
               {/* Footer - consistent positioning */}
-              <CardFooter className="p-4 pt-4 border-t border-white/5 mt-auto flex-col items-stretch space-y-3 bg-transparent shrink-0">
+              <CardFooter className="p-4 pt-2 border-t border-white/5 mt-auto flex-col items-stretch space-y-3 bg-transparent shrink-0">
                 <div className="grid grid-cols-2 gap-3 w-full">
                   <div>
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
