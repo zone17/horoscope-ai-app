@@ -113,8 +113,12 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
     const luckyNumber = typeof data.lucky_number === 'object' ? '7' : String(data.lucky_number || '7');
     
     // Normalize lucky color
-    const luckyColor = typeof data.lucky_color === 'object' ? 'Indigo' : 
-                      typeof data.lucky_color === 'string' ? data.lucky_color : 'Indigo';
+    let luckyColor = 'Indigo';
+    if (typeof data.lucky_color === 'object') {
+      luckyColor = 'Indigo';
+    } else if (typeof data.lucky_color === 'string') {
+      luckyColor = data.lucky_color;
+    }
     
     return {
       ...data,
@@ -218,6 +222,41 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   const content = showNightContent ? processedHoroscope.peaceful_thought : processedHoroscope.message;
   const firstSentence = getFirstSentence(content || '');
   
+  // Helper function to properly handle color values
+  const getColorForDisplay = (colorValue: string): string => {
+    // Handle common color names directly
+    const commonColors: Record<string, string> = {
+      'red': '#EF4444',
+      'blue': '#3B82F6',
+      'green': '#22C55E',
+      'purple': '#9333EA',
+      'pink': '#EC4899',
+      'orange': '#F97316',
+      'yellow': '#EAB308',
+      'indigo': '#6366F1',
+      'violet': '#8B5CF6',
+      'teal': '#14B8A6',
+      'cyan': '#06B6D4',
+      'amber': '#F59E0B',
+      'emerald': '#10B981',
+      'rose': '#E11D48'
+    };
+    
+    // Check if it's a common color name
+    const lowerColor = colorValue.toLowerCase();
+    if (commonColors[lowerColor]) {
+      return commonColors[lowerColor];
+    }
+    
+    // Try to use the color directly if it seems to be a valid color format
+    if (lowerColor.startsWith('#') || lowerColor.startsWith('rgb')) {
+      return lowerColor;
+    }
+    
+    // For other strings, use the hash function for consistent color mapping
+    return getColorFromString(colorValue);
+  };
+  
   return (
     <>
       <AnimatePresence>
@@ -311,18 +350,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                         whileHover={{ scale: 1.2 }}
                         className="inline-block w-4 h-4 rounded-full mr-2"
                         style={{ 
-                          backgroundColor: typeof processedHoroscope.lucky_color === 'string' 
-                            ? processedHoroscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
-                            : '#6366F1' // Default to indigo if not a string
+                          backgroundColor: getColorForDisplay(processedHoroscope.lucky_color)
                         }}
                       ></motion.span>
                       <p className="font-light text-white truncate">
-                        {typeof processedHoroscope.lucky_color === 'object'
-                          ? 'Indigo' // Fallback value if it's an object
-                          : typeof processedHoroscope.lucky_color === 'string'
-                            ? processedHoroscope.lucky_color
-                            : String(processedHoroscope.lucky_color || 'Indigo')
-                        }
+                        {processedHoroscope.lucky_color}
                       </p>
                     </div>
                   </div>
@@ -445,18 +477,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                           whileHover={{ scale: 1.2 }}
                           className="inline-block w-4 h-4 rounded-full mr-2"
                           style={{ 
-                            backgroundColor: typeof processedHoroscope.lucky_color === 'string' 
-                              ? processedHoroscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
-                              : '#6366F1' // Default to indigo if not a string
+                            backgroundColor: getColorForDisplay(processedHoroscope.lucky_color)
                           }}
                         ></motion.span>
                         <p className="font-light text-white truncate">
-                          {typeof processedHoroscope.lucky_color === 'object'
-                            ? 'Indigo' // Fallback value if it's an object
-                            : typeof processedHoroscope.lucky_color === 'string'
-                              ? processedHoroscope.lucky_color
-                              : String(processedHoroscope.lucky_color || 'Indigo')
-                          }
+                          {processedHoroscope.lucky_color}
                         </p>
                       </div>
                     </div>
