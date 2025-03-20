@@ -99,7 +99,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <div className="flex items-center gap-3">
               <div className="text-2xl text-indigo-200">{symbol}</div>
               <div>
-                <h2 className="text-xl font-extralight text-white capitalize tracking-wide">{capitalize(sign)}</h2>
+                <h2 className="text-xl font-light text-white capitalize tracking-tight">{capitalize(sign)}</h2>
                 <p className="text-indigo-200/70 text-xs font-light tracking-wider">{dateRange} • {element}</p>
               </div>
             </div>
@@ -116,15 +116,15 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           <CardFooter className="pt-3 border-t border-white/5 mt-3 flex-col items-stretch space-y-2 bg-transparent">
             <div className="grid grid-cols-2 gap-3 w-full">
               <div>
-                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-extralight tracking-wider">Lucky Number</h3>
+                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-300/70">Lucky Number</h3>
                 <motion.p 
-                  className="font-extralight text-white text-lg"
+                  className="font-light text-white text-lg"
                   animate={{ opacity: [0.4, 0.8, 0.4] }}
                   transition={{ repeat: Infinity, duration: 2 }}
                 >?</motion.p>
               </div>
               <div>
-                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-extralight tracking-wider">Lucky Color</h3>
+                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-300/70">Lucky Color</h3>
                 <div className="flex items-center">
                   <motion.span 
                     className="inline-block w-4 h-4 rounded-full mr-2 bg-indigo-700/10"
@@ -132,7 +132,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     transition={{ repeat: Infinity, duration: 2 }}
                   ></motion.span>
                   <motion.p 
-                    className="font-extralight text-white"
+                    className="font-light text-white"
                     animate={{ opacity: [0.4, 0.8, 0.4] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   >Loading...</motion.p>
@@ -193,14 +193,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               {symbol}
             </motion.div>
             <div>
-              <h2 className="text-xl font-extralight text-white capitalize tracking-wide">{capitalize(sign)}</h2>
-              <p className="text-indigo-200/80 text-xs font-extralight tracking-wider">{dateRange} • {element}</p>
+              <h2 className="text-xl font-light text-white capitalize tracking-tight leading-tight">{capitalize(sign)}</h2>
+              <p className="text-indigo-200/80 text-xs font-light tracking-wide">{dateRange} • {element}</p>
             </div>
           </div>
         </CardHeader>
         
         <CardContent className="pb-0 bg-transparent">
-          <p className="text-white/90 text-sm font-extralight leading-relaxed tracking-wide">
+          <p className="text-white/90 text-sm font-light leading-relaxed tracking-normal">
             {content}
           </p>
         </CardContent>
@@ -208,15 +208,15 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         <CardFooter className="pt-3 border-t border-white/5 mt-3 flex-col items-stretch space-y-2 bg-transparent">
           <div className="grid grid-cols-2 gap-3 w-full">
             <div>
-              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Lucky Number</h3>
-              <p className="font-extralight text-white text-lg">
+              <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
+              <p className="font-light text-white text-lg leading-none">
                 {typeof horoscope.lucky_number === 'object' 
                   ? '7' // Fallback value if it's an object
                   : String(horoscope.lucky_number)}
               </p>
             </div>
             <div>
-              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Lucky Color</h3>
+              <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Color</h3>
               <div className="flex items-center">
                 <motion.span 
                   whileHover={{ scale: 1.2 }}
@@ -227,7 +227,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       : '#6366F1' // Default to indigo if not a string
                   }}
                 ></motion.span>
-                <p className="font-extralight text-white truncate">
+                <p className="font-light text-white truncate">
                   {typeof horoscope.lucky_color === 'object'
                     ? 'Indigo' // Fallback value if it's an object
                     : typeof horoscope.lucky_color === 'string'
@@ -241,15 +241,15 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
 
           {(horoscope.mood && typeof horoscope.mood === 'string') && (
             <div className="border-t border-white/5 pt-2 mt-1 w-full">
-              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Mood</h3>
-              <p className="font-extralight text-white text-sm">{horoscope.mood}</p>
+              <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Mood</h3>
+              <p className="font-light text-white text-sm">{horoscope.mood}</p>
             </div>
           )}
           
           {(horoscope.compatibility && typeof horoscope.compatibility === 'string') && (
             <div className="w-full">
-              <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Compatibility</h3>
-              <p className="font-extralight text-white text-sm">{horoscope.compatibility}</p>
+              <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Compatibility</h3>
+              <p className="font-light text-white text-sm">{horoscope.compatibility}</p>
             </div>
           )}
         </CardFooter>
