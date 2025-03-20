@@ -133,12 +133,6 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
       "src": "next.config.js",
       "use": "@vercel/next"
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://api.gettodayshoroscope.com/api/$1"
-    }
   ]
 }
 EOF
