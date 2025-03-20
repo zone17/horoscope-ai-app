@@ -7,8 +7,7 @@ import { getHoroscopesForAllSigns } from '@/utils/horoscope-service';
 import { Button } from '@/components/ui/button';
 import { RefreshCwIcon } from 'lucide-react';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
-import { useMode } from '@/contexts/ModeContext';
-import { useAllHoroscopes } from '@/contexts/AllHoroscopesContext';
+import { useMode } from '@/hooks/useMode';
 
 // Zodiac sign data with symbols, date ranges, and elements
 const ZODIAC_SIGNS = [
@@ -44,7 +43,9 @@ function getZodiacElement(sign: string): string {
 
 export default function HoroscopeDisplay() {
   const { mode } = useMode();
-  const { data: allHoroscopes, isLoading, isError } = useAllHoroscopes();
+  const [horoscopes, setHoroscopes] = useState<Record<string, any>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
   
   // Format today's date
@@ -61,18 +62,32 @@ export default function HoroscopeDisplay() {
   const hours = nextUpdate.getHours();
   const minutes = nextUpdate.getMinutes();
   const nextUpdateText = `Next update in ${15}h ${minutes}m`;
-
-  // If data loaded successfully, show a refresh confirmation
+  
+  // Fetch horoscopes data
   useEffect(() => {
-    if (allHoroscopes && !isLoading) {
-      setRefreshed(true);
-      // Hide the refresh confirmation after 5 seconds
-      const timer = setTimeout(() => {
-        setRefreshed(false);
-      }, 5000);
-      return () => clearTimeout(timer);
+    async function fetchHoroscopes() {
+      try {
+        setIsLoading(true);
+        const data = await getHoroscopesForAllSigns();
+        setHoroscopes(data);
+        setIsError(false);
+        setRefreshed(true);
+        
+        // Hide the refresh confirmation after 5 seconds
+        const timer = setTimeout(() => {
+          setRefreshed(false);
+        }, 5000);
+        return () => clearTimeout(timer);
+      } catch (error) {
+        console.error('Error fetching horoscopes:', error);
+        setIsError(true);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [allHoroscopes, isLoading]);
+    
+    fetchHoroscopes();
+  }, []);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
@@ -126,15 +141,15 @@ export default function HoroscopeDisplay() {
       )}
 
       {/* Zodiac cards grid */}
-      {!isLoading && !isError && allHoroscopes && (
+      {!isLoading && !isError && Object.keys(horoscopes).length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Object.entries(allHoroscopes).map(([sign, horoscope]) => (
+          {Object.entries(horoscopes).map(([sign, horoscope]) => (
             <ZodiacCard 
               key={sign}
-              sign={sign as ZodiacSign}
-              symbol={getZodiacSymbol(sign as ZodiacSign)}
-              dateRange={getZodiacDateRange(sign as ZodiacSign)}
-              element={getZodiacElement(sign as ZodiacSign)}
+              sign={sign}
+              symbol={getZodiacSymbol(sign)}
+              dateRange={getZodiacDateRange(sign)}
+              element={getZodiacElement(sign)}
               horoscope={horoscope}
               isLoading={isLoading}
             />

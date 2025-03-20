@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "../styles/animations.css";
-import { ModeProvider } from "@/contexts/ModeContext";
-import { AllHoroscopesProvider } from "@/contexts/AllHoroscopesContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-br from-indigo-950 via-[#0f0b30] to-[#0c0921] text-white`}
       >
-        <ModeProvider>
-          <AllHoroscopesProvider>
-            {children}
-          </AllHoroscopesProvider>
-        </ModeProvider>
+        {children}
       </body>
     </html>
   );
