@@ -49,14 +49,6 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         stiffness: 260,
         damping: 20 
       }
-    },
-    hover: { 
-      y: -5, 
-      transition: { 
-        type: 'spring', 
-        stiffness: 400, 
-        damping: 17 
-      }
     }
   };
 
@@ -82,14 +74,13 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         variants={cardVariants}
         initial="initial"
         animate="animate"
-        whileHover="hover"
         className="group"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <Card className="h-auto relative overflow-hidden card-glassmorphic border-0 shadow-lg">
+        <Card className="h-auto relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
           <motion.div 
-            className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl z-0"
+            className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
             variants={glowVariants}
             initial="initial"
             animate="animate"
@@ -97,10 +88,10 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           
           {/* Card video/image container */}
           <div className="relative h-40 overflow-hidden rounded-t-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-700/20 to-indigo-900/20">
-              <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/30 via-transparent to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-700/10 to-indigo-900/10">
+              <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/20 to-transparent z-10"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-transparent to-transparent"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl">{symbol}</div>
           </div>
           
@@ -163,14 +154,13 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
       variants={cardVariants}
       initial="initial"
       animate="animate"
-      whileHover="hover"
       className="group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Card className="h-auto pb-4 relative overflow-hidden card-glassmorphic border-0 shadow-lg">
+      <Card className="h-auto pb-4 relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
         <motion.div 
-          className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl z-0"
+          className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
           variants={glowVariants}
           initial="initial"
           animate="animate"
@@ -188,22 +178,24 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <source src={`/videos/zodiac/${sign}.mp4`} type="video/mp4" />
           </video>
           
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 to-indigo-900/10 mix-blend-overlay"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-transparent to-black/10"></div>
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/20 to-transparent z-10"></div>
-        </div>
-        
-        {/* Zodiac symbol badge - similar to the example */}
-        <div className="absolute top-3 left-3 z-10">
-          <div className="flex items-center justify-center w-8 h-8 rounded-md bg-purple-500/60 backdrop-blur-sm text-white">
-            {symbol}
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/5 to-indigo-900/5 mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-transparent to-black/5"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-transparent to-transparent"></div>
         </div>
         
         <CardHeader className="pt-3 pb-1 bg-transparent">
-          <div>
-            <h2 className="text-xl font-extralight text-white capitalize tracking-wide">{capitalize(sign)}</h2>
-            <p className="text-indigo-200/80 text-xs font-extralight tracking-wider">{dateRange} • {element}</p>
+          <div className="flex items-center gap-3">
+            <motion.div 
+              whileHover={{ rotate: [0, -5, 5, -5, 0] }}
+              transition={{ duration: 0.5 }}
+              className="text-2xl text-indigo-100"
+            >
+              {symbol}
+            </motion.div>
+            <div>
+              <h2 className="text-xl font-extralight text-white capitalize tracking-wide">{capitalize(sign)}</h2>
+              <p className="text-indigo-200/80 text-xs font-extralight tracking-wider">{dateRange} • {element}</p>
+            </div>
           </div>
         </CardHeader>
         
@@ -226,14 +218,15 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <div>
               <h3 className="text-xs text-indigo-100/80 uppercase mb-1 font-extralight tracking-wider">Lucky Color</h3>
               <div className="flex items-center">
-                <div
-                  className="inline-block w-4 h-4 rounded-sm mr-2"
+                <motion.span 
+                  whileHover={{ scale: 1.2 }}
+                  className="inline-block w-4 h-4 rounded-full mr-2"
                   style={{ 
                     backgroundColor: typeof horoscope.lucky_color === 'string' 
                       ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
                       : '#6366F1' // Default to indigo if not a string
                   }}
-                ></div>
+                ></motion.span>
                 <p className="font-extralight text-white truncate">
                   {typeof horoscope.lucky_color === 'object'
                     ? 'Indigo' // Fallback value if it's an object
