@@ -57,11 +57,30 @@ export default function HoroscopeDisplay() {
     year: 'numeric'
   });
   
-  // Calculate next update time (15h from now)
-  const nextUpdate = new Date(today.getTime() + 15 * 60 * 60 * 1000);
-  const hours = nextUpdate.getHours();
-  const minutes = nextUpdate.getMinutes();
-  const nextUpdateText = `Next update in ${15}h ${minutes}m`;
+  // Calculate time until next update (midnight tonight)
+  const calculateTimeUntilNextUpdate = () => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const diffMs = tomorrow.getTime() - now.getTime();
+    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `Next update in ${diffHrs}h ${diffMins}m`;
+  };
+  
+  const [timeUntilUpdate, setTimeUntilUpdate] = useState(calculateTimeUntilNextUpdate());
+  
+  // Update the countdown every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeUntilUpdate(calculateTimeUntilNextUpdate());
+    }, 60000);
+    
+    return () => clearInterval(timer);
+  }, []);
   
   // Fetch horoscopes data
   useEffect(() => {
@@ -93,28 +112,42 @@ export default function HoroscopeDisplay() {
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
       {/* Hero section */}
       <div className="relative w-full mb-16 px-4 py-20 flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-black/80">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 mix-blend-overlay"></div>
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+        {/* Background video */}
+        <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl">
+          <video
+            className="w-full h-full object-cover opacity-40"
+            autoPlay
+            muted
+            loop
+            playsInline
+          >
+            <source src="/videos/zodiac/space.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-black/50 z-10"></div>
+        </div>
         
-        <h1 className="text-4xl md:text-5xl font-light text-center bg-clip-text text-transparent bg-gradient-to-b from-purple-200 to-indigo-200 mb-4">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 mix-blend-overlay z-20"></div>
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"></div>
+        
+        <h1 className="text-4xl md:text-5xl font-normal text-center bg-clip-text text-transparent bg-gradient-to-b from-purple-200 to-indigo-200 mb-4 relative z-30">
           Get Today's Horoscope
         </h1>
         
-        <p className="text-center text-white/80 max-w-2xl font-extralight text-lg mb-8">
+        <p className="text-center text-white/80 max-w-2xl font-light text-lg mb-8 relative z-30">
           Your celestial guidance for what the cosmos has aligned today
         </p>
         
-        <div className="px-4 py-2 rounded-full glassmorphic inline-flex items-center">
-          <time className="text-white/90 font-extralight">{formattedDate}</time>
+        <div className="px-4 py-2 rounded-full glassmorphic inline-flex items-center relative z-30">
+          <span className="text-white/90 font-normal text-sm tracking-wide">{timeUntilUpdate}</span>
         </div>
       </div>
       
       {/* Refresh notification */}
       {refreshed && (
-        <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm text-white/70 font-extralight backdrop-blur-md bg-white/5 border border-white/10 flex items-center gap-2 z-50">
+        <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm text-white/70 font-normal backdrop-blur-md bg-white/5 border border-white/10 flex items-center gap-2 z-50">
           <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          <span>{nextUpdateText}</span>
+          <span>{timeUntilUpdate}</span>
         </div>
       )}
       
@@ -128,7 +161,7 @@ export default function HoroscopeDisplay() {
       {/* Error state */}
       {isError && (
         <div className="max-w-xl mx-auto glassmorphic text-center my-20">
-          <p className="text-white/70 mb-4">We couldn't connect to the cosmos right now.</p>
+          <p className="text-white/70 mb-4 font-normal">We couldn't connect to the cosmos right now.</p>
           <Button
             variant="outline"
             className="border-white/10 hover:border-white/20 text-white/80"
