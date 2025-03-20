@@ -21,6 +21,9 @@ mkdir -p $TEMP_DIR/src/app
 mkdir -p $TEMP_DIR/public
 mkdir -p $TEMP_DIR/src/components
 mkdir -p $TEMP_DIR/src/utils
+mkdir -p $TEMP_DIR/src/lib
+mkdir -p $TEMP_DIR/src/hooks
+mkdir -p $TEMP_DIR/src/styles
 
 # Copy frontend code (explicitly excluding API routes)
 echo "Copying frontend files..."
@@ -35,6 +38,15 @@ cp -r src/app/loading.tsx $TEMP_DIR/src/app/ 2>/dev/null || :
 # Copy components
 echo "Copying components..."
 cp -r src/components/* $TEMP_DIR/src/components/
+
+# Copy styles
+echo "Copying styles..."
+cp -r src/styles/* $TEMP_DIR/src/styles/ 2>/dev/null || :
+
+# Copy hooks and lib
+echo "Copying hooks and utilities..."
+cp -r src/hooks/* $TEMP_DIR/src/hooks/ 2>/dev/null || :
+cp -r src/lib/* $TEMP_DIR/src/lib/ 2>/dev/null || :
 
 # Copy utility files (only frontend-related, explicitly excluding Redis/API utilities)
 echo "Copying utility files..."
@@ -170,9 +182,18 @@ cat > $TEMP_DIR/package.json << 'EOF'
     "lint": "next lint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.24.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.8",
+    "lucide-react": "^0.344.0",
     "next": "^15.2.3",
+    "next-themes": "^0.2.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
