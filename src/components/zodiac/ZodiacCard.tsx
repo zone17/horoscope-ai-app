@@ -30,7 +30,6 @@ interface ZodiacCardProps {
 
 export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscope }: ZodiacCardProps) {
   const { mode } = useMode();
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   
   // Card animation variants
@@ -49,7 +48,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
       }
     },
     hover: { 
-      y: -8, 
+      y: -5, 
       transition: { 
         type: 'spring', 
         stiffness: 400, 
@@ -85,7 +84,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <Card className="h-[400px] relative overflow-hidden backdrop-blur-md bg-black/30 border border-indigo-500/20">
+        <Card className="h-auto relative overflow-hidden backdrop-blur-md bg-black/30 border border-indigo-500/20">
           <motion.div 
             className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-600 to-indigo-600 blur-xl z-0"
             variants={glowVariants}
@@ -102,46 +101,44 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl">{symbol}</div>
           </div>
           
-          <CardHeader className="pt-4 pb-2">
-            <div className="flex items-center gap-2">
-              <div className="bg-purple-500/30 p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
-                <div className="text-xl">{symbol}</div>
-              </div>
+          <CardHeader className="pt-3 pb-1">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl text-indigo-200">{symbol}</div>
               <div>
-                <h2 className="text-xl font-bold text-white capitalize">{capitalize(sign)}</h2>
-                <p className="text-indigo-200 text-xs">{dateRange} • {element}</p>
+                <h2 className="text-xl font-light text-white capitalize tracking-wide">{capitalize(sign)}</h2>
+                <p className="text-indigo-200/70 text-xs font-light tracking-wider">{dateRange} • {element}</p>
               </div>
             </div>
           </CardHeader>
           
-          <CardContent>
-            <div className="flex flex-col space-y-2 animate-pulse">
-              <div className="bg-indigo-700/50 h-3 rounded w-full"></div>
-              <div className="bg-indigo-700/50 h-3 rounded w-full"></div>
-              <div className="bg-indigo-700/50 h-3 rounded w-3/4"></div>
+          <CardContent className="pb-0">
+            <div className="space-y-1.5 animate-pulse">
+              <div className="bg-indigo-700/30 h-3 rounded w-full"></div>
+              <div className="bg-indigo-700/30 h-3 rounded w-full"></div>
+              <div className="bg-indigo-700/30 h-3 rounded w-3/4"></div>
             </div>
           </CardContent>
           
-          <CardFooter className="pt-4 border-t border-indigo-700/30 flex flex-col space-y-4">
-            <div className="grid grid-cols-2 gap-4 w-full">
+          <CardFooter className="pt-3 border-t border-indigo-700/30 mt-3 flex-col items-stretch space-y-2">
+            <div className="grid grid-cols-2 gap-3 w-full">
               <div>
-                <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Number</h3>
                 <motion.p 
-                  className="font-medium text-white text-lg"
+                  className="font-light text-white text-lg"
                   animate={{ opacity: [0.4, 0.8, 0.4] }}
                   transition={{ repeat: Infinity, duration: 2 }}
                 >?</motion.p>
               </div>
               <div>
-                <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Color</h3>
                 <div className="flex items-center">
                   <motion.span 
-                    className="inline-block w-4 h-4 rounded-full mr-2 bg-indigo-700/50"
+                    className="inline-block w-4 h-4 rounded-full mr-2 bg-indigo-700/30"
                     animate={{ opacity: [0.4, 0.8, 0.4] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   ></motion.span>
                   <motion.p 
-                    className="font-medium text-white"
+                    className="font-light text-white"
                     animate={{ opacity: [0.4, 0.8, 0.4] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   >Loading...</motion.p>
@@ -168,7 +165,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Card className="h-[400px] relative overflow-hidden backdrop-blur-md bg-black/30 border border-indigo-500/20">
+      <Card className="h-auto pb-3 relative overflow-hidden backdrop-blur-md bg-black/30 border border-indigo-500/20">
         <motion.div 
           className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-600 to-indigo-600 blur-xl z-0"
           variants={glowVariants}
@@ -193,47 +190,36 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
         </div>
         
-        <CardHeader className="pt-4 pb-2">
-          <div className="flex items-center gap-2">
+        <CardHeader className="pt-3 pb-1">
+          <div className="flex items-center gap-3">
             <motion.div 
               whileHover={{ rotate: [0, -5, 5, -5, 0] }}
               transition={{ duration: 0.5 }}
-              className="bg-purple-500/30 p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20"
+              className="text-2xl text-indigo-200"
             >
-              <div className="text-xl">{symbol}</div>
+              {symbol}
             </motion.div>
             <div>
-              <h2 className="text-xl font-bold text-white capitalize">{capitalize(sign)}</h2>
-              <p className="text-indigo-200 text-xs">{dateRange} • {element}</p>
+              <h2 className="text-xl font-light text-white capitalize tracking-wide">{capitalize(sign)}</h2>
+              <p className="text-indigo-200/70 text-xs font-light tracking-wider">{dateRange} • {element}</p>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="h-[120px] overflow-y-auto pr-1 custom-scrollbar">
-          <div className={isExpanded ? '' : 'line-clamp-4'}>
-            <p className="text-white text-sm">{content}</p>
-          </div>
-          
-          {content && content.length > 120 && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-2 text-indigo-300 hover:text-indigo-100 px-2 py-1 h-auto text-xs"
-            >
-              {isExpanded ? 'Read less' : 'Read more'}
-            </Button>
-          )}
+        <CardContent className="pb-0">
+          <p className="text-white/90 text-sm font-light leading-relaxed tracking-wide">
+            {content}
+          </p>
         </CardContent>
         
-        <CardFooter className="pt-4 border-t border-indigo-700/30 mt-auto">
-          <div className="grid grid-cols-2 gap-4 w-full">
+        <CardFooter className="pt-3 border-t border-indigo-700/30 mt-3 flex-col items-stretch space-y-2">
+          <div className="grid grid-cols-2 gap-3 w-full">
             <div>
-              <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-              <p className="font-medium text-white text-lg">{String(horoscope.lucky_number)}</p>
+              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Number</h3>
+              <p className="font-light text-white text-lg">{String(horoscope.lucky_number)}</p>
             </div>
             <div>
-              <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Lucky Color</h3>
               <div className="flex items-center">
                 <motion.span 
                   whileHover={{ scale: 1.2 }}
@@ -244,14 +230,29 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       : getColorFromString(String(horoscope.lucky_color))
                   }}
                 ></motion.span>
-                <p className="font-medium text-white">{
-                  typeof horoscope.lucky_color === 'string' 
+                <p className="font-light text-white truncate">
+                  {typeof horoscope.lucky_color === 'string' 
                     ? horoscope.lucky_color 
                     : String(horoscope.lucky_color || 'Unknown')
-                }</p>
+                  }
+                </p>
               </div>
             </div>
           </div>
+
+          {horoscope.mood && (
+            <div className="border-t border-indigo-700/30 pt-2 mt-1 w-full">
+              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Mood</h3>
+              <p className="font-light text-white text-sm">{horoscope.mood}</p>
+            </div>
+          )}
+          
+          {horoscope.compatibility && (
+            <div className="w-full">
+              <h3 className="text-xs text-indigo-300/70 uppercase mb-1 font-light tracking-wider">Compatibility</h3>
+              <p className="font-light text-white text-sm">{horoscope.compatibility}</p>
+            </div>
+          )}
         </CardFooter>
       </Card>
     </motion.div>
