@@ -115,7 +115,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <Card className="h-auto relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
+        <Card className="h-[550px] relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
           <motion.div 
             className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
             variants={glowVariants}
@@ -201,7 +201,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <Card className="h-auto pb-4 relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
+            <Card className="h-[550px] relative flex flex-col overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5">
               <motion.div 
                 className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
                 variants={glowVariants}
@@ -209,8 +209,8 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 animate="animate"
               />
               
-              {/* Card video/image container */}
-              <div className="relative h-40 overflow-hidden rounded-t-xl">
+              {/* Card video/image container - fixed height */}
+              <div className="relative h-40 w-full overflow-hidden rounded-t-xl shrink-0">
                 <video 
                   className="w-full h-full object-cover brightness-110 contrast-125"
                   loop
@@ -226,7 +226,8 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-transparent to-transparent"></div>
               </div>
               
-              <CardHeader className="pt-4 pb-2 bg-transparent">
+              {/* Header - consistent padding */}
+              <CardHeader className="p-4 pb-2 bg-transparent shrink-0">
                 <div className="flex items-center gap-3">
                   <motion.div 
                     whileHover={{ rotate: [0, -5, 5, -5, 0] }}
@@ -242,23 +243,27 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 </div>
               </CardHeader>
               
-              <CardContent className="pb-0 bg-transparent px-6">
-                <p className="text-white/90 text-[15px] font-normal leading-relaxed tracking-normal text-left mx-auto max-w-md card-content font-satoshi">
-                  {firstSentence}
-                </p>
-                <div className="mt-4 flex justify-center">
-                  <Button 
-                    onClick={() => setIsExpanded(true)}
-                    variant="cosmic"
-                    size="sm"
-                    className="px-4 py-2 text-xs bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-full"
-                  >
-                    Read More <ArrowRightIcon className="ml-2 h-3 w-3" />
-                  </Button>
+              {/* Content - with fixed height for consistent card sizing */}
+              <CardContent className="p-4 pt-2 pb-0 bg-transparent flex-grow">
+                <div className="h-[160px] flex flex-col">
+                  <p className="text-white/90 text-[15px] font-normal leading-relaxed tracking-normal text-left mx-auto w-full card-content font-satoshi">
+                    {firstSentence}
+                  </p>
+                  <div className="mt-auto flex justify-center">
+                    <Button 
+                      onClick={() => setIsExpanded(true)}
+                      variant="cosmic"
+                      size="sm"
+                      className="px-4 py-2 text-xs bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-full"
+                    >
+                      Read More <ArrowRightIcon className="ml-2 h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
               
-              <CardFooter className="pt-4 border-t border-white/5 mt-4 flex-col items-stretch space-y-3 bg-transparent">
+              {/* Footer - consistent positioning */}
+              <CardFooter className="p-4 pt-4 border-t border-white/5 mt-auto flex-col items-stretch space-y-3 bg-transparent shrink-0">
                 <div className="grid grid-cols-2 gap-3 w-full">
                   <div>
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
@@ -290,6 +295,23 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       </p>
                     </div>
                   </div>
+                </div>
+                
+                {/* Additional metadata - conditionally rendered but with consistent spacing */}
+                <div className="space-y-3">
+                  {(horoscope.mood && typeof horoscope.mood === 'string') && (
+                    <div className="w-full">
+                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Mood</h3>
+                      <p className="font-light text-white text-sm truncate">{horoscope.mood}</p>
+                    </div>
+                  )}
+                  
+                  {(horoscope.compatibility && typeof horoscope.compatibility === 'string') && (
+                    <div className="w-full">
+                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Compatibility</h3>
+                      <p className="font-light text-white text-sm truncate">{horoscope.compatibility}</p>
+                    </div>
+                  )}
                 </div>
               </CardFooter>
             </Card>
