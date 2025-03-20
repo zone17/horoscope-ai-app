@@ -43,8 +43,8 @@ body {
   }
   
   .card-glassmorphic {
-    @apply bg-transparent backdrop-blur-md border-0 shadow-lg 
-           hover:bg-white/5 transition-all duration-300 rounded-xl;
+    @apply bg-transparent backdrop-blur-[10px] border-0 shadow-md
+           hover:bg-white/2 transition-all duration-300 rounded-xl;
   }
 }
 
@@ -62,8 +62,8 @@ body {
   }
   
   .backdrop-blur-md {
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
   .font-extralight {
