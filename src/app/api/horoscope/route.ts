@@ -42,26 +42,39 @@ async function generateHoroscope(sign: string, type: string) {
   console.log('Making OpenAI request with:', {
     sign,
     type,
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4o-mini-2024-07-18',
   });
 
   const timeframe = type === 'daily' ? 'today' : type;
   
-  // Prompt for the horoscope generation
-  const prompt = `Generate a ${timeframe} horoscope for ${sign}. The horoscope should be insightful, 
-  positive, and include guidance on love, career, and health. Format the response in JSON with the following fields:
-  - message: The main horoscope message
-  - lucky_number: A lucky number for the ${timeframe}
-  - lucky_color: A lucky color for the ${timeframe}
-  - mood: A word describing the overall mood
-  - compatibility: The most compatible sign for ${timeframe}`;
+  // Prompt for the horoscope generation - exact clone of cron job prompt
+  const prompt = `You are an insightful and spiritually reflective AI with all the historic knowledge of all of the best works of Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, Walter Russell providing a daily symbolic horoscope designed to nurture mindfulness, self-awareness, and personal growth for ${sign}. Your horoscope does not predict literal or material outcomes but offers thoughtful, symbolic guidance rooted in the principles of mindfulness, perspective, connection to nature, self-discovery, and emotional resilience.
 
-  // Generate the horoscope using OpenAI
+For today's horoscope, include the following elements:
+1. Insightful Daily Guidance:
+    * Offer symbolic advice encouraging the reader to stay mindfully present (hora), observe inwardly their thoughts and emotions (skopos), connect meaningfully with nature, or cultivate qualities such as patience, empathy, wisdom, and compassion.
+    * Suggest gently letting go of rigid expectations or material attachments, encouraging emotional resilience and inner peace.
+2. Lucky Color:
+    * Suggest a meaningful color for the day with a brief symbolic explanation emphasizing emotional or spiritual resonance.
+3. Lucky Number:
+    * Provide a number with symbolic significance, briefly explaining its reflective or spiritual symbolism for the day.
+4. Peaceful Nighttime Thought:
+    * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
+
+Your tone should remain nurturing, reflective, and empowering, guiding readers gently toward self-awareness, inner reflection, and a mindful, purposeful approach to daily life.
+
+Format the response in JSON with the following fields:
+- message: The main horoscope guidance message
+- lucky_number: A lucky number for today with its symbolic meaning
+- lucky_color: A lucky color for today with its symbolic meaning
+- peaceful_thought: A calming nighttime reflection`;
+
+  // Generate the horoscope using OpenAI - using same model as cron job
   const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4o-mini-2024-07-18',
     messages: [{ role: 'user', content: prompt }],
     response_format: { type: 'json_object' },
-    max_tokens: 500,
+    max_tokens: 800,
   });
 
   const content = response.choices[0].message.content;
