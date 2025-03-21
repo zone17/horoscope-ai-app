@@ -292,7 +292,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   <div className="mt-auto mb-0 flex justify-center">
                     <Button
                       onClick={() => setIsExpanded(true)}
-                      className="px-4 py-1.5 text-xs bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-full text-white/90 backdrop-blur-sm font-light sm:backdrop-blur-md"
+                      className="px-4 py-1.5 text-xs bg-indigo-500/40 hover:bg-indigo-500/60 transition-all duration-300 rounded-full text-white font-medium shadow-sm border border-indigo-400/30"
                       aria-label={`Read full horoscope for ${sign}`}
                     >
                       &lt;&gt; Read More &lt;&gt;
