@@ -235,39 +235,32 @@ async function pollForMissingHoroscopes(missingSigns: string[]): Promise<Record<
 // Function to fetch horoscopes for all zodiac signs
 export async function getHoroscopesForAllSigns(): Promise<Record<string, HoroscopeData | null>> {
   const horoscopes: Record<string, HoroscopeData | null> = {};
-  const missingSigns: string[] = [];
-  let generationTriggered = false;
   
-  // First, try to fetch horoscopes for all signs
+  console.log('Retrieving horoscopes from the database...');
+  
+  // Fetch horoscopes for all signs from the database only
   await Promise.all(
     VALID_SIGNS.map(async (sign) => {
-      const horoscope = await fetchHoroscope(sign);
-      horoscopes[sign] = horoscope;
-      
-      if (!horoscope) {
-        missingSigns.push(sign);
+      try {
+        const horoscope = await fetchHoroscope(sign);
+        horoscopes[sign] = horoscope;
+        
+        if (!horoscope) {
+          console.warn(`No horoscope data found for ${sign} in the database`);
+        }
+      } catch (error) {
+        console.error(`Error fetching horoscope for ${sign}:`, error);
+        horoscopes[sign] = null;
       }
     })
   );
   
-  // If any horoscopes are missing, trigger the generation job ONCE
-  if (missingSigns.length > 0 && !generationTriggered) {
-    console.log(`Missing horoscopes for: ${missingSigns.join(', ')}. Triggering generation job...`);
-    generationTriggered = true;
-    const success = await triggerHoroscopeGeneration();
-    
-    if (success) {
-      // Poll for the missing horoscopes
-      const polledHoroscopes = await pollForMissingHoroscopes(missingSigns);
-      
-      // Update the results with any successfully polled horoscopes
-      Object.entries(polledHoroscopes).forEach(([sign, data]) => {
-        if (data) {
-          horoscopes[sign] = data;
-        }
-      });
-    }
-  }
+  // Log a message indicating which signs have data
+  const availableSigns = Object.entries(horoscopes)
+    .filter(([_, data]) => data !== null)
+    .map(([sign, _]) => sign);
+  
+  console.log(`Successfully retrieved ${availableSigns.length} horoscopes: ${availableSigns.join(', ')}`);
   
   return horoscopes;
 } 
