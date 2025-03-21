@@ -16,7 +16,7 @@ interface HoroscopeData {
   date: string;
   message: string;
   best_match?: string;
-  inspirational_quote?: string; 
+  inspirational_quote?: string;
   quote_author?: string;
   peaceful_thought?: string;
   mood?: string;
@@ -120,22 +120,17 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   const processHoroscopeData = (data: HoroscopeData | null) => {
     if (!data) return null;
     
-    // Default to empty strings for optional fields
-    const bestMatch = data.best_match || '';
-    const inspirationalQuote = data.inspirational_quote || '';
-    const quoteAuthor = data.quote_author || '';
-    
     return {
       ...data,
-      best_match: bestMatch,
-      inspirational_quote: inspirationalQuote,
-      quote_author: quoteAuthor,
+      best_match: data.best_match || 'Coming soon',
+      inspirational_quote: data.inspirational_quote || 'Coming soon',
+      quote_author: data.quote_author || '',
       message: data.message,
     };
   };
   
   // Display loading state if horoscope data is not available or has missing required fields
-  if (!horoscope || !horoscope.message || horoscope.best_match === undefined || !horoscope.inspirational_quote) {
+  if (!horoscope || !horoscope.message) {
     return (
       <motion.div
         variants={cardVariants}
@@ -317,25 +312,24 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   <div>
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Best Match</h3>
                     <p className="font-light text-white text-lg leading-none capitalize">
-                      {processedHoroscope?.best_match || ''}
+                      {processedHoroscope?.best_match || 'Coming soon'}
                     </p>
                   </div>
                   <div>
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote</h3>
                     <div className="flex flex-col">
                       <p className="font-light text-white text-xs italic line-clamp-2">
-                        {processedHoroscope?.inspirational_quote ? `"${processedHoroscope.inspirational_quote}"` : ''}
+                        {processedHoroscope?.inspirational_quote ? 
+                         `"${processedHoroscope.inspirational_quote}"` : 
+                         'Coming soon'}
                       </p>
-                      <p className="font-light text-indigo-200 text-xs mt-0.5">
-                        {processedHoroscope?.quote_author ? `- ${processedHoroscope.quote_author}` : ''}
-                      </p>
+                      {processedHoroscope?.quote_author && (
+                        <p className="font-light text-indigo-200 text-xs mt-0.5">
+                          - {processedHoroscope.quote_author}
+                        </p>
+                      )}
                     </div>
                   </div>
-                </div>
-                
-                {/* Remove the mood and compatibility sections */}
-                <div className="space-y-3">
-                  {/* Mood and compatibility sections are removed */}
                 </div>
               </CardFooter>
             </Card>
@@ -443,18 +437,22 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       <div>
                         <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Best Match</h3>
                         <p className="font-light text-white text-lg leading-none capitalize">
-                          {processedHoroscope?.best_match || ''}
+                          {processedHoroscope?.best_match || 'Coming soon'}
                         </p>
                       </div>
                       <div>
                         <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
                         <div className="flex flex-col">
                           <p className="font-light text-white text-sm italic">
-                            {processedHoroscope?.inspirational_quote ? `"${processedHoroscope.inspirational_quote}"` : ''}
+                            {processedHoroscope?.inspirational_quote ? 
+                             `"${processedHoroscope.inspirational_quote}"` : 
+                             'Coming soon'}
                           </p>
-                          <p className="font-light text-indigo-200 text-xs mt-1">
-                            {processedHoroscope?.quote_author ? `- ${processedHoroscope.quote_author}` : ''}
-                          </p>
+                          {processedHoroscope?.quote_author && (
+                            <p className="font-light text-indigo-200 text-xs mt-1">
+                              - {processedHoroscope.quote_author}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

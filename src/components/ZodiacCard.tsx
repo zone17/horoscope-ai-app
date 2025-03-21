@@ -6,7 +6,7 @@ import { VideoBanner } from './VideoBanner';
 import { X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Define the horoscope data interface
+// Define the horoscope data interface - only new format
 interface HoroscopeData {
   sign: string;
   type: string;
@@ -49,7 +49,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   });
   
   // Display loading state if horoscope data is not available or has missing required fields
-  if (!horoscope || !horoscope.message || !horoscope.best_match || !horoscope.inspirational_quote || !horoscope.quote_author) {
+  if (!horoscope || !horoscope.message) {
     return (
       <div className="group transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
         <div className="relative rounded-xl overflow-hidden shadow-xl h-[370px] sm:h-[380px] md:h-[400px] backdrop-blur-md bg-indigo-950/30 border border-indigo-500/20">
@@ -161,25 +161,21 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
-                  <p className="font-medium text-white text-base sm:text-lg capitalize">{
-                    typeof horoscope.best_match === 'string' 
-                      ? horoscope.best_match 
-                      : ''
-                  }</p>
+                  <p className="font-medium text-white text-base sm:text-lg capitalize">
+                    {horoscope.best_match || 'Coming soon'}
+                  </p>
                 </div>
                 <div>
                   <h3 className="text-xs text-indigo-300 uppercase mb-1">Quote</h3>
                   <div className="flex flex-col">
-                    <p className="font-medium text-white text-xs italic line-clamp-2">{
-                      typeof horoscope.inspirational_quote === 'string' 
-                        ? `"${horoscope.inspirational_quote}"` 
-                        : ''
-                    }</p>
-                    <p className="text-indigo-200 text-xs mt-0.5">{
-                      typeof horoscope.quote_author === 'string' 
-                        ? `- ${horoscope.quote_author}` 
-                        : ''
-                    }</p>
+                    <p className="font-medium text-white text-xs italic line-clamp-2">
+                      {horoscope.inspirational_quote ? `"${horoscope.inspirational_quote}"` : 'Coming soon'}
+                    </p>
+                    {horoscope.quote_author && (
+                      <p className="text-indigo-200 text-xs mt-0.5">
+                        - {horoscope.quote_author}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -259,25 +255,21 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
-                      <p className="font-medium text-white text-lg capitalize">{
-                        typeof horoscope.best_match === 'string' 
-                          ? horoscope.best_match 
-                          : ''
-                      }</p>
+                      <p className="font-medium text-white text-lg capitalize">
+                        {horoscope.best_match || 'Coming soon'}
+                      </p>
                     </div>
                     <div>
                       <h3 className="text-xs text-indigo-300 uppercase mb-1">Inspirational Quote</h3>
                       <div className="flex flex-col">
-                        <p className="font-medium text-white text-sm italic">{
-                          typeof horoscope.inspirational_quote === 'string' 
-                            ? `"${horoscope.inspirational_quote}"` 
-                            : ''
-                        }</p>
-                        <p className="text-indigo-200 text-xs mt-1">{
-                          typeof horoscope.quote_author === 'string' 
-                            ? `- ${horoscope.quote_author}` 
-                            : ''
-                        }</p>
+                        <p className="font-medium text-white text-sm italic">
+                          {horoscope.inspirational_quote ? `"${horoscope.inspirational_quote}"` : 'Coming soon'}
+                        </p>
+                        {horoscope.quote_author && (
+                          <p className="text-indigo-200 text-xs mt-1">
+                            - {horoscope.quote_author}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
