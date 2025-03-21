@@ -23,6 +23,42 @@ interface RedisRetrieveOptions {
 }
 
 /**
+ * Normalizes horoscope data by handling complex object structures from OpenAI
+ * This ensures consistent data display while preserving rich semantic information
+ * 
+ * @param data - Horoscope data object from OpenAI
+ * @returns Normalized data with simple string/number values
+ */
+export function normalizeHoroscopeData<T extends Record<string, any>>(data: T): T {
+  // Create a copy of the data to avoid mutating the original
+  const normalizedData = { ...data };
+  
+  // Extract simple values from complex objects for lucky number
+  if (typeof normalizedData.lucky_number === 'object' && normalizedData.lucky_number !== null) {
+    // Store the full object as _full for future expansion
+    normalizedData.lucky_number_full = normalizedData.lucky_number;
+    // Extract simple value from complex object
+    normalizedData.lucky_number = 
+      normalizedData.lucky_number.number || 
+      normalizedData.lucky_number.value || 
+      '7';
+  }
+  
+  // Extract simple values from complex objects for lucky color
+  if (typeof normalizedData.lucky_color === 'object' && normalizedData.lucky_color !== null) {
+    // Store the full object as _full for future expansion
+    normalizedData.lucky_color_full = normalizedData.lucky_color;
+    // Extract simple value from complex object
+    normalizedData.lucky_color = 
+      normalizedData.lucky_color.color || 
+      normalizedData.lucky_color.value || 
+      'Indigo';
+  }
+  
+  return normalizedData;
+}
+
+/**
  * Safely stores any data in Redis with proper JSON serialization
  * 
  * @param key - The cache key
@@ -51,6 +87,15 @@ export async function safelyStoreInRedis<T>(
     if (data === null || data === undefined) {
       console.warn(`Attempted to store null/undefined for key: ${namespacedKey}`);
       return false;
+    }
+    
+    // If this looks like horoscope data, normalize it before storing
+    if (typeof data === 'object' && 
+        data !== null && 
+        'sign' in data && 
+        ('lucky_number' in data || 'lucky_color' in data)) {
+      data = normalizeHoroscopeData(data as any) as unknown as T;
+      console.log('Normalized horoscope data before storing');
     }
     
     // Safely stringify data with error handling for circular references

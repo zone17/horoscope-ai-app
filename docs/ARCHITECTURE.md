@@ -59,6 +59,38 @@ The application is divided into two main deployments:
 4. Frontend displays the horoscope data to the user
 5. Smart polling mechanism checks for and retrieves missing horoscopes
 
+## Data Normalization
+
+The application employs a data normalization strategy to handle complex object structures from OpenAI responses:
+
+1. **OpenAI Response Structure**: The AI may return complex objects for fields like `lucky_number` and `lucky_color` that include both values and symbolic meanings
+2. **Backend Normalization**: Before storing in Redis, complex objects are normalized to extract simple values while preserving meaning
+3. **Frontend Fallback**: The frontend components have fallback logic to handle unexpected data structures
+
+```typescript
+// Example data normalization in Redis storage logic
+function normalizeHoroscopeData(data) {
+  // Extract simple values from complex objects
+  if (typeof data.lucky_number === 'object' && data.lucky_number !== null) {
+    // Store the full object as _full for future expansion
+    data.lucky_number_full = data.lucky_number;
+    // Extract simple value from complex object
+    data.lucky_number = data.lucky_number.number || data.lucky_number.value || '7';
+  }
+  
+  if (typeof data.lucky_color === 'object' && data.lucky_color !== null) {
+    // Store the full object as _full for future expansion
+    data.lucky_color_full = data.lucky_color;
+    // Extract simple value from complex object
+    data.lucky_color = data.lucky_color.color || data.lucky_color.value || 'Indigo';
+  }
+  
+  return data;
+}
+```
+
+This approach ensures consistent data display while preserving rich semantic information from the AI for potential future use.
+
 ## Smart Polling Logic
 
 The frontend implements a sophisticated polling mechanism to handle potential delays in horoscope generation:
