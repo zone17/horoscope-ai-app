@@ -11,8 +11,9 @@ interface HoroscopeData {
   type: string;
   date: string;
   message: string;
-  lucky_number: string | number; // Accept both string and number types
-  lucky_color: string;
+  best_match: string;
+  inspirational_quote: string;
+  quote_author: string;
   peaceful_thought?: string;
   mood?: string;
   compatibility?: string;
@@ -128,11 +129,11 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
     console.log(`Returning horoscope data for ${sign}:`, {
       type: typeof horoscopeData,
       keys: Object.keys(horoscopeData),
-      hasRequiredFields: horoscopeData.message && horoscopeData.lucky_number && horoscopeData.lucky_color
+      hasRequiredFields: horoscopeData.message && horoscopeData.best_match && horoscopeData.inspirational_quote && horoscopeData.quote_author
     });
     
     // Ensure all required fields are present and of the right type
-    if (!horoscopeData.message || horoscopeData.lucky_number === undefined || !horoscopeData.lucky_color) {
+    if (!horoscopeData.message || horoscopeData.best_match === undefined || !horoscopeData.inspirational_quote || !horoscopeData.quote_author) {
       console.error(`Missing required fields in horoscope data for ${sign}`, horoscopeData);
       return null;
     }
@@ -141,7 +142,9 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
     return {
       ...horoscopeData,
       message: String(horoscopeData.message),
-      lucky_color: String(horoscopeData.lucky_color),
+      best_match: String(horoscopeData.best_match),
+      inspirational_quote: String(horoscopeData.inspirational_quote),
+      quote_author: String(horoscopeData.quote_author),
       peaceful_thought: horoscopeData.peaceful_thought ? String(horoscopeData.peaceful_thought) : undefined,
       mood: horoscopeData.mood ? String(horoscopeData.mood) : undefined,
       compatibility: horoscopeData.compatibility ? String(horoscopeData.compatibility) : undefined,

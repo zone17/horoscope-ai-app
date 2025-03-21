@@ -12,8 +12,9 @@ interface HoroscopeData {
   type: string;
   date: string;
   message: string;
-  lucky_number: string | number;
-  lucky_color: string;
+  best_match?: string;
+  inspirational_quote?: string;
+  quote_author?: string;
   peaceful_thought?: string;
   mood?: string;
   compatibility?: string;
@@ -42,13 +43,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
     isObject: horoscope ? typeof horoscope === 'object' : false,
     keys: horoscope ? Object.keys(horoscope) : [],
     messageField: horoscope?.message ? typeof horoscope.message : 'missing',
-    luckyNumberField: horoscope?.lucky_number !== undefined ? typeof horoscope.lucky_number : 'missing',
-    luckyColorField: horoscope?.lucky_color ? typeof horoscope.lucky_color : 'missing',
+    bestMatchField: horoscope?.best_match ? typeof horoscope.best_match : 'missing',
+    inspirationalQuoteField: horoscope?.inspirational_quote ? typeof horoscope.inspirational_quote : 'missing',
+    quoteAuthorField: horoscope?.quote_author ? typeof horoscope.quote_author : 'missing',
     fullData: horoscope ? JSON.stringify(horoscope).substring(0, 100) + '...' : 'null'
   });
   
   // Display loading state if horoscope data is not available or has missing required fields
-  if (!horoscope || !horoscope.message || horoscope.lucky_number === undefined || !horoscope.lucky_color) {
+  if (!horoscope || !horoscope.message || !horoscope.best_match || !horoscope.inspirational_quote || !horoscope.quote_author) {
     return (
       <div className="group transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
         <div className="relative rounded-xl overflow-hidden shadow-xl h-[370px] sm:h-[380px] md:h-[400px] backdrop-blur-md bg-indigo-950/30 border border-indigo-500/20">
@@ -79,11 +81,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
                   <div className="h-5 bg-indigo-700/50 animate-pulse rounded"></div>
                 </div>
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Quote</h3>
                   <div className="flex items-center">
                     <div className="h-3 w-3 rounded-full mr-2 bg-indigo-700/50 animate-pulse"></div>
                     <div className="h-4 w-16 bg-indigo-700/50 animate-pulse rounded"></div>
@@ -152,28 +154,31 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   setIsExpanded(true);
                 }}
               >
-                Read More
+                &lt;&gt; Read More &lt;&gt;
               </button>
             </div>
             
             <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                  <p className="font-medium text-white text-base sm:text-lg">{String(horoscope.lucky_number)}</p>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
+                  <p className="font-medium text-white text-base sm:text-lg capitalize">{
+                    typeof horoscope.best_match === 'string' 
+                      ? horoscope.best_match 
+                      : ''
+                  }</p>
                 </div>
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
-                  <div className="flex items-center">
-                    <span 
-                      className="inline-block w-3 h-3 rounded-full mr-2"
-                      style={{ backgroundColor: typeof horoscope.lucky_color === 'string' 
-                        ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
-                        : '' }}
-                    ></span>
-                    <p className="font-medium text-white">{
-                      typeof horoscope.lucky_color === 'string' 
-                        ? horoscope.lucky_color 
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Quote</h3>
+                  <div className="flex flex-col">
+                    <p className="font-medium text-white text-xs italic line-clamp-2">{
+                      typeof horoscope.inspirational_quote === 'string' 
+                        ? `"${horoscope.inspirational_quote}"` 
+                        : ''
+                    }</p>
+                    <p className="text-indigo-200 text-xs mt-0.5">{
+                      typeof horoscope.quote_author === 'string' 
+                        ? `- ${horoscope.quote_author}` 
                         : ''
                     }</p>
                   </div>
@@ -232,21 +237,24 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 <div className="border-t border-indigo-700/30 pt-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                      <p className="font-medium text-white text-lg">{String(horoscope.lucky_number)}</p>
+                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
+                      <p className="font-medium text-white text-lg capitalize">{
+                        typeof horoscope.best_match === 'string' 
+                          ? horoscope.best_match 
+                          : ''
+                      }</p>
                     </div>
                     <div>
-                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
-                      <div className="flex items-center">
-                        <span 
-                          className="inline-block w-4 h-4 rounded-full mr-2"
-                          style={{ backgroundColor: typeof horoscope.lucky_color === 'string' 
-                            ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
-                            : '' }}
-                        ></span>
-                        <p className="font-medium text-white">{
-                          typeof horoscope.lucky_color === 'string' 
-                            ? horoscope.lucky_color 
+                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Inspirational Quote</h3>
+                      <div className="flex flex-col">
+                        <p className="font-medium text-white text-sm italic">{
+                          typeof horoscope.inspirational_quote === 'string' 
+                            ? `"${horoscope.inspirational_quote}"` 
+                            : ''
+                        }</p>
+                        <p className="text-indigo-200 text-xs mt-1">{
+                          typeof horoscope.quote_author === 'string' 
+                            ? `- ${horoscope.quote_author}` 
                             : ''
                         }</p>
                       </div>

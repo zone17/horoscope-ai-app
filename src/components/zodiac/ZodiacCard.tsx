@@ -15,8 +15,9 @@ interface HoroscopeData {
   type: string;
   date: string;
   message: string;
-  lucky_number: string | number;
-  lucky_color: string;
+  best_match?: string;
+  inspirational_quote?: string; 
+  quote_author?: string;
   peaceful_thought?: string;
   mood?: string;
   compatibility?: string;
@@ -119,39 +120,22 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   const processHoroscopeData = (data: HoroscopeData | null) => {
     if (!data) return null;
     
-    // Extract lucky number, handling both string and object formats
-    let luckyNumber = '';
-    if (typeof data.lucky_number === 'object' && data.lucky_number !== null) {
-      // Extract just the number from complex object
-      const numObj = data.lucky_number as Record<string, any>;
-      luckyNumber = String(numObj.number || numObj.value || '');
-    } else if (data.lucky_number !== undefined) {
-      luckyNumber = String(data.lucky_number);
-    }
-    
-    // Extract lucky color, handling both string and object formats
-    let luckyColor = '';
-    if (typeof data.lucky_color === 'object' && data.lucky_color !== null) {
-      // Extract just the color name from complex object
-      const colorObj = data.lucky_color as Record<string, any>;
-      luckyColor = String(colorObj.color || colorObj.value || '');
-    } else if (typeof data.lucky_color === 'string') {
-      luckyColor = data.lucky_color;
-    }
+    // Default to empty strings for optional fields
+    const bestMatch = data.best_match || '';
+    const inspirationalQuote = data.inspirational_quote || '';
+    const quoteAuthor = data.quote_author || '';
     
     return {
       ...data,
-      lucky_number: luckyNumber,
-      lucky_color: luckyColor,
-      // Store original values with meanings for potential future use
-      lucky_number_full: data.lucky_number,
-      lucky_color_full: data.lucky_color,
+      best_match: bestMatch,
+      inspirational_quote: inspirationalQuote,
+      quote_author: quoteAuthor,
       message: data.message,
     };
   };
   
   // Display loading state if horoscope data is not available or has missing required fields
-  if (!horoscope || !horoscope.message || horoscope.lucky_number === undefined || !horoscope.lucky_color) {
+  if (!horoscope || !horoscope.message || horoscope.best_match === undefined || !horoscope.inspirational_quote) {
     return (
       <motion.div
         variants={cardVariants}
@@ -196,26 +180,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           <CardFooter className="pt-3 border-t border-white/5 mt-3 flex-col items-stretch space-y-2 bg-transparent">
             <div className="grid grid-cols-2 gap-3 w-full">
               <div>
-                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-300/70">Lucky Number</h3>
-                <motion.p 
-                  className="font-light text-white text-lg"
-                  animate={{ opacity: [0.4, 0.8, 0.4] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                >?</motion.p>
+                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Best Match</h3>
+                <div className="h-5 w-20 animate-pulse bg-indigo-800/30 rounded"></div>
               </div>
               <div>
-                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-300/70">Lucky Color</h3>
-                <div className="flex items-center">
-                  <motion.span 
-                    className="inline-block w-4 h-4 rounded-full mr-2 bg-indigo-700/10"
-                    animate={{ opacity: [0.4, 0.8, 0.4] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  ></motion.span>
-                  <motion.p 
-                    className="font-light text-white"
-                    animate={{ opacity: [0.4, 0.8, 0.4] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  >Loading...</motion.p>
+                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote</h3>
+                <div className="flex flex-col">
+                  <div className="h-3 w-full animate-pulse bg-indigo-800/30 rounded mb-1"></div>
+                  <div className="h-2 w-16 animate-pulse bg-indigo-800/30 rounded"></div>
                 </div>
               </div>
             </div>
@@ -333,7 +305,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       className="px-4 py-1.5 text-xs bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-full"
                       aria-label={`Read full horoscope for ${sign}`}
                     >
-                      Read More <ArrowRightIcon className="ml-2 h-3 w-3" />
+                      &lt;&gt; Read More &lt;&gt;
                     </Button>
                   </div>
                 </div>
@@ -343,25 +315,19 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               <CardFooter className="p-4 pt-2 border-t border-white/5 mt-auto flex-col items-stretch space-y-3 bg-transparent shrink-0">
                 <div className="grid grid-cols-2 gap-3 w-full">
                   <div>
-                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
-                    <p className="font-light text-white text-lg leading-none">
-                      {typeof processedHoroscope?.lucky_number === 'object' 
-                        ? processedHoroscope.lucky_number 
-                        : String(processedHoroscope?.lucky_number || '')}
+                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Best Match</h3>
+                    <p className="font-light text-white text-lg leading-none capitalize">
+                      {processedHoroscope?.best_match || ''}
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Color</h3>
-                    <div className="flex items-center">
-                      <motion.span 
-                        whileHover={{ scale: 1.2 }}
-                        className="inline-block w-4 h-4 rounded-full mr-2"
-                        style={{ 
-                          backgroundColor: getColorForDisplay(processedHoroscope?.lucky_color || '')
-                        }}
-                      ></motion.span>
-                      <p className="font-light text-white truncate">
-                        {processedHoroscope?.lucky_color}
+                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote</h3>
+                    <div className="flex flex-col">
+                      <p className="font-light text-white text-xs italic line-clamp-2">
+                        {processedHoroscope?.inspirational_quote ? `"${processedHoroscope.inspirational_quote}"` : ''}
+                      </p>
+                      <p className="font-light text-indigo-200 text-xs mt-0.5">
+                        {processedHoroscope?.quote_author ? `- ${processedHoroscope.quote_author}` : ''}
                       </p>
                     </div>
                   </div>
@@ -447,35 +413,27 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 </CardContent>
                 
                 <CardFooter className="pt-4 border-t border-white/10 flex-col items-stretch space-y-4 bg-transparent px-6 sm:px-8 pb-6">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 w-full">
-                    <div>
-                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
-                      <p className="font-light text-white text-lg leading-none">
-                        {typeof processedHoroscope?.lucky_number === 'object' 
-                          ? processedHoroscope.lucky_number 
-                          : String(processedHoroscope?.lucky_number || '')}
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Color</h3>
-                      <div className="flex items-center">
-                        <motion.span 
-                          whileHover={{ scale: 1.2 }}
-                          className="inline-block w-4 h-4 rounded-full mr-2"
-                          style={{ 
-                            backgroundColor: getColorForDisplay(processedHoroscope?.lucky_color || '')
-                          }}
-                        ></motion.span>
-                        <p className="font-light text-white truncate">
-                          {processedHoroscope?.lucky_color}
+                  <div className="border-t border-indigo-700/30 pt-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Best Match</h3>
+                        <p className="font-light text-white text-lg leading-none capitalize">
+                          {processedHoroscope?.best_match || ''}
                         </p>
                       </div>
+                      <div>
+                        <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
+                        <div className="flex flex-col">
+                          <p className="font-light text-white text-sm italic">
+                            {processedHoroscope?.inspirational_quote ? `"${processedHoroscope.inspirational_quote}"` : ''}
+                          </p>
+                          <p className="font-light text-indigo-200 text-xs mt-1">
+                            {processedHoroscope?.quote_author ? `- ${processedHoroscope.quote_author}` : ''}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    
-                    {/* Remove the mood section in expanded view */}
                   </div>
-                  
-                  {/* Remove the compatibility section in expanded view */}
                 </CardFooter>
               </Card>
             </motion.div>

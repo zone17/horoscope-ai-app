@@ -36,10 +36,12 @@ For today's horoscope, you MUST include ALL of the following elements:
 1. Insightful Daily Guidance:
     * Offer symbolic advice encouraging the reader to stay mindfully present (hora), observe inwardly their thoughts and emotions (skopos), connect meaningfully with nature, or cultivate qualities such as patience, empathy, wisdom, and compassion.
     * Suggest gently letting go of rigid expectations or material attachments, encouraging emotional resilience and inner peace.
-2. Lucky Color:
-    * You MUST provide a specific, simple color name (like "Blue", "Indigo", "Azure") - do not use complex descriptions, objects, or metaphors.
-3. Lucky Number:
-    * You MUST provide a simple numeric value between 1 and 100 - no complex expressions or equations.
+2. Best Match:
+    * Provide ONE zodiac sign that harmonizes well with this sign today (choose from: aries, taurus, gemini, cancer, leo, virgo, libra, scorpio, sagittarius, capricorn, aquarius, pisces).
+3. Inspirational Quote:
+    * Include a short, powerful quote from EXACTLY ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
+    * Attribute the quote to the correct person.
+    * Keep the quote concise (under 150 characters).
 4. Peaceful Nighttime Thought:
     * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
 
@@ -47,11 +49,12 @@ Your tone should remain nurturing, reflective, and empowering, guiding readers g
 
 Format the response in JSON with the following fields:
 - message: The main horoscope guidance message
-- lucky_number: A numeric value for today (just the number, not an explanation)
-- lucky_color: A simple color name for today (just the color name, not an explanation)
+- best_match: A single zodiac sign name (lowercase, e.g., "cancer")
+- inspirational_quote: The quote text
+- quote_author: The name of the quote's author (e.g., "Marcus Aurelius")
 - peaceful_thought: A calming nighttime reflection
 
-IMPORTANT: Your response MUST include all fields and they must be formatted exactly as specified. The lucky_number must be a simple numeric value and lucky_color must be a simple color name.`;
+IMPORTANT: Your response MUST include all fields and they must be formatted exactly as specified. Make sure each zodiac sign gets a different quote author - do not repeat the same thinker across different signs.`;
 
   // Generate the horoscope using OpenAI
   const response = await openai.chat.completions.create({
@@ -68,7 +71,7 @@ IMPORTANT: Your response MUST include all fields and they must be formatted exac
     const horoscopeData = JSON.parse(content || '{}');
     
     // Validate the required fields exist
-    if (!horoscopeData.message || horoscopeData.lucky_number === undefined || !horoscopeData.lucky_color) {
+    if (!horoscopeData.message || horoscopeData.best_match === undefined || !horoscopeData.inspirational_quote || !horoscopeData.quote_author) {
       throw new Error('Missing required horoscope fields');
     }
     
