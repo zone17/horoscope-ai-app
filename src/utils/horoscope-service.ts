@@ -17,6 +17,8 @@ interface HoroscopeData {
   peaceful_thought?: string;
   mood?: string;
   compatibility?: string;
+  lucky_number?: number;
+  lucky_color?: string;
 }
 
 interface HoroscopeResponse {
@@ -133,18 +135,20 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
     });
     
     // Ensure all required fields are present and of the right type
-    if (!horoscopeData.message || horoscopeData.best_match === undefined || !horoscopeData.inspirational_quote || !horoscopeData.quote_author) {
-      console.error(`Missing required fields in horoscope data for ${sign}`, horoscopeData);
+    if (!horoscopeData.message) {
+      console.error(`Missing required message field in horoscope data for ${sign}`, horoscopeData);
       return null;
     }
     
-    // Normalize data types to ensure consistency
+    // Normalize data types to ensure consistency and map API fields to expected frontend fields
     return {
       ...horoscopeData,
       message: String(horoscopeData.message),
-      best_match: String(horoscopeData.best_match),
-      inspirational_quote: String(horoscopeData.inspirational_quote),
-      quote_author: String(horoscopeData.quote_author),
+      best_match: horoscopeData.compatibility || "None specified",
+      inspirational_quote: horoscopeData.peaceful_thought || "",
+      quote_author: "Daily Wisdom",
+      lucky_number: horoscopeData.lucky_number,
+      lucky_color: horoscopeData.lucky_color,
       peaceful_thought: horoscopeData.peaceful_thought ? String(horoscopeData.peaceful_thought) : undefined,
       mood: horoscopeData.mood ? String(horoscopeData.mood) : undefined,
       compatibility: horoscopeData.compatibility ? String(horoscopeData.compatibility) : undefined,
@@ -266,4 +270,36 @@ export async function getHoroscopesForAllSigns(): Promise<Record<string, Horosco
   console.log(`Successfully retrieved ${availableSigns.length} horoscopes: ${availableSigns.join(', ')}`);
   
   return horoscopes;
+}
+
+// Debug function to test direct API access
+export async function testDirectApiAccess(sign: string = 'aries'): Promise<any> {
+  try {
+    const baseUrl = getBaseUrl();
+    const url = `${baseUrl}/api/horoscope?sign=${sign}`;
+    console.log(`Testing direct API access at: ${url}`);
+    
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    console.log(`Direct API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API error (${response.status}): ${errorText}`);
+      return { error: errorText, status: response.status };
+    }
+    
+    const data = await response.json();
+    console.log('Direct API response:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in direct API test:', error);
+    return { error: String(error) };
+  }
 } 

@@ -18,6 +18,8 @@ interface HoroscopeData {
   peaceful_thought?: string;
   mood?: string;
   compatibility?: string;
+  lucky_number?: number;
+  lucky_color?: string;
 }
 
 interface ZodiacCardProps {
@@ -80,13 +82,16 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
-                  <div className="h-5 bg-indigo-700/50 animate-pulse rounded"></div>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full mr-2 bg-purple-500"></div>
+                    <div className="h-4 w-8 bg-indigo-700/50 animate-pulse rounded"></div>
+                  </div>
                 </div>
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Quote</h3>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
                   <div className="flex items-center">
-                    <div className="h-3 w-3 rounded-full mr-2 bg-indigo-700/50 animate-pulse"></div>
+                    <div className="h-2 w-2 rounded-full mr-2 bg-indigo-500"></div>
                     <div className="h-4 w-16 bg-indigo-700/50 animate-pulse rounded"></div>
                   </div>
                 </div>
@@ -160,22 +165,17 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
-                  <p className="font-medium text-white text-base sm:text-lg capitalize">
-                    {horoscope.best_match || 'Coming soon'}
-                  </p>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full mr-2 bg-purple-500"></div>
+                    <div className="h-4 w-8 bg-indigo-700/50 animate-pulse rounded"></div>
+                  </div>
                 </div>
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Quote</h3>
-                  <div className="flex flex-col">
-                    <p className="font-medium text-white text-xs italic line-clamp-2">
-                      {horoscope.inspirational_quote ? `"${horoscope.inspirational_quote}"` : 'Coming soon'}
-                    </p>
-                    {horoscope.quote_author && (
-                      <p className="text-indigo-200 text-xs mt-0.5">
-                        - {horoscope.quote_author}
-                      </p>
-                    )}
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full mr-2 bg-indigo-500"></div>
+                    <div className="h-4 w-16 bg-indigo-700/50 animate-pulse rounded"></div>
                   </div>
                 </div>
               </div>
@@ -254,22 +254,17 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 <div className="border-t border-indigo-700/30 pt-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
+                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
                       <p className="font-medium text-white text-lg capitalize">
-                        {horoscope.best_match || 'Coming soon'}
+                        {horoscope.lucky_number || '7'}
                       </p>
                     </div>
                     <div>
-                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Inspirational Quote</h3>
+                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
                       <div className="flex flex-col">
-                        <p className="font-medium text-white text-sm italic">
-                          {horoscope.inspirational_quote ? `"${horoscope.inspirational_quote}"` : 'Coming soon'}
+                        <p className="font-medium text-white text-sm">
+                          {horoscope.lucky_color || 'Blue'}
                         </p>
-                        {horoscope.quote_author && (
-                          <p className="text-indigo-200 text-xs mt-1">
-                            - {horoscope.quote_author}
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
