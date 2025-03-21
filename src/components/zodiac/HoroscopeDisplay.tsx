@@ -176,14 +176,14 @@ export default function HoroscopeDisplay() {
       {/* Zodiac cards grid */}
       {!isLoading && !isError && Object.keys(horoscopes).length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Object.entries(horoscopes).map(([sign, horoscope]) => (
+          {ZODIAC_SIGNS.map(({ sign, symbol, dateRange, element }) => (
             <ZodiacCard 
               key={sign}
               sign={sign}
-              symbol={getZodiacSymbol(sign)}
-              dateRange={getZodiacDateRange(sign)}
-              element={getZodiacElement(sign)}
-              horoscope={horoscope}
+              symbol={symbol}
+              dateRange={dateRange}
+              element={element}
+              horoscope={horoscopes[sign] || null}
               isLoading={isLoading}
             />
           ))}
