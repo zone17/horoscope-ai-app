@@ -173,7 +173,6 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           <div className="relative h-40 overflow-hidden rounded-t-xl">
             <VideoBanner sign={sign} />
             <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-transparent to-transparent"></div>
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl">{symbol}</div>
           </div>
           
           <CardHeader className="pt-3 pb-1 bg-transparent">
@@ -283,8 +282,10 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <Card className="h-[480px] relative flex flex-col overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5 cursor-pointer transition-all hover:border-white/20 hover:shadow-lg"
-                 onClick={() => setIsExpanded(true)}>
+            <Card 
+              className="h-[480px] relative flex flex-col overflow-hidden border border-white/10 rounded-xl backdrop-blur-md bg-white/5 cursor-pointer transition-all hover:border-white/20 hover:shadow-lg"
+              onClick={() => setIsExpanded(true)}
+            >
               <motion.div 
                 className="absolute -inset-1 rounded-xl opacity-0 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 blur-xl"
                 variants={glowVariants}

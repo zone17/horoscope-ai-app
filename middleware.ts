@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAllowedOrigin } from './src/utils/cors-service';
 
 /**
  * Middleware to handle API requests and CORS
@@ -13,16 +12,17 @@ export async function middleware(request: NextRequest) {
   const origin = request.headers.get('origin') || '';
   console.log(`Request origin: ${origin}`);
   
-  // Define allowed origins
-  const allowedOrigins = [
-    'https://www.gettodayshoroscope.com',
-    'https://gettodayshoroscope.com',
+  // Define allowed origins with broader matching
+  const allowedOriginsPatterns = [
+    'gettodayshoroscope.com',  // Matches both www and api subdomains
+    'vercel.app',              // Matches preview deployments
+    'localhost'                // Matches local development
   ];
   
-  // Add localhost for development
-  if (process.env.NODE_ENV === 'development') {
-    allowedOrigins.push('http://localhost:3000');
-  }
+  // Check if the origin matches any of our allowed patterns
+  const isAllowedOrigin = origin && allowedOriginsPatterns.some(pattern => 
+    origin.includes(pattern)
+  );
   
   // Only apply CORS handling to API routes
   if (url.includes('/api/')) {
@@ -30,33 +30,35 @@ export async function middleware(request: NextRequest) {
     
     // Handle preflight OPTIONS requests
     if (request.method === 'OPTIONS') {
-      console.log('Middleware: Handling OPTIONS preflight request');
+      console.log(`Middleware: Handling OPTIONS preflight request from ${origin}`);
       
-      // Use the specific origin instead of wildcard for credentials support
-      const responseOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-      
+      // For preflight, always return the actual origin if it's allowed
       return new NextResponse(null, {
         status: 204,
         headers: {
-          'Access-Control-Allow-Origin': responseOrigin,
+          'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Accept, X-Requested-With',
           'Access-Control-Max-Age': '86400',
-          'Access-Control-Allow-Credentials': 'true'
+          'Access-Control-Allow-Credentials': isAllowedOrigin ? 'true' : 'false'
         }
       });
     }
     
     // Handle regular API requests
-    console.log('Middleware: Applying CORS headers to regular request');
+    console.log(`Middleware: Applying CORS headers to regular request from ${origin}`);
     const response = NextResponse.next();
     
-    // Add CORS headers to all API responses - using specific origin for credentials support
-    const responseOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-    response.headers.set('Access-Control-Allow-Origin', responseOrigin);
+    // Add CORS headers to all API responses
+    // Always return the actual origin if it's allowed
+    response.headers.set('Access-Control-Allow-Origin', isAllowedOrigin ? origin : '*');
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control');
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    
+    // Only set Allow-Credentials: true for allowed origins
+    if (isAllowedOrigin) {
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+    }
     
     return response;
   }

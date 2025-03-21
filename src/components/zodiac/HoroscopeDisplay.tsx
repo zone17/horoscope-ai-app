@@ -131,7 +131,7 @@ export default function HoroscopeDisplay() {
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"></div>
         
         <h1 className="text-4xl md:text-5xl font-normal text-center bg-clip-text text-transparent bg-gradient-to-b from-purple-200 to-indigo-200 mb-4 relative z-30">
-          Get Today's Horoscope
+          Today's Horoscope
         </h1>
         
         <p className="text-center text-white/80 max-w-2xl font-light text-lg mb-8 relative z-30">

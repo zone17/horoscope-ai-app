@@ -26,27 +26,17 @@ interface HoroscopeResponse {
 
 // Helper function to get base URL for API calls
 function getBaseUrl(): string {
-  // For production, use the API subdomain
+  // For production, use the API subdomain explicitly
   if (process.env.NODE_ENV === 'production') {
     return 'https://api.gettodayshoroscope.com';
   }
   
-  // Use explicit API URL if configured
+  // Use explicit API URL if configured - highest priority
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
-  // For Vercel preview deployments
-  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
-  }
-  
-  // If running in browser, use window.location.origin for development
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  
-  // Fallback for server-side rendering in development
+  // For local development, use localhost without port conflicts
   return 'http://localhost:3000';
 }
 
@@ -57,31 +47,49 @@ function getBaseUrl(): string {
  * @returns Promise resolving to the fetch Response
  */
 async function corsAwareFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  // Ensure credentials are included for CORS requests
+  console.log(`Making corsAwareFetch request to: ${url}`);
+  
+  // Ensure URL is correctly formatted
+  const normalizedUrl = url.replace(/\/+$/, '');
+  
+  // For cross-domain requests, we need specific CORS settings
   const corsOptions: RequestInit = {
     ...options,
-    credentials: 'include',
+    // Use 'cors' mode for same-origin or properly configured CORS
+    // when dealing with a remote API endpoint
+    mode: 'cors',
+    // Don't send credentials by default for cross-origin
+    credentials: 'same-origin',
     headers: {
       ...options.headers,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     }
   };
   
   // Make the fetch call with appropriate error handling
   try {
-    const response = await fetch(url, corsOptions);
+    console.log(`Fetch request options:`, {
+      url: normalizedUrl,
+      method: corsOptions.method || 'GET'
+    });
     
-    // Log for debugging
-    console.log(`Fetch response for ${url}:`, {
+    const response = await fetch(normalizedUrl, corsOptions);
+    
+    // Log detailed response info for debugging
+    console.log(`Fetch response for ${normalizedUrl}:`, {
       status: response.status,
       ok: response.ok,
-      statusText: response.statusText,
-      cors: response.headers.get('access-control-allow-origin')
+      statusText: response.statusText
     });
+    
+    if (!response.ok) {
+      console.error(`Response not OK (${response.status}): ${response.statusText}`);
+    }
     
     return response;
   } catch (error) {
-    console.error(`Network error for ${url}:`, error);
+    console.error(`Network error for ${normalizedUrl}:`, error);
     throw error;
   }
 }
@@ -149,19 +157,28 @@ async function triggerHoroscopeGeneration(): Promise<boolean> {
   try {
     const baseUrl = getBaseUrl();
     console.log('Triggering horoscope generation job...');
-    const response = await fetch(`${baseUrl}/api/cron/daily-horoscope`, {
+    const url = `${baseUrl}/api/cron/daily-horoscope`;
+    
+    console.log(`Generation endpoint URL: ${url}`);
+    
+    // Simple fetch without credentials for this endpoint
+    const response = await fetch(url, {
       cache: 'no-store',
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-      },
+        'Accept': 'application/json'
+      }
     });
+    
+    console.log(`Generation response status: ${response.status}`);
     
     if (!response.ok) {
       throw new Error(`Failed to trigger horoscope generation: ${response.status}`);
     }
     
     const data = await response.json();
+    console.log('Generation response data:', data);
     return data.success === true;
   } catch (error) {
     console.error('Error triggering horoscope generation:', error);

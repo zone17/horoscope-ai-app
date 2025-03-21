@@ -181,15 +181,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Check for authorization (optional for enhanced security)
+    // Always allow this endpoint to be called from the frontend
+    // We only check for CRON_SECRET if it's not from our frontend domains
     const authHeader = request.headers.get('authorization');
-    const isAuthorized = process.env.CRON_SECRET 
-      ? authHeader === `Bearer ${process.env.CRON_SECRET}`
-      : true;
-    
+    const isFrontendOrigin = origin && (
+      origin.includes('gettodayshoroscope.com') || 
+      origin.includes('localhost:3000')
+    );
+
+    // Skip auth check for frontend requests
+    const isAuthorized = isFrontendOrigin || 
+      (process.env.CRON_SECRET ? authHeader === `Bearer ${process.env.CRON_SECRET}` : true);
+
     if (!isAuthorized) {
+      console.log('Unauthorized request to generate horoscopes');
       const errorResponse = NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Unauthorized access to horoscope generation' },
         { status: 401 }
       );
       return addCorsHeaders(errorResponse, origin);
