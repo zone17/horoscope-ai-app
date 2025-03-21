@@ -26,7 +26,12 @@ interface HoroscopeResponse {
 
 // Helper function to get base URL for API calls
 function getBaseUrl(): string {
-  // Use explicit API URL for production
+  // For production, use the API subdomain
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://api.gettodayshoroscope.com';
+  }
+  
+  // Use explicit API URL if configured
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
@@ -45,6 +50,42 @@ function getBaseUrl(): string {
   return 'http://localhost:3000';
 }
 
+/**
+ * Creates a fetch request with proper CORS credentials
+ * @param url The URL to fetch
+ * @param options Additional fetch options
+ * @returns Promise resolving to the fetch Response
+ */
+async function corsAwareFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  // Ensure credentials are included for CORS requests
+  const corsOptions: RequestInit = {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...options.headers,
+      'Content-Type': 'application/json'
+    }
+  };
+  
+  // Make the fetch call with appropriate error handling
+  try {
+    const response = await fetch(url, corsOptions);
+    
+    // Log for debugging
+    console.log(`Fetch response for ${url}:`, {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText,
+      cors: response.headers.get('access-control-allow-origin')
+    });
+    
+    return response;
+  } catch (error) {
+    console.error(`Network error for ${url}:`, error);
+    throw error;
+  }
+}
+
 // Function to fetch a horoscope for a specific sign
 async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<HoroscopeData | null> {
   try {
@@ -52,8 +93,8 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
     const url = `${baseUrl}/api/horoscope?sign=${sign}&type=${type}`;
     console.log(`Fetching horoscope from: ${url}`);
     
-    // Call the API endpoint to fetch horoscope data with complete URL
-    const response = await fetch(url, {
+    // Call the API endpoint with CORS awareness
+    const response = await corsAwareFetch(url, {
       cache: 'no-store', // Ensure we always get the latest data
     });
     

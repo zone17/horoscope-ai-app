@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { capitalize, getColorFromString } from '@/lib/utils';
 import { ArrowRightIcon, X } from 'lucide-react';
+import { VideoBanner } from '@/components/VideoBanner';
 
 // Define the horoscope data interface
 interface HoroscopeData {
@@ -118,13 +119,22 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   const processHoroscopeData = (data: HoroscopeData | null) => {
     if (!data) return null;
     
-    // Normalize lucky number
-    const luckyNumber = typeof data.lucky_number === 'object' ? '7' : String(data.lucky_number || '7');
+    // Extract lucky number, handling both string and object formats
+    let luckyNumber = '';
+    if (typeof data.lucky_number === 'object' && data.lucky_number !== null) {
+      // Extract just the number from complex object
+      const numObj = data.lucky_number as Record<string, any>;
+      luckyNumber = String(numObj.number || numObj.value || '');
+    } else if (data.lucky_number !== undefined) {
+      luckyNumber = String(data.lucky_number);
+    }
     
-    // Normalize lucky color
-    let luckyColor = 'Indigo';
-    if (typeof data.lucky_color === 'object') {
-      luckyColor = 'Indigo';
+    // Extract lucky color, handling both string and object formats
+    let luckyColor = '';
+    if (typeof data.lucky_color === 'object' && data.lucky_color !== null) {
+      // Extract just the color name from complex object
+      const colorObj = data.lucky_color as Record<string, any>;
+      luckyColor = String(colorObj.color || colorObj.value || '');
     } else if (typeof data.lucky_color === 'string') {
       luckyColor = data.lucky_color;
     }
@@ -133,8 +143,10 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
       ...data,
       lucky_number: luckyNumber,
       lucky_color: luckyColor,
-      // Ensure message exists
-      message: data.message || 'Your horoscope for today is being written in the stars...',
+      // Store original values with meanings for potential future use
+      lucky_number_full: data.lucky_number,
+      lucky_color_full: data.lucky_color,
+      message: data.message,
     };
   };
   
@@ -159,9 +171,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           
           {/* Card video/image container */}
           <div className="relative h-40 overflow-hidden rounded-t-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-700/10 to-indigo-900/10">
-              <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
-            </div>
+            <VideoBanner sign={sign} />
             <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-transparent to-transparent"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl">{symbol}</div>
           </div>
@@ -217,18 +227,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   }
 
   // Process the horoscope data for consistency
-  const processedHoroscope = processHoroscopeData(horoscope) || {
-    message: '',
-    lucky_number: '7',
-    lucky_color: 'Indigo',
-    peaceful_thought: undefined,
-    mood: undefined,
-    compatibility: undefined
-  };
+  const processedHoroscope = processHoroscopeData(horoscope) || null;
   
   // Determine what content to show based on mode (day/night)
-  const showNightContent = mode === 'night' && processedHoroscope.peaceful_thought;
-  const content = showNightContent ? processedHoroscope.peaceful_thought : processedHoroscope.message;
+  const showNightContent = mode === 'night' && processedHoroscope?.peaceful_thought;
+  const content = showNightContent ? processedHoroscope.peaceful_thought : processedHoroscope?.message;
   const firstSentence = getFirstSentence(content || '');
   
   // Helper function to properly handle color values
@@ -291,18 +294,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               
               {/* Card video/image container - fixed height */}
               <div className="relative h-40 w-full overflow-hidden rounded-t-xl shrink-0">
-                <video 
-                  className="w-full h-full object-cover brightness-110 contrast-125"
-                  loop
-                  muted
-                  playsInline
-                  autoPlay
-                >
-                  <source src={`/videos/zodiac/${sign}.mp4`} type="video/mp4" />
-                </video>
-                
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/5 to-indigo-900/5 mix-blend-overlay"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-transparent to-black/5"></div>
+                <VideoBanner sign={sign} />
                 <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-transparent to-transparent"></div>
               </div>
               
@@ -352,9 +344,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   <div>
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
                     <p className="font-light text-white text-lg leading-none">
-                      {typeof processedHoroscope.lucky_number === 'object' 
-                        ? '7' // Fallback value if it's an object
-                        : String(processedHoroscope.lucky_number)}
+                      {typeof processedHoroscope?.lucky_number === 'object' 
+                        ? processedHoroscope.lucky_number 
+                        : String(processedHoroscope?.lucky_number || '')}
                     </p>
                   </div>
                   <div>
@@ -364,11 +356,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                         whileHover={{ scale: 1.2 }}
                         className="inline-block w-4 h-4 rounded-full mr-2"
                         style={{ 
-                          backgroundColor: getColorForDisplay(processedHoroscope.lucky_color)
+                          backgroundColor: getColorForDisplay(processedHoroscope?.lucky_color || '')
                         }}
                       ></motion.span>
                       <p className="font-light text-white truncate">
-                        {processedHoroscope.lucky_color}
+                        {processedHoroscope?.lucky_color}
                       </p>
                     </div>
                   </div>
@@ -415,18 +407,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 
                 {/* Card video/image container */}
                 <div className="relative h-48 sm:h-56 overflow-hidden rounded-t-xl">
-                  <video 
-                    className="w-full h-full object-cover brightness-110 contrast-125"
-                    loop
-                    muted
-                    playsInline
-                    autoPlay
-                  >
-                    <source src={`/videos/zodiac/${sign}.mp4`} type="video/mp4" />
-                  </video>
-                  
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 to-indigo-900/10 mix-blend-overlay"></div>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-transparent to-black/10"></div>
+                  <VideoBanner sign={sign} />
                 </div>
                 
                 <CardHeader className="pt-6 pb-2 bg-transparent">
@@ -453,7 +434,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     {content}
                   </p>
                   
-                  {processedHoroscope.peaceful_thought && (
+                  {processedHoroscope?.peaceful_thought && (
                     <>
                       <div className="my-4 border-t border-white/10"></div>
                       <h3 className="text-sm uppercase tracking-wider text-indigo-200/80 mb-2 font-light">Nightly Reflection</h3>
@@ -469,9 +450,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     <div>
                       <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Lucky Number</h3>
                       <p className="font-light text-white text-lg leading-none">
-                        {typeof processedHoroscope.lucky_number === 'object' 
-                          ? '7' // Fallback value if it's an object
-                          : String(processedHoroscope.lucky_number)}
+                        {typeof processedHoroscope?.lucky_number === 'object' 
+                          ? processedHoroscope.lucky_number 
+                          : String(processedHoroscope?.lucky_number || '')}
                       </p>
                     </div>
                     <div>
@@ -481,11 +462,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                           whileHover={{ scale: 1.2 }}
                           className="inline-block w-4 h-4 rounded-full mr-2"
                           style={{ 
-                            backgroundColor: getColorForDisplay(processedHoroscope.lucky_color)
+                            backgroundColor: getColorForDisplay(processedHoroscope?.lucky_color || '')
                           }}
                         ></motion.span>
                         <p className="font-light text-white truncate">
-                          {processedHoroscope.lucky_color}
+                          {processedHoroscope?.lucky_color}
                         </p>
                       </div>
                     </div>

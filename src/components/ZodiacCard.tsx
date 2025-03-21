@@ -77,13 +77,13 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                  <p className="font-medium text-white text-base sm:text-lg">0</p>
+                  <div className="h-5 bg-indigo-700/50 animate-pulse rounded"></div>
                 </div>
                 <div>
                   <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
                   <div className="flex items-center">
-                    <span className="inline-block w-3 h-3 rounded-full mr-2 bg-indigo-700/50"></span>
-                    <p className="font-medium text-white">Unknown</p>
+                    <div className="h-3 w-3 rounded-full mr-2 bg-indigo-700/50 animate-pulse"></div>
+                    <div className="h-4 w-16 bg-indigo-700/50 animate-pulse rounded"></div>
                   </div>
                 </div>
               </div>
@@ -170,12 +170,12 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     className="inline-block w-3 h-3 rounded-full mr-2"
                     style={{ backgroundColor: typeof horoscope.lucky_color === 'string' 
                       ? horoscope.lucky_color.toLowerCase().replace(/\s+/g, '') 
-                      : '#indigo700' }}
+                      : '' }}
                   ></span>
                   <p className="font-medium text-white">{
                     typeof horoscope.lucky_color === 'string' 
                       ? horoscope.lucky_color 
-                      : String(horoscope.lucky_color || 'Unknown')
+                      : ''
                   }</p>
                 </div>
               </div>

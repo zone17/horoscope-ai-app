@@ -96,15 +96,36 @@ Format the response in JSON with the following fields:
   }
 }
 
+// Function to apply CORS headers directly
+function addCorsHeaders(response: NextResponse): NextResponse {
+  // Allow all origins for maximum compatibility
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  
+  return response;
+}
+
 export async function GET(request: NextRequest) {
+  // Handle preflight requests
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control',
+        'Access-Control-Max-Age': '86400'
+      }
+    });
+  }
+
   try {
     // Get sign and type from query parameters
     const { searchParams } = new URL(request.url);
     const sign = searchParams.get('sign')?.toLowerCase() || '';
     const type = searchParams.get('type')?.toLowerCase() || 'daily';
-    
-    // Get the origin for CORS
-    const origin = request.headers.get('origin');
     
     // Validate sign
     if (!sign || !VALID_SIGNS.includes(sign)) {
@@ -116,8 +137,8 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
       
-      // Apply CORS headers even to error responses
-      return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
+      // Apply CORS headers directly
+      return addCorsHeaders(errorResponse);
     }
     
     // Validate type
@@ -130,8 +151,8 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
       
-      // Apply CORS headers even to error responses
-      return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
+      // Apply CORS headers directly
+      return addCorsHeaders(errorResponse);
     }
     
     // Get today's date for daily horoscopes
@@ -181,13 +202,10 @@ export async function GET(request: NextRequest) {
       data: horoscope
     });
     
-    // Apply CORS headers and return the response
-    return origin ? applyCorsHeaders(successResponse, origin) : successResponse;
+    // Apply CORS headers directly and return
+    return addCorsHeaders(successResponse);
   } catch (error) {
     console.error('Horoscope API error:', error);
-    
-    // Get the origin for CORS
-    const origin = request.headers.get('origin');
     
     // Return error response with proper type checking
     const errorMessage = error instanceof Error ? error.message : 'An error occurred generating the horoscope';
@@ -202,7 +220,7 @@ export async function GET(request: NextRequest) {
       }
     );
     
-    // Apply CORS headers even to error responses
-    return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
+    // Apply CORS headers directly to error response
+    return addCorsHeaders(errorResponse);
   }
 } 

@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { redis, CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
 import { safelyStoreInRedis } from '@/utils/redis-helpers';
-import { applyCorsHeaders } from '@/utils/cors-service';
+import { applyCorsHeaders, isAllowedOrigin } from '@/utils/cors-service';
 
 // Valid zodiac signs
 const VALID_SIGNS = [
@@ -32,14 +32,14 @@ async function generateDailyHoroscope(sign: string) {
   // Prompt for the horoscope generation based on user requirements
   const prompt = `You are an insightful and spiritually reflective AI with all the historic knowledge of all of the best works of Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, Walter Russell providing a daily symbolic horoscope designed to nurture mindfulness, self-awareness, and personal growth for ${sign}. Your horoscope does not predict literal or material outcomes but offers thoughtful, symbolic guidance rooted in the principles of mindfulness, perspective, connection to nature, self-discovery, and emotional resilience.
 
-For today's horoscope, include the following elements:
+For today's horoscope, you MUST include ALL of the following elements:
 1. Insightful Daily Guidance:
     * Offer symbolic advice encouraging the reader to stay mindfully present (hora), observe inwardly their thoughts and emotions (skopos), connect meaningfully with nature, or cultivate qualities such as patience, empathy, wisdom, and compassion.
     * Suggest gently letting go of rigid expectations or material attachments, encouraging emotional resilience and inner peace.
 2. Lucky Color:
-    * Suggest a meaningful color for the day with a brief symbolic explanation emphasizing emotional or spiritual resonance.
+    * You MUST provide a specific, simple color name (like "Blue", "Indigo", "Azure") - do not use complex descriptions, objects, or metaphors.
 3. Lucky Number:
-    * Provide a number with symbolic significance, briefly explaining its reflective or spiritual symbolism for the day.
+    * You MUST provide a simple numeric value between 1 and 100 - no complex expressions or equations.
 4. Peaceful Nighttime Thought:
     * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
 
@@ -47,9 +47,11 @@ Your tone should remain nurturing, reflective, and empowering, guiding readers g
 
 Format the response in JSON with the following fields:
 - message: The main horoscope guidance message
-- lucky_number: A lucky number for today with its symbolic meaning
-- lucky_color: A lucky color for today with its symbolic meaning
-- peaceful_thought: A calming nighttime reflection`;
+- lucky_number: A numeric value for today (just the number, not an explanation)
+- lucky_color: A simple color name for today (just the color name, not an explanation)
+- peaceful_thought: A calming nighttime reflection
+
+IMPORTANT: Your response MUST include all fields and they must be formatted exactly as specified. The lucky_number must be a simple numeric value and lucky_color must be a simple color name.`;
 
   // Generate the horoscope using OpenAI
   const response = await openai.chat.completions.create({
@@ -64,6 +66,11 @@ Format the response in JSON with the following fields:
   // Parse the JSON response and add metadata
   try {
     const horoscopeData = JSON.parse(content || '{}');
+    
+    // Validate the required fields exist
+    if (!horoscopeData.message || horoscopeData.lucky_number === undefined || !horoscopeData.lucky_color) {
+      throw new Error('Missing required horoscope fields');
+    }
     
     return {
       sign,
@@ -112,14 +119,68 @@ async function generateAllHoroscopes() {
   return { results, errors };
 }
 
+// Function to apply CORS headers directly
+function addCorsHeaders(response: NextResponse, origin: string): NextResponse {
+  // Define allowed origins
+  const allowedOrigins = [
+    'https://www.gettodayshoroscope.com',
+    'https://gettodayshoroscope.com',
+  ];
+  
+  // Add localhost for development
+  if (process.env.NODE_ENV === 'development') {
+    allowedOrigins.push('http://localhost:3000');
+  }
+  
+  // Use the specific origin if it's allowed, otherwise use the first allowed origin
+  const responseOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  
+  response.headers.set('Access-Control-Allow-Origin', responseOrigin);
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  
+  return response;
+}
+
 /**
  * Vercel Cron handler - runs at midnight daily
  */
 export async function GET(request: NextRequest) {
-  try {
-    // Get the origin for CORS
-    const origin = request.headers.get('origin');
+  // Get the origin for CORS
+  const origin = request.headers.get('origin') || '';
+  console.log(`Request from origin: ${origin}`);
+  
+  // Define allowed origins
+  const allowedOrigins = [
+    'https://www.gettodayshoroscope.com',
+    'https://gettodayshoroscope.com',
+  ];
+  
+  // Add localhost for development
+  if (process.env.NODE_ENV === 'development') {
+    allowedOrigins.push('http://localhost:3000');
+  }
+  
+  // Handle preflight requests
+  if (request.method === 'OPTIONS') {
+    // Use the specific origin if it's allowed, otherwise use the first allowed origin
+    const responseOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
     
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': responseOrigin,
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Max-Age': '86400'
+      }
+    });
+  }
+
+  try {
     // Check for authorization (optional for enhanced security)
     const authHeader = request.headers.get('authorization');
     const isAuthorized = process.env.CRON_SECRET 
@@ -131,7 +192,7 @@ export async function GET(request: NextRequest) {
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
-      return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
+      return addCorsHeaders(errorResponse, origin);
     }
     
     // Generate and cache all horoscopes
@@ -145,13 +206,10 @@ export async function GET(request: NextRequest) {
       ...result
     });
     
-    // Apply CORS headers and return
-    return origin ? applyCorsHeaders(successResponse, origin) : successResponse;
+    // Apply CORS headers directly and return
+    return addCorsHeaders(successResponse, origin);
   } catch (error) {
     console.error('Cron job error:', error);
-    
-    // Get the origin for CORS
-    const origin = request.headers.get('origin');
     
     // Create error response
     const errorResponse = NextResponse.json(
@@ -163,6 +221,6 @@ export async function GET(request: NextRequest) {
     );
     
     // Apply CORS headers to error response
-    return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
+    return addCorsHeaders(errorResponse, origin);
   }
 } 

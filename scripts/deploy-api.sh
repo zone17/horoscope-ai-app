@@ -12,47 +12,56 @@ if ! command -v vercel &> /dev/null; then
     exit 1
 fi
 
-# Create a temp directory for deployment
+# Create a temporary directory for deployment
 TEMP_DIR=$(mktemp -d)
 echo "Created temporary directory: $TEMP_DIR"
 
-# Create the API-only directory structure
-mkdir -p $TEMP_DIR/src/app/api
-mkdir -p $TEMP_DIR/src/utils
+# Create necessary directories
+mkdir -p "$TEMP_DIR/src/app/api"
+mkdir -p "$TEMP_DIR/src/utils"
 
-# Copy only API routes
+# Copy API routes
 echo "Copying API routes..."
-cp -r src/app/api/* $TEMP_DIR/src/app/api/
+cp -r src/app/api/* "$TEMP_DIR/src/app/api/"
 
-# Copy utility files
+# Copy backend utility files
 echo "Copying backend utility files..."
-cp -r src/utils/* $TEMP_DIR/src/utils/
+cp -r src/utils/* "$TEMP_DIR/src/utils/"
+
+# Copy middleware in all possible locations to ensure it's picked up
+echo "Copying middleware files..."
+if [ -f "middleware.ts" ]; then
+  cp middleware.ts "$TEMP_DIR/"
+  echo "Copied root middleware.ts"
+fi
+
+if [ -f "src/middleware.ts" ]; then
+  cp src/middleware.ts "$TEMP_DIR/src/"
+  echo "Copied src/middleware.ts"
+else
+  # If src/middleware.ts doesn't exist but root middleware.ts does, copy it there too
+  if [ -f "middleware.ts" ]; then
+    mkdir -p "$TEMP_DIR/src"
+    cp middleware.ts "$TEMP_DIR/src/"
+    echo "Copied middleware.ts to src/ directory"
+  fi
+fi
 
 # Copy configuration files
 echo "Copying configuration files..."
-cp package.backend.json $TEMP_DIR/package.json
-cp next.config.backend.js $TEMP_DIR/next.config.js
-cp tsconfig.json $TEMP_DIR/tsconfig.json
-cp jsconfig.json $TEMP_DIR/ 2>/dev/null || :
+cp .env.production "$TEMP_DIR/"
+cp next.config.js "$TEMP_DIR/"
+cp package.json "$TEMP_DIR/"
+cp tsconfig.json "$TEMP_DIR/"
+cp vercel.json "$TEMP_DIR/"
 
-# Create a minimal Next.js app structure (no UI, just basic routing)
-mkdir -p $TEMP_DIR/src/app
-cat > $TEMP_DIR/src/app/layout.js << 'EOF'
-export const metadata = {
-  title: 'API Only',
-  description: 'API Only Backend',
-};
-
-export default function RootLayout({ children }) {
-  return children;
-}
-EOF
-
-cat > $TEMP_DIR/src/app/page.js << 'EOF'
-export default function Home() {
-  return null;
-}
-EOF
+# Create minimal app layout
+mkdir -p "$TEMP_DIR/src/app"
+if [ ! -f "$TEMP_DIR/src/app/layout.js" ]; then
+  echo "Creating minimal app layout..."
+  echo "export default function RootLayout({ children }) { return children; }" > "$TEMP_DIR/src/app/layout.js"
+  echo "export default function Page() { return <h1>API Only</h1>; }" > "$TEMP_DIR/src/app/page.js"
+fi
 
 # Create vercel.json for API configuration
 cat > $TEMP_DIR/vercel.json << 'EOF'
@@ -83,16 +92,6 @@ if [ ! -f "$TEMP_DIR/jsconfig.json" ] && [ ! -f "$TEMP_DIR/tsconfig.json" ]; the
 }
 EOF
 fi
-
-# Create .env file with environment variable placeholders
-cat > $TEMP_DIR/.env.production << 'EOF'
-# API-only environment variables
-# Configure these in the Vercel dashboard
-# UPSTASH_REDIS_REST_URL=
-# UPSTASH_REDIS_REST_TOKEN=
-# OPENAI_API_KEY=
-# CRON_SECRET=
-EOF
 
 # Navigate to the temp directory
 cd $TEMP_DIR
