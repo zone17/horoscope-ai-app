@@ -69,7 +69,9 @@ For today's horoscope, include the following elements:
         - Water signs (Cancer, Scorpio, Pisces) harmonize with other Water signs and Earth signs (Taurus, Virgo, Capricorn)
     * IMPORTANT: If the sign is Libra, ALWAYS include Aquarius in best matches. If the sign is Aquarius, ALWAYS include Libra in best matches.
 5. Inspirational Quote:
-    * Include a relevant philosophical quote from one of the thinkers mentioned above (Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell).
+    * IMPORTANT: Include a quote EXCLUSIVELY from ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
+    * DO NOT use quotes from ANY other sources (no Buddha, Gandhi, Rumi, etc.) - ONLY use quotes from the philosophers listed above.
+    * Attribute the quote correctly to the exact name from the list above.
     * Ensure the quote relates to the horoscope's central theme or advice.
 6. Peaceful Nighttime Thought:
     * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
@@ -98,6 +100,23 @@ Format the response in JSON with the following fields:
   // Parse the JSON response and add metadata
   try {
     const horoscopeData = JSON.parse(content || '{}');
+    
+    // Valid quote authors list
+    const validAuthors = [
+      'Allan Watts', 'Alan Watts', 'Richard Feynman', 'Albert Einstein', 
+      'Friedrich Nietzsche', 'Lao Tzu', 'Socrates', 'Plato', 'Aristotle', 
+      'Epicurus', 'Marcus Aurelius', 'Seneca', 'Jiddu Krishnamurti', 
+      'Dr. Joe Dispenza', 'Joe Dispenza', 'Walter Russell'
+    ];
+    
+    // Validate the quote author is from our approved list
+    if (!horoscopeData.quote_author || 
+        !validAuthors.some(author => 
+          horoscopeData.quote_author.toLowerCase().includes(author.toLowerCase()))) {
+      console.error(`Invalid or missing quote author: ${horoscopeData.quote_author}. Using fallback.`);
+      // Use a fallback author from our list
+      horoscopeData.quote_author = validAuthors[Math.floor(Math.random() * validAuthors.length)];
+    }
     
     return {
       sign,

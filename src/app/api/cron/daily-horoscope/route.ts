@@ -46,8 +46,9 @@ For today's horoscope, you MUST include ALL of the following elements:
         - Water signs (Cancer, Scorpio, Pisces) harmonize with other Water signs and Earth signs (Taurus, Virgo, Capricorn)
     * IMPORTANT: If the sign is Libra, ALWAYS include Aquarius in best matches. If the sign is Aquarius, ALWAYS include Libra in best matches.
 3. Inspirational Quote:
-    * Include a short, powerful quote from EXACTLY ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
-    * Attribute the quote to the correct person.
+    * IMPORTANT: Include a quote EXCLUSIVELY from ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
+    * DO NOT use quotes from ANY other sources (no Buddha, Gandhi, Rumi, etc.) - ONLY use quotes from the philosophers listed above.
+    * Attribute the quote correctly to the exact name from the list above.
     * Keep the quote concise (under 150 characters).
 4. Peaceful Nighttime Thought:
     * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
@@ -77,9 +78,26 @@ IMPORTANT: Your response MUST include all fields and they must be formatted exac
   try {
     const horoscopeData = JSON.parse(content || '{}');
     
+    // Valid quote authors list
+    const validAuthors = [
+      'Allan Watts', 'Alan Watts', 'Richard Feynman', 'Albert Einstein', 
+      'Friedrich Nietzsche', 'Lao Tzu', 'Socrates', 'Plato', 'Aristotle', 
+      'Epicurus', 'Marcus Aurelius', 'Seneca', 'Jiddu Krishnamurti', 
+      'Dr. Joe Dispenza', 'Joe Dispenza', 'Walter Russell'
+    ];
+    
     // Validate the required fields exist
-    if (!horoscopeData.message || horoscopeData.best_match === undefined || !horoscopeData.inspirational_quote || !horoscopeData.quote_author) {
+    if (!horoscopeData.message || horoscopeData.best_match === undefined || 
+        !horoscopeData.inspirational_quote || !horoscopeData.quote_author) {
       throw new Error('Missing required horoscope fields');
+    }
+    
+    // Validate the quote author is from our approved list
+    if (!validAuthors.some(author => 
+        horoscopeData.quote_author.toLowerCase().includes(author.toLowerCase()))) {
+      console.error(`Invalid quote author: ${horoscopeData.quote_author}. Using fallback.`);
+      // Use a fallback author from our list
+      horoscopeData.quote_author = validAuthors[Math.floor(Math.random() * validAuthors.length)];
     }
     
     return {
@@ -101,12 +119,37 @@ async function generateAllHoroscopes() {
   const date = getTodayDate();
   const results = [];
   const errors = [];
-
-  // Generate horoscopes for all signs in parallel
-  const horoscopePromises = VALID_SIGNS.map(async (sign) => {
+  
+  // Track philosopher usage to avoid repeating the same one more than twice
+  const philosopherUsage = {};
+  
+  // Generate horoscopes sequentially to manage philosopher assignment
+  for (const sign of VALID_SIGNS) {
     try {
       // Generate horoscope for this sign
-      const horoscope = await generateDailyHoroscope(sign);
+      let horoscope = await generateDailyHoroscope(sign);
+      
+      // Count philosopher usage
+      const author = horoscope.quote_author;
+      philosopherUsage[author] = (philosopherUsage[author] || 0) + 1;
+      
+      // If this philosopher has been used more than twice, regenerate the horoscope
+      if (philosopherUsage[author] > 2) {
+        console.log(`Philosopher ${author} already used twice. Regenerating horoscope for ${sign}...`);
+        // Try up to 3 times to get a different philosopher
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const newHoroscope = await generateDailyHoroscope(sign);
+          const newAuthor = newHoroscope.quote_author;
+          
+          // If this is a different philosopher who hasn't been used twice yet
+          if (newAuthor !== author && (!philosopherUsage[newAuthor] || philosopherUsage[newAuthor] < 2)) {
+            horoscope = newHoroscope;
+            philosopherUsage[newAuthor] = (philosopherUsage[newAuthor] || 0) + 1;
+            console.log(`Successfully assigned philosopher ${newAuthor} to ${sign}`);
+            break;
+          }
+        }
+      }
       
       // Generate cache key
       const cacheKey = horoscopeKeys.daily(sign, date);
@@ -121,10 +164,7 @@ async function generateAllHoroscopes() {
       console.error(`Error generating horoscope for ${sign}:`, error);
       errors.push({ sign, error: error instanceof Error ? error.message : 'Unknown error' });
     }
-  });
-
-  // Wait for all horoscopes to be generated
-  await Promise.all(horoscopePromises);
+  }
 
   return { results, errors };
 }
