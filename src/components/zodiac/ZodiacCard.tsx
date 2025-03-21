@@ -374,21 +374,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   </div>
                 </div>
                 
-                {/* Additional metadata - conditionally rendered but with consistent spacing */}
+                {/* Remove the mood and compatibility sections */}
                 <div className="space-y-3">
-                  {(processedHoroscope.mood && typeof processedHoroscope.mood === 'string') && (
-                    <div className="w-full">
-                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Mood</h3>
-                      <p className="font-light text-white text-sm truncate">{processedHoroscope.mood}</p>
-                    </div>
-                  )}
-                  
-                  {(processedHoroscope.compatibility && typeof processedHoroscope.compatibility === 'string') && (
-                    <div className="w-full">
-                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Compatibility</h3>
-                      <p className="font-light text-white text-sm truncate">{processedHoroscope.compatibility}</p>
-                    </div>
-                  )}
+                  {/* Mood and compatibility sections are removed */}
                 </div>
               </CardFooter>
             </Card>
@@ -458,8 +446,8 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 </CardHeader>
                 
                 <CardContent className="pt-4 pb-6 px-6 sm:px-8 bg-transparent">
-                  <h3 className="text-lg text-white/90 mb-3 font-light">
-                    Daily Horoscope <span className="text-indigo-200/70 text-sm">• {formattedDate}</span>
+                  <h3 className="text-sm uppercase tracking-wider text-indigo-200/80 mb-2 font-light">
+                    Daily Horoscope <span className="normal-case text-indigo-200/70 text-sm">• {formattedDate}</span>
                   </h3>
                   <p className="text-white/90 text-base font-light leading-relaxed tracking-normal text-left mx-auto mb-6 font-satoshi">
                     {content}
@@ -502,20 +490,10 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       </div>
                     </div>
                     
-                    {(processedHoroscope.mood && typeof processedHoroscope.mood === 'string') && (
-                      <div>
-                        <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Mood</h3>
-                        <p className="font-light text-white text-sm">{processedHoroscope.mood}</p>
-                      </div>
-                    )}
+                    {/* Remove the mood section in expanded view */}
                   </div>
                   
-                  {(processedHoroscope.compatibility && typeof processedHoroscope.compatibility === 'string') && (
-                    <div className="w-full pt-2">
-                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Compatibility</h3>
-                      <p className="font-light text-white text-sm">{processedHoroscope.compatibility}</p>
-                    </div>
-                  )}
+                  {/* Remove the compatibility section in expanded view */}
                 </CardFooter>
               </Card>
             </motion.div>
