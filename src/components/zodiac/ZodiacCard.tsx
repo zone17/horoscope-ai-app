@@ -35,6 +35,15 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   
+  // Format the current date
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+  
   // Card animation variants
   const cardVariants = {
     initial: { 
@@ -449,7 +458,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 </CardHeader>
                 
                 <CardContent className="pt-4 pb-6 px-6 sm:px-8 bg-transparent">
-                  <h3 className="text-lg text-white/90 mb-3 font-light">Daily Horoscope</h3>
+                  <h3 className="text-lg text-white/90 mb-3 font-light">
+                    Daily Horoscope <span className="text-indigo-200/70 text-sm">• {formattedDate}</span>
+                  </h3>
                   <p className="text-white/90 text-base font-light leading-relaxed tracking-normal text-left mx-auto mb-6 font-satoshi">
                     {content}
                   </p>
@@ -457,7 +468,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   {processedHoroscope.peaceful_thought && (
                     <>
                       <div className="my-4 border-t border-white/10"></div>
-                      <h3 className="text-sm uppercase tracking-wider text-indigo-200/80 mb-2 font-light">Peaceful Thought</h3>
+                      <h3 className="text-sm uppercase tracking-wider text-indigo-200/80 mb-2 font-light">Nightly Reflection</h3>
                       <p className="text-white/90 text-base italic font-light leading-relaxed tracking-normal text-left mx-auto font-satoshi">
                         "{processedHoroscope.peaceful_thought}"
                       </p>
