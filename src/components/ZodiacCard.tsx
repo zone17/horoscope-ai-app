@@ -3,7 +3,7 @@
 import { useMode } from './ModeProvider';
 import { useState } from 'react';
 import { VideoBanner } from './VideoBanner';
-import { X } from 'lucide-react';
+import { X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Define the horoscope data interface
@@ -31,7 +31,6 @@ interface ZodiacCardProps {
 export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscope }: ZodiacCardProps) {
   const { mode } = useMode();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showFullContent, setShowFullContent] = useState(false);
   
   // Functions to capitalize first letter of a string
   const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
@@ -203,23 +202,45 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-indigo-950/90 border border-indigo-500/20 rounded-xl max-w-xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+              className="relative bg-indigo-950/90 border border-indigo-500/20 rounded-xl max-w-xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Close button - more prominent for mobile */}
+              <button 
+                className="absolute top-3 right-3 z-50 bg-black/40 text-white p-2.5 rounded-full hover:bg-black/60 transition-colors shadow-xl"
+                onClick={() => setIsExpanded(false)}
+                aria-label="Close details"
+              >
+                <X size={24} />
+              </button>
+              
+              {/* Mobile swipe indicator */}
+              <div className="absolute top-0 left-0 right-0 flex justify-center pt-2 pb-1 z-40 md:hidden">
+                <motion.div
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  className="bg-white/20 h-1 w-16 rounded-full"
+                ></motion.div>
+              </div>
+              
+              {/* Mobile close hint text - only on smaller screens */}
+              <div className="absolute top-1 left-0 right-0 text-center text-xs text-white/50 z-40 md:hidden">
+                <motion.div
+                  animate={{ opacity: [0.5, 0.8, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                >
+                  Tap outside or swipe down to close
+                </motion.div>
+              </div>
+              
               {/* Video header */}
               <div className="relative h-48 overflow-hidden">
                 <VideoBanner sign={sign} />
                 <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-indigo-950/90 to-transparent"></div>
-                <button 
-                  className="absolute top-3 right-3 bg-black/30 text-white p-2 rounded-full hover:bg-black/50 transition-colors z-30"
-                  onClick={() => setIsExpanded(false)}
-                >
-                  <X size={18} />
-                </button>
               </div>
               
               {/* Content */}
-              <div className="p-5">
+              <div className="p-5 overflow-y-auto max-h-[60vh]">
                 <div className="flex items-center mb-4">
                   <div className="bg-purple-500/30 p-2 rounded-lg shadow-md backdrop-blur-md border border-purple-500/20">
                     <div className="text-2xl">{symbol}</div>
@@ -230,7 +251,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   </div>
                 </div>
                 
-                <div className="overflow-y-auto max-h-[30vh] pr-2 mb-5 text-white text-sm leading-relaxed">
+                <div className="mb-5 text-white text-sm leading-relaxed">
                   {content}
                 </div>
                 
@@ -261,20 +282,6 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     </div>
                   </div>
                 </div>
-                
-                {horoscope.mood && (
-                  <div className="border-t border-indigo-700/30 pt-4 mt-4">
-                    <h3 className="text-xs text-indigo-300 uppercase mb-1">Mood</h3>
-                    <p className="text-white">{horoscope.mood}</p>
-                  </div>
-                )}
-                
-                {horoscope.compatibility && (
-                  <div className="border-t border-indigo-700/30 pt-4 mt-4">
-                    <h3 className="text-xs text-indigo-300 uppercase mb-1">Compatibility</h3>
-                    <p className="text-white">{horoscope.compatibility}</p>
-                  </div>
-                )}
               </div>
             </motion.div>
           </motion.div>
@@ -282,4 +289,4 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
       </AnimatePresence>
     </>
   );
-} 
+}

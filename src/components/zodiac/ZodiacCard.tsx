@@ -6,7 +6,7 @@ import { useMode } from '@/hooks/useMode';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { capitalize, getColorFromString } from '@/lib/utils';
-import { ArrowRightIcon, X } from 'lucide-react';
+import { ArrowRightIcon, X, ChevronDown } from 'lucide-react';
 import { VideoBanner } from '@/components/VideoBanner';
 
 // Define the horoscope data interface
@@ -347,23 +347,48 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            key="expanded-card-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setIsExpanded(false)}
           >
             <motion.div
-              key="expanded-card"
-              variants={expandedCardVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="w-full max-w-2xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-indigo-950/90 border border-indigo-500/20 rounded-xl max-w-xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <Card className="h-auto relative overflow-hidden border border-white/10 rounded-xl backdrop-blur-lg bg-white/10">
+              {/* Close button - more prominent for mobile */}
+              <button 
+                className="absolute top-3 right-3 z-50 bg-black/40 text-white p-2.5 rounded-full hover:bg-black/60 transition-colors shadow-xl"
+                onClick={() => setIsExpanded(false)}
+                aria-label="Close details"
+              >
+                <X size={24} />
+              </button>
+              
+              {/* Mobile swipe indicator */}
+              <div className="absolute top-0 left-0 right-0 flex justify-center pt-2 pb-1 z-40 md:hidden">
+                <motion.div
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  className="bg-white/20 h-1 w-16 rounded-full"
+                ></motion.div>
+              </div>
+              
+              {/* Mobile close hint text - only on smaller screens */}
+              <div className="absolute top-1 left-0 right-0 text-center text-xs text-white/50 z-40 md:hidden">
+                <motion.div
+                  animate={{ opacity: [0.5, 0.8, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                >
+                  Tap outside or swipe down to close
+                </motion.div>
+              </div>
+              
+              <Card className="w-full h-full max-h-[90vh] overflow-auto border-0 bg-transparent shadow-none">
                 {/* Close button */}
                 <button 
                   onClick={() => setIsExpanded(false)}
