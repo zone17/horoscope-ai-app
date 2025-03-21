@@ -37,8 +37,14 @@ For today's horoscope, you MUST include ALL of the following elements:
     * Offer symbolic advice encouraging the reader to stay mindfully present (hora), observe inwardly their thoughts and emotions (skopos), connect meaningfully with nature, or cultivate qualities such as patience, empathy, wisdom, and compassion.
     * Suggest gently letting go of rigid expectations or material attachments, encouraging emotional resilience and inner peace.
 2. Best Match:
-    * Provide ALL zodiac signs that harmonize well with this sign today, listed in alphabetical order.
+    * Provide 3-4 zodiac signs that harmonize well with this sign today, listed in alphabetical order.
     * Format the list as a comma-separated string (e.g., "aries, gemini, libra").
+    * Follow these traditional astrological compatibility patterns:
+        - Fire signs (Aries, Leo, Sagittarius) harmonize with other Fire signs and Air signs (Gemini, Libra, Aquarius)
+        - Earth signs (Taurus, Virgo, Capricorn) harmonize with other Earth signs and Water signs (Cancer, Scorpio, Pisces)
+        - Air signs (Gemini, Libra, Aquarius) harmonize with other Air signs and Fire signs (Aries, Leo, Sagittarius)
+        - Water signs (Cancer, Scorpio, Pisces) harmonize with other Water signs and Earth signs (Taurus, Virgo, Capricorn)
+    * IMPORTANT: If the sign is Libra, ALWAYS include Aquarius in best matches. If the sign is Aquarius, ALWAYS include Libra in best matches.
 3. Inspirational Quote:
     * Include a short, powerful quote from EXACTLY ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
     * Attribute the quote to the correct person.
@@ -50,7 +56,7 @@ Your tone should remain nurturing, reflective, and empowering, guiding readers g
 
 Format the response in JSON with the following fields:
 - message: The main horoscope guidance message
-- best_match: A single zodiac sign name (lowercase, e.g., "cancer")
+- best_match: A comma-separated list of compatible zodiac signs in alphabetical order (e.g., "aries, gemini, libra")
 - inspirational_quote: The quote text
 - quote_author: The name of the quote's author (e.g., "Marcus Aurelius")
 - peaceful_thought: A calming nighttime reflection

@@ -60,8 +60,14 @@ For today's horoscope, include the following elements:
 3. Lucky Number:
     * Provide a number with symbolic significance, briefly explaining its reflective or spiritual symbolism for the day.
 4. Best Match:
-    * Provide ALL zodiac signs that harmonize well with this sign today, listed in alphabetical order.
+    * Provide 3-4 zodiac signs that harmonize well with this sign today, listed in alphabetical order.
     * Format the list as a comma-separated string (e.g., "aries, gemini, libra").
+    * Follow these traditional astrological compatibility patterns:
+        - Fire signs (Aries, Leo, Sagittarius) harmonize with other Fire signs and Air signs (Gemini, Libra, Aquarius)
+        - Earth signs (Taurus, Virgo, Capricorn) harmonize with other Earth signs and Water signs (Cancer, Scorpio, Pisces)
+        - Air signs (Gemini, Libra, Aquarius) harmonize with other Air signs and Fire signs (Aries, Leo, Sagittarius)
+        - Water signs (Cancer, Scorpio, Pisces) harmonize with other Water signs and Earth signs (Taurus, Virgo, Capricorn)
+    * IMPORTANT: If the sign is Libra, ALWAYS include Aquarius in best matches. If the sign is Aquarius, ALWAYS include Libra in best matches.
 5. Inspirational Quote:
     * Include a relevant philosophical quote from one of the thinkers mentioned above (Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell).
     * Ensure the quote relates to the horoscope's central theme or advice.
