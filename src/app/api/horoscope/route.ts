@@ -59,7 +59,12 @@ For today's horoscope, include the following elements:
     * Suggest a meaningful color for the day with a brief symbolic explanation emphasizing emotional or spiritual resonance.
 3. Lucky Number:
     * Provide a number with symbolic significance, briefly explaining its reflective or spiritual symbolism for the day.
-4. Peaceful Nighttime Thought:
+4. Best Match:
+    * Determine which zodiac sign would be most spiritually or philosophically compatible with ${sign} today based on elemental and energetic resonance.
+5. Inspirational Quote:
+    * Include a relevant philosophical quote from one of the thinkers mentioned above (Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell).
+    * Ensure the quote relates to the horoscope's central theme or advice.
+6. Peaceful Nighttime Thought:
     * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
 
 Your tone should remain nurturing, reflective, and empowering, guiding readers gently toward self-awareness, inner reflection, and a mindful, purposeful approach to daily life.
@@ -68,6 +73,9 @@ Format the response in JSON with the following fields:
 - message: The main horoscope guidance message
 - lucky_number: A lucky number for today with its symbolic meaning
 - lucky_color: A lucky color for today with its symbolic meaning
+- best_match: The most compatible zodiac sign for today
+- inspirational_quote: A philosophical quote from one of the mentioned thinkers
+- quote_author: The author of the inspirational quote
 - peaceful_thought: A calming nighttime reflection`;
 
   // Generate the horoscope using OpenAI - using same model as cron job

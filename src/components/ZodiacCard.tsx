@@ -79,17 +79,18 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               <div className="bg-indigo-700/50 h-2.5 sm:h-3 rounded w-3/4"></div>
             </div>
             
+            {/* Loading state for best match and quote */}
             <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
                   <div className="flex items-center">
                     <div className="h-2 w-2 rounded-full mr-2 bg-purple-500"></div>
-                    <div className="h-4 w-8 bg-indigo-700/50 animate-pulse rounded"></div>
+                    <div className="h-4 w-16 bg-indigo-700/50 animate-pulse rounded"></div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Quote</h3>
                   <div className="flex items-center">
                     <div className="h-2 w-2 rounded-full mr-2 bg-indigo-500"></div>
                     <div className="h-4 w-16 bg-indigo-700/50 animate-pulse rounded"></div>
@@ -162,20 +163,21 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               </button>
             </div>
             
+            {/* Loading state for best match and quote */}
             <div className="mt-auto pt-3 sm:pt-4 border-t border-indigo-700/30">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
                   <div className="flex items-center">
                     <div className="h-2 w-2 rounded-full mr-2 bg-purple-500"></div>
-                    <div className="h-4 w-8 bg-indigo-700/50 animate-pulse rounded"></div>
+                    <p className="text-white capitalize">{horoscope.best_match || "None"}</p>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Quote</h3>
                   <div className="flex items-center">
                     <div className="h-2 w-2 rounded-full mr-2 bg-indigo-500"></div>
-                    <div className="h-4 w-16 bg-indigo-700/50 animate-pulse rounded"></div>
+                    <p className="text-white text-xs italic line-clamp-1">{horoscope.inspirational_quote ? `"${horoscope.inspirational_quote.substring(0, 30)}..."` : "None"}</p>
                   </div>
                 </div>
               </div>
@@ -251,23 +253,40 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   {content}
                 </div>
                 
-                <div className="border-t border-indigo-700/30 pt-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
-                      <p className="font-medium text-white text-lg capitalize">
-                        {horoscope.lucky_number || '7'}
+                <div className="mt-6">
+                  <h3 className="text-xs text-indigo-300 uppercase mb-2">Inspirational Quote</h3>
+                  <div className="p-3 bg-indigo-950/50 backdrop-blur-sm rounded-lg border border-indigo-800/30">
+                    <p className="text-white text-sm italic">
+                      "{horoscope.inspirational_quote || 'Wisdom comes from within.'}"
+                    </p>
+                    {horoscope.quote_author && (
+                      <p className="text-indigo-300 text-xs mt-1">
+                        - {horoscope.quote_author}
                       </p>
-                    </div>
-                    <div>
-                      <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
-                      <div className="flex flex-col">
-                        <p className="font-medium text-white text-sm">
-                          {horoscope.lucky_color || 'Blue'}
-                        </p>
-                      </div>
-                    </div>
+                    )}
                   </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Number</h3>
+                    <p className="font-medium text-white text-lg">
+                      {horoscope.lucky_number || '7'}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xs text-indigo-300 uppercase mb-1">Lucky Color</h3>
+                    <p className="font-medium text-white text-lg">
+                      {horoscope.lucky_color || 'Blue'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-4">
+                  <h3 className="text-xs text-indigo-300 uppercase mb-1">Best Match</h3>
+                  <p className="font-medium text-white text-lg capitalize">
+                    {horoscope.best_match || 'None Specified'}
+                  </p>
                 </div>
               </div>
             </motion.div>

@@ -144,9 +144,9 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
     return {
       ...horoscopeData,
       message: String(horoscopeData.message),
-      best_match: horoscopeData.compatibility || "None specified",
-      inspirational_quote: horoscopeData.peaceful_thought || "",
-      quote_author: "Daily Wisdom",
+      best_match: horoscopeData.best_match || "None specified",
+      inspirational_quote: horoscopeData.inspirational_quote || "",
+      quote_author: horoscopeData.quote_author || "Daily Wisdom",
       lucky_number: horoscopeData.lucky_number,
       lucky_color: horoscopeData.lucky_color,
       peaceful_thought: horoscopeData.peaceful_thought ? String(horoscopeData.peaceful_thought) : undefined,
