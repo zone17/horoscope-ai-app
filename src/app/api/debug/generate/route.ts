@@ -45,7 +45,21 @@ For today's horoscope, include the following elements:
     * Suggest a meaningful color for the day with a brief symbolic explanation emphasizing emotional or spiritual resonance.
 3. Lucky Number:
     * Provide a number with symbolic significance, briefly explaining its reflective or spiritual symbolism for the day.
-4. Peaceful Nighttime Thought:
+4. Best Match:
+    * Provide 3-4 zodiac signs that harmonize well with this sign today, listed in alphabetical order.
+    * Format the list as a comma-separated string (e.g., "aries, gemini, libra").
+    * Follow these traditional astrological compatibility patterns:
+        - Fire signs (Aries, Leo, Sagittarius) harmonize with other Fire signs and Air signs (Gemini, Libra, Aquarius)
+        - Earth signs (Taurus, Virgo, Capricorn) harmonize with other Earth signs and Water signs (Cancer, Scorpio, Pisces)
+        - Air signs (Gemini, Libra, Aquarius) harmonize with other Air signs and Fire signs (Aries, Leo, Sagittarius)
+        - Water signs (Cancer, Scorpio, Pisces) harmonize with other Water signs and Earth signs (Taurus, Virgo, Capricorn)
+    * IMPORTANT: If the sign is Libra, ALWAYS include Aquarius in best matches. If the sign is Aquarius, ALWAYS include Libra in best matches.
+5. Inspirational Quote:
+    * IMPORTANT: Include a quote EXCLUSIVELY from ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
+    * DO NOT use quotes from ANY other sources (no Buddha, Gandhi, Rumi, etc.) - ONLY use quotes from the philosophers listed above.
+    * Attribute the quote correctly to the exact name from the list above.
+    * Ensure the quote relates to the horoscope's central theme or advice.
+6. Peaceful Nighttime Thought:
     * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
 
 Your tone should remain nurturing, reflective, and empowering, guiding readers gently toward self-awareness, inner reflection, and a mindful, purposeful approach to daily life.
@@ -54,6 +68,9 @@ Format the response in JSON with the following fields:
 - message: The main horoscope guidance message
 - lucky_number: A lucky number for today with its symbolic meaning
 - lucky_color: A lucky color for today with its symbolic meaning
+- best_match: A comma-separated list of compatible zodiac signs
+- inspirational_quote: A philosophical quote from one of the mentioned thinkers
+- quote_author: The author of the inspirational quote
 - peaceful_thought: A calming nighttime reflection`;
 
   console.log(`DEBUG-GENERATE: Sending prompt to OpenAI for ${sign}`);
@@ -73,11 +90,63 @@ Format the response in JSON with the following fields:
   try {
     const horoscopeData = JSON.parse(content || '{}');
     
+    // Valid quote authors list
+    const validAuthors = [
+      'Allan Watts', 'Alan Watts', 'Richard Feynman', 'Albert Einstein', 
+      'Friedrich Nietzsche', 'Lao Tzu', 'Socrates', 'Plato', 'Aristotle', 
+      'Epicurus', 'Marcus Aurelius', 'Seneca', 'Jiddu Krishnamurti', 
+      'Dr. Joe Dispenza', 'Joe Dispenza', 'Walter Russell'
+    ];
+    
+    // Validate the quote author is from our approved list
+    if (!horoscopeData.quote_author || 
+        !validAuthors.some(author => 
+          horoscopeData.quote_author.toLowerCase().includes(author.toLowerCase()))) {
+      console.error(`Invalid or missing quote author: ${horoscopeData.quote_author}. Using fallback.`);
+      // Use a fallback author from our list
+      horoscopeData.quote_author = validAuthors[Math.floor(Math.random() * validAuthors.length)];
+    }
+    
+    // Validate best match - ensure it's properly formatted
+    if (sign === 'libra' && horoscopeData.best_match) {
+      // Make sure Aquarius is included for Libra
+      const matches = horoscopeData.best_match.toLowerCase().split(/,\s*/);
+      if (!matches.includes('aquarius')) {
+        matches.push('aquarius');
+        // Sort alphabetically and rejoin
+        horoscopeData.best_match = [...new Set(matches)].sort().join(', ');
+      }
+    }
+    
+    if (sign === 'aquarius' && horoscopeData.best_match) {
+      // Make sure Libra is included for Aquarius
+      const matches = horoscopeData.best_match.toLowerCase().split(/,\s*/);
+      if (!matches.includes('libra')) {
+        matches.push('libra');
+        // Sort alphabetically and rejoin
+        horoscopeData.best_match = [...new Set(matches)].sort().join(', ');
+      }
+    }
+    
     return {
       sign,
       type: 'daily',
       date: getTodayDate(),
-      ...horoscopeData,
+      message: horoscopeData.message,
+      lucky_number: horoscopeData.lucky_number,
+      lucky_color: horoscopeData.lucky_color,
+      best_match: horoscopeData.best_match || '',
+      inspirational_quote: horoscopeData.inspirational_quote || '',
+      quote_author: horoscopeData.quote_author || '',
+      peaceful_thought: horoscopeData.peaceful_thought || '',
+      lucky_number_full: {
+        number: horoscopeData.lucky_number,
+        meaning: horoscopeData.lucky_number_meaning || ''
+      },
+      lucky_color_full: {
+        color: horoscopeData.lucky_color,
+        meaning: horoscopeData.lucky_color_meaning || ''
+      }
     };
   } catch (error) {
     console.error(`DEBUG-GENERATE: Error parsing horoscope JSON for ${sign}:`, error);
