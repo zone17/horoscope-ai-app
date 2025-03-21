@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { corsHandler, handlePreflight, isAllowedOrigin, applyCorsHeaders } from '@/utils/cors-service';
 
 /**
  * Middleware to handle API requests and CORS
@@ -11,26 +12,16 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/api/')) {
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
-      return new NextResponse(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': 'https://www.gettodayshoroscope.com',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          'Access-Control-Max-Age': '86400',
-          'Access-Control-Allow-Credentials': 'true'
-        }
-      });
+      return handlePreflight(req);
     }
     
-    // Handle regular API requests
+    // For regular API requests, apply CORS headers to the response
     const response = NextResponse.next();
+    const origin = req.headers.get('origin');
     
-    // Add CORS headers to all API responses
-    response.headers.set('Access-Control-Allow-Origin', 'https://www.gettodayshoroscope.com');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    if (origin && isAllowedOrigin(origin)) {
+      return applyCorsHeaders(response, origin);
+    }
     
     return response;
   }

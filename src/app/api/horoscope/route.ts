@@ -4,6 +4,7 @@ import { withCache } from '@/utils/cache';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 import { CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
+import { applyCorsHeaders } from '@/utils/cors-service';
 
 // Set route to be dynamic to prevent caching at edge level
 export const dynamic = 'force-dynamic';
@@ -102,26 +103,35 @@ export async function GET(request: NextRequest) {
     const sign = searchParams.get('sign')?.toLowerCase() || '';
     const type = searchParams.get('type')?.toLowerCase() || 'daily';
     
+    // Get the origin for CORS
+    const origin = request.headers.get('origin');
+    
     // Validate sign
     if (!sign || !VALID_SIGNS.includes(sign)) {
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { 
           success: false, 
           error: `Invalid sign. Must be one of: ${VALID_SIGNS.join(', ')}` 
         },
         { status: 400 }
       );
+      
+      // Apply CORS headers even to error responses
+      return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
     }
     
     // Validate type
     if (!VALID_TYPES.includes(type)) {
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { 
           success: false, 
           error: `Invalid type. Must be one of: ${VALID_TYPES.join(', ')}` 
         },
         { status: 400 }
       );
+      
+      // Apply CORS headers even to error responses
+      return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
     }
     
     // Get today's date for daily horoscopes
@@ -164,19 +174,25 @@ export async function GET(request: NextRequest) {
       horoscope = await fetchHoroscope();
     }
     
-    // Return the horoscope
-    return NextResponse.json({
+    // Create the success response
+    const successResponse = NextResponse.json({
       success: true,
       cached: isCachingEnabled,
       data: horoscope
     });
+    
+    // Apply CORS headers and return the response
+    return origin ? applyCorsHeaders(successResponse, origin) : successResponse;
   } catch (error) {
     console.error('Horoscope API error:', error);
+    
+    // Get the origin for CORS
+    const origin = request.headers.get('origin');
     
     // Return error response with proper type checking
     const errorMessage = error instanceof Error ? error.message : 'An error occurred generating the horoscope';
     
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { 
         success: false, 
         error: errorMessage
@@ -185,5 +201,8 @@ export async function GET(request: NextRequest) {
         status: 500
       }
     );
+    
+    // Apply CORS headers even to error responses
+    return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
   }
 } 

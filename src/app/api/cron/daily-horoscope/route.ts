@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { redis, CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
 import { safelyStoreInRedis } from '@/utils/redis-helpers';
+import { applyCorsHeaders } from '@/utils/cors-service';
 
 // Valid zodiac signs
 const VALID_SIGNS = [
@@ -116,6 +117,9 @@ async function generateAllHoroscopes() {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Get the origin for CORS
+    const origin = request.headers.get('origin');
+    
     // Check for authorization (optional for enhanced security)
     const authHeader = request.headers.get('authorization');
     const isAuthorized = process.env.CRON_SECRET 
@@ -123,36 +127,42 @@ export async function GET(request: NextRequest) {
       : true;
     
     if (!isAuthorized) {
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { success: false, error: 'Unauthorized' },
-        { 
-          status: 401
-        }
+        { status: 401 }
       );
+      return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
     }
     
     // Generate and cache all horoscopes
     const result = await generateAllHoroscopes();
     
-    // Return success response with CORS headers
-    return NextResponse.json({
+    // Create success response
+    const successResponse = NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: getTodayDate(),
       ...result
     });
+    
+    // Apply CORS headers and return
+    return origin ? applyCorsHeaders(successResponse, origin) : successResponse;
   } catch (error) {
     console.error('Cron job error:', error);
     
-    // Return error response with CORS headers
-    return NextResponse.json(
+    // Get the origin for CORS
+    const origin = request.headers.get('origin');
+    
+    // Create error response
+    const errorResponse = NextResponse.json(
       { 
         success: false, 
         error: error instanceof Error ? error.message : 'An error occurred during horoscope generation'
       },
-      { 
-        status: 500
-      }
+      { status: 500 }
     );
+    
+    // Apply CORS headers to error response
+    return origin ? applyCorsHeaders(errorResponse, origin) : errorResponse;
   }
 } 
