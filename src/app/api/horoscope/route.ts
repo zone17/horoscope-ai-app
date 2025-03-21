@@ -60,7 +60,8 @@ For today's horoscope, include the following elements:
 3. Lucky Number:
     * Provide a number with symbolic significance, briefly explaining its reflective or spiritual symbolism for the day.
 4. Best Match:
-    * Determine which zodiac sign would be most spiritually or philosophically compatible with ${sign} today based on elemental and energetic resonance.
+    * Provide ALL zodiac signs that harmonize well with this sign today, listed in alphabetical order.
+    * Format the list as a comma-separated string (e.g., "aries, gemini, libra").
 5. Inspirational Quote:
     * Include a relevant philosophical quote from one of the thinkers mentioned above (Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell).
     * Ensure the quote relates to the horoscope's central theme or advice.
@@ -73,7 +74,7 @@ Format the response in JSON with the following fields:
 - message: The main horoscope guidance message
 - lucky_number: A lucky number for today with its symbolic meaning
 - lucky_color: A lucky color for today with its symbolic meaning
-- best_match: The most compatible zodiac sign for today
+- best_match: The most compatible zodiac signs for today in alphabetical order
 - inspirational_quote: A philosophical quote from one of the mentioned thinkers
 - quote_author: The author of the inspirational quote
 - peaceful_thought: A calming nighttime reflection`;

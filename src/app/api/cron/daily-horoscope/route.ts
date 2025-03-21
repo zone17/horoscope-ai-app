@@ -37,7 +37,8 @@ For today's horoscope, you MUST include ALL of the following elements:
     * Offer symbolic advice encouraging the reader to stay mindfully present (hora), observe inwardly their thoughts and emotions (skopos), connect meaningfully with nature, or cultivate qualities such as patience, empathy, wisdom, and compassion.
     * Suggest gently letting go of rigid expectations or material attachments, encouraging emotional resilience and inner peace.
 2. Best Match:
-    * Provide ONE zodiac sign that harmonizes well with this sign today (choose from: aries, taurus, gemini, cancer, leo, virgo, libra, scorpio, sagittarius, capricorn, aquarius, pisces).
+    * Provide ALL zodiac signs that harmonize well with this sign today, listed in alphabetical order.
+    * Format the list as a comma-separated string (e.g., "aries, gemini, libra").
 3. Inspirational Quote:
     * Include a short, powerful quote from EXACTLY ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
     * Attribute the quote to the correct person.
