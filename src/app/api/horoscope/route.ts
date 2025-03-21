@@ -62,6 +62,7 @@ For today's horoscope, include the following elements:
 4. Best Match:
     * Provide 3-4 zodiac signs that harmonize well with this sign today, listed in alphabetical order.
     * Format the list as a comma-separated string (e.g., "aries, gemini, libra").
+    * IMPORTANT: NEVER include the current sign in its own best matches (e.g., Libra should never list Libra as a best match).
     * Follow these traditional astrological compatibility patterns:
         - Fire signs (Aries, Leo, Sagittarius) harmonize with other Fire signs and Air signs (Gemini, Libra, Aquarius)
         - Earth signs (Taurus, Virgo, Capricorn) harmonize with other Earth signs and Water signs (Cancer, Scorpio, Pisces)
@@ -116,6 +117,13 @@ Format the response in JSON with the following fields:
       console.error(`Invalid or missing quote author: ${horoscopeData.quote_author}. Using fallback.`);
       // Use a fallback author from our list
       horoscopeData.quote_author = validAuthors[Math.floor(Math.random() * validAuthors.length)];
+    }
+    
+    // Ensure sign is not included in its own best matches
+    if (horoscopeData.best_match) {
+      const bestMatches = horoscopeData.best_match.toLowerCase().split(',').map(s => s.trim());
+      const filteredMatches = bestMatches.filter(match => match !== sign.toLowerCase());
+      horoscopeData.best_match = filteredMatches.join(', ');
     }
     
     return {

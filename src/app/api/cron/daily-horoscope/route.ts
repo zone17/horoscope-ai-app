@@ -100,6 +100,13 @@ IMPORTANT: Your response MUST include all fields and they must be formatted exac
       horoscopeData.quote_author = validAuthors[Math.floor(Math.random() * validAuthors.length)];
     }
     
+    // Ensure sign is not included in its own best matches
+    if (horoscopeData.best_match) {
+      const bestMatches = horoscopeData.best_match.toLowerCase().split(',').map(s => s.trim());
+      const filteredMatches = bestMatches.filter(match => match !== sign.toLowerCase());
+      horoscopeData.best_match = filteredMatches.join(', ');
+    }
+    
     return {
       sign,
       type: 'daily',
