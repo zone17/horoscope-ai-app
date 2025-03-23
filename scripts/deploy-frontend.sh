@@ -50,10 +50,20 @@ cp -r src/lib/* $TEMP_DIR/src/lib/ 2>/dev/null || :
 
 # Copy utility files (only frontend-related, explicitly excluding Redis/API utilities)
 echo "Copying utility files..."
-cp src/utils/horoscope-service.ts $TEMP_DIR/src/utils/
-cp src/utils/feature-flags.ts $TEMP_DIR/src/utils/
-cp src/utils/signs.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
-cp src/utils/date-utils.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
+cp -r src/utils/feature-flags.ts $TEMP_DIR/src/utils/
+cp -r src/utils/horoscope-service.ts $TEMP_DIR/src/utils/
+
+# Adding shared utilities needed by both frontend and backend
+echo "Copying shared utility files..."
+cp -r src/utils/schema-generator.ts $TEMP_DIR/src/utils/
+cp -r src/utils/web-vitals.ts $TEMP_DIR/src/utils/
+mkdir -p $TEMP_DIR/src/mocks
+cp -r src/mocks/data.ts $TEMP_DIR/src/mocks/ 2>/dev/null || echo "No mock data file found"
+
+# Copy constants needed by the utilities
+echo "Copying constants..."
+mkdir -p $TEMP_DIR/src/constants
+cp -r src/constants/index.ts $TEMP_DIR/src/constants/
 
 # Copy images and assets
 echo "Copying public assets..."
@@ -199,6 +209,7 @@ cat > $TEMP_DIR/package.json << 'EOF'
     "react-dom": "^18.2.0",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
+    "web-vitals": "^3.5.2",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

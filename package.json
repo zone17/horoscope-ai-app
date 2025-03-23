@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest"
+    "test": "jest",
+    "test:regression": "node scripts/regression-test.js"
   },
   "dependencies": {
     "@shadcn/ui": "^0.0.4",
