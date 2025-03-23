@@ -150,6 +150,17 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
       "destination": "https://api.gettodayshoroscope.com/api/:path*"
     }
   ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+        }
+      ]
+    }
+  ],
   "builds": [
     {
       "src": "next.config.js",
@@ -158,7 +169,9 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
   ],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.gettodayshoroscope.com",
-    "NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "true"
+    "NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "false",
+    "NEXT_PUBLIC_FEATURE_FLAG_USE_CORE_WEB_VITALS_OPTIMIZATIONS": "true", 
+    "NEXT_PUBLIC_FEATURE_FLAG_USE_SCHEMA_MARKUP": "true"
   }
 }
 EOF
@@ -168,7 +181,7 @@ cat > $TEMP_DIR/.env.production << 'EOF'
 # Frontend production environment variables
 NEXT_PUBLIC_API_URL=https://api.gettodayshoroscope.com
 # Feature flags - frontend-only UI controls
-NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER=true
+NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER=false
 EOF
 
 # Create jsconfig.json if it doesn't exist
