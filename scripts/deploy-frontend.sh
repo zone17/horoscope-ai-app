@@ -145,7 +145,11 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
       "src": "next.config.js",
       "use": "@vercel/next"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://api.gettodayshoroscope.com",
+    "FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "true"
+  }
 }
 EOF
 
@@ -153,6 +157,8 @@ EOF
 cat > $TEMP_DIR/.env.production << 'EOF'
 # Frontend production environment variables
 NEXT_PUBLIC_API_URL=https://api.gettodayshoroscope.com
+# Feature flags - frontend-only UI controls
+NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER=true
 EOF
 
 # Create jsconfig.json if it doesn't exist
