@@ -1,42 +1,94 @@
 /**
  * Core Web Vitals utilities
  * 
- * This module provides utilities for tracking and reporting Core Web Vitals metrics
- * - LCP (Largest Contentful Paint)
- * - FID (First Input Delay)
- * - CLS (Cumulative Layout Shift)
- * - TTFB (Time To First Byte)
+ * This module provides functions for measuring and reporting Core Web Vitals metrics,
+ * as well as optimizations to improve them.
  */
-
-import { onCLS, onFID, onLCP, onTTFB, Metric } from 'web-vitals';
+import { getCLS, getFID, getLCP, getFCP, getTTFB, Metric } from 'web-vitals';
 import { isFeatureEnabled, FEATURE_FLAGS } from './feature-flags';
 
-// Define the type for reporting function
-type ReportHandler = (metric: Metric) => void;
-
-// Create a default reporting handler
-const defaultReportHandler: ReportHandler = (metric) => {
-  // In production, you could send this to your analytics system
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Web Vitals:', metric);
-  }
-};
+// Define metric names for type safety
+export type WebVitalName = 'CLS' | 'FID' | 'LCP' | 'FCP' | 'TTFB';
 
 /**
- * Report all the Core Web Vitals metrics
- * 
- * @param onReport - Optional custom report handler
- * @returns void
+ * Reports Core Web Vitals metrics to specified analytics endpoint
+ * Only sends data if the feature flag is enabled
  */
-export function reportWebVitals(onReport: ReportHandler = defaultReportHandler): void {
-  // Check if the Core Web Vitals optimizations are enabled
-  if (!isFeatureEnabled(FEATURE_FLAGS.USE_CORE_WEB_VITALS_OPTIMIZATIONS, false)) {
+export function reportWebVitals(analyticsEndpoint?: string): void {
+  if (!isFeatureEnabled(FEATURE_FLAGS.USE_CORE_WEB_VITALS_OPT, false)) {
     return;
   }
 
-  // Monitor and report metrics when they become available
-  onCLS(onReport);
-  onFID(onReport);
-  onLCP(onReport);
-  onTTFB(onReport);
+  // Default endpoint if none provided
+  const endpoint = analyticsEndpoint || '/api/analytics/vitals';
+
+  function sendToAnalytics(metric: Metric) {
+    const body = JSON.stringify({
+      name: metric.name,
+      value: metric.value,
+      id: metric.id,
+      delta: metric.delta
+    });
+
+    // Use `navigator.sendBeacon()` if available, falling back to `fetch()`
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(endpoint, body);
+    } else {
+      fetch(endpoint, {
+        body,
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+  }
+
+  // Get and report each Core Web Vital metric
+  getCLS(sendToAnalytics);
+  getFID(sendToAnalytics);
+  getLCP(sendToAnalytics);
+  getFCP(sendToAnalytics);
+  getTTFB(sendToAnalytics);
+}
+
+/**
+ * Adds resource hints for critical resources to improve LCP
+ * Only applies if the feature flag is enabled
+ */
+export function addResourceHints(): void {
+  if (!isFeatureEnabled(FEATURE_FLAGS.USE_CORE_WEB_VITALS_OPT, false) || typeof document === 'undefined') {
+    return;
+  }
+
+  // Critical resources to preload
+  const criticalResources = [
+    { rel: 'preload', as: 'font', href: '/fonts/font-file.woff2', crossOrigin: 'anonymous' },
+    { rel: 'preconnect', href: 'https://api.gettodayshoroscope.com' },
+    // Add more critical resources as needed
+  ];
+
+  // Create and add link elements for resource hints
+  criticalResources.forEach(resource => {
+    const link = document.createElement('link');
+    Object.entries(resource).forEach(([attr, value]) => {
+      if (value) link.setAttribute(attr, value);
+    });
+    document.head.appendChild(link);
+  });
+}
+
+/**
+ * Helper function to get fixed size for images to prevent CLS
+ * @param sign Zodiac sign name
+ * @returns Object with fixed dimensions
+ */
+export function getFixedImageDimensions(sign: string): { width: number; height: number } {
+  // Provide fixed dimensions for each zodiac sign video/image
+  // This helps prevent CLS by ensuring space is reserved
+  return {
+    width: 400,
+    height: 225
+  };
 } 

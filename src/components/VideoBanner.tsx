@@ -2,82 +2,77 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
+import { getFixedImageDimensions } from '@/utils/web-vitals';
 
 interface VideoBannerProps {
   sign: string;
 }
 
 export function VideoBanner({ sign }: VideoBannerProps) {
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const isCoreWebVitalsEnabled = isFeatureEnabled(FEATURE_FLAGS.USE_CORE_WEB_VITALS_OPTIMIZATIONS, false);
+  const isCoreWebVitalsOptEnabled = typeof window !== 'undefined' && 
+    isFeatureEnabled(FEATURE_FLAGS.USE_CORE_WEB_VITALS_OPT, false);
   
-  // Use preload for the first sign to improve LCP
-  const shouldPreload = sign === 'aries' && isCoreWebVitalsEnabled;
+  // Get fixed dimensions to prevent layout shifts
+  const dimensions = getFixedImageDimensions(sign);
   
   useEffect(() => {
     if (!videoRef.current) return;
     
-    // Add event listeners for video load tracking
-    const videoElement = videoRef.current;
-    
-    const handleLoad = () => {
-      setIsLoaded(true);
+    const handleLoadedMetadata = () => {
+      setIsVideoLoaded(true);
     };
     
-    // For Core Web Vitals: optimize video loading
-    if (isCoreWebVitalsEnabled) {
-      // Add loading listener
-      videoElement.addEventListener('loadeddata', handleLoad);
-      
-      // Set playback quality to lower for faster loading
-      if ('playsInline' in videoElement) {
-        videoElement.playsInline = true;
-      }
-      
-      if ('disablePictureInPicture' in videoElement) {
-        videoElement.disablePictureInPicture = true;
-      }
-      
-      // Reduce initial load by setting video to low quality
-      if (typeof videoElement.canPlayType === 'function' && videoElement.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"')) {
-        // Browser supports basic h.264 profile - good for performance
-        // Can be upgraded after initial load
-      }
+    const videoElement = videoRef.current;
+    videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+    
+    // If the video is already loaded when this effect runs
+    if (videoElement.readyState >= 2) {
+      setIsVideoLoaded(true);
     }
     
     return () => {
-      videoElement.removeEventListener('loadeddata', handleLoad);
+      videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
     };
-  }, [sign, isCoreWebVitalsEnabled]);
-  
+  }, []);
+
   return (
-    <div className="absolute inset-0 z-0 bg-indigo-950">
+    <div 
+      className="absolute inset-0 z-0 bg-indigo-950 overflow-hidden"
+      style={isCoreWebVitalsOptEnabled ? {
+        width: dimensions.width,
+        height: dimensions.height,
+        maxWidth: '100%',
+        aspectRatio: `${dimensions.width} / ${dimensions.height}`
+      } : undefined}
+    >
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-indigo-500/5 to-indigo-950/20 mix-blend-overlay"></div>
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400/30 via-purple-500/50 to-indigo-400/30"></div>
       
-      {/* Show a placeholder while video loads, to improve CLS */}
-      {!isLoaded && isCoreWebVitalsEnabled && (
+      {/* Low-quality placeholder shown while video loads */}
+      {!isVideoLoaded && isCoreWebVitalsOptEnabled && (
         <div 
-          className="absolute inset-0 bg-indigo-900/50"
+          className="absolute inset-0 bg-indigo-900 animate-pulse"
+          style={{
+            backgroundImage: `url("/images/placeholders/${sign}.jpg")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
           aria-hidden="true"
-          style={{ aspectRatio: '16/9' }}
         />
       )}
       
       <video 
         ref={videoRef}
         id={`video-${sign}`}
-        className="w-full h-full object-cover brightness-110 contrast-125"
+        className={`w-full h-full object-cover brightness-110 contrast-125 ${!isVideoLoaded && isCoreWebVitalsOptEnabled ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
         loop
         muted
         playsInline
         autoPlay
-        preload={shouldPreload ? "auto" : "metadata"}
-        width="640"
-        height="360"
-        style={{ aspectRatio: '16/9' }}
-        onLoadedData={() => setIsLoaded(true)}
+        poster={isCoreWebVitalsOptEnabled ? `/images/placeholders/${sign}.jpg` : undefined}
+        loading={isCoreWebVitalsOptEnabled ? "lazy" : undefined}
       >
         <source src={`/videos/zodiac/${sign}.mp4`} type="video/mp4" />
       </video>

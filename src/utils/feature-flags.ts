@@ -10,8 +10,8 @@ export const FEATURE_FLAGS = {
   USE_TIMEZONE_CONTENT: 'USE_TIMEZONE_CONTENT',
   // Whether to order zodiac signs according to lunar calendar
   USE_LUNAR_ZODIAC_ORDER: 'USE_LUNAR_ZODIAC_ORDER',
-  // Whether to use Core Web Vitals optimizations
-  USE_CORE_WEB_VITALS_OPTIMIZATIONS: 'USE_CORE_WEB_VITALS_OPTIMIZATIONS',
+  // Whether to enable Core Web Vitals optimizations
+  USE_CORE_WEB_VITALS_OPT: 'USE_CORE_WEB_VITALS_OPT',
 };
 
 /**
