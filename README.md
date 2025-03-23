@@ -169,6 +169,19 @@ The application supports displaying zodiac signs in lunar calendar order instead
 For detailed information, see:
 - [Lunar Calendar Ordering Documentation](./docs/LUNAR_CALENDAR_ORDER.md)
 
+### Core Web Vitals Optimization
+
+The application implements performance optimizations targeted at Google's Core Web Vitals metrics:
+
+- Controlled by a feature flag for safe rollout and easy rollback
+- Optimizes Largest Contentful Paint (LCP) with resource hints and prioritized loading
+- Improves Cumulative Layout Shift (CLS) with fixed-size containers and placeholders
+- Enhances First Input Delay (FID) with optimized JavaScript handling
+- Collects and analyzes performance metrics via a dedicated API endpoint
+
+For detailed information, see:
+- [Core Web Vitals Documentation](./docs/CORE_WEB_VITALS.md)
+
 ### Content Optimization
 
 The application includes several optimizations for content generation:

@@ -9,8 +9,9 @@ Welcome to the documentation for the Horoscope AI Application. This guide is des
 3. [Backend Documentation](#backend-documentation)
 4. [Smart Polling System](#smart-polling-system)
 5. [UI Design System](#ui-design-system)
-6. [Deployment Guide](#deployment-guide)
-7. [API Integration](#api-integration)
+6. [Core Web Vitals](#core-web-vitals)
+7. [Deployment Guide](#deployment-guide)
+8. [API Integration](#api-integration)
 
 ## Architecture Overview
 
@@ -80,6 +81,22 @@ The UI follows a consistent glassmorphic design system:
 - Responsive design for all screen sizes
 
 For detailed UI guidelines, see [UI_DESIGN_SYSTEM.md](./UI_DESIGN_SYSTEM.md).
+
+## Core Web Vitals
+
+The application includes optimizations targeted at Core Web Vitals metrics:
+
+- **Performance Measuring**: Using the web-vitals library to track LCP, CLS, FID, and other metrics
+- **Layout Shift Prevention**: Fixed dimensions for dynamic content
+- **Load Time Optimization**: Resource hints and prioritized loading
+- **Feature Flag Control**: All optimizations can be toggled via a feature flag
+
+Key implementation files:
+- `src/utils/web-vitals.ts`: Core utilities for performance optimization
+- `src/components/performance/CoreWebVitalsInitializer.tsx`: Client component that initializes reporting
+- `src/app/api/analytics/vitals/route.ts`: API endpoint for metrics collection
+
+For detailed documentation, see [CORE_WEB_VITALS.md](./CORE_WEB_VITALS.md).
 
 ## Deployment Guide
 
