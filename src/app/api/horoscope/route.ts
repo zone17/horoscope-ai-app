@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { withCache } from '@/utils/cache';
+import { withCache, getCachedData } from '@/utils/cache';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 import { CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
 import { applyCorsHeaders } from '@/utils/cors-service';
+import { getLocalDateForTimezone, getSafeTimezone } from '@/utils/timezone-utils';
+import { safelyStoreInRedis } from '@/utils/redis-helpers';
 
 // Set route to be dynamic to prevent caching at edge level
 export const dynamic = 'force-dynamic';
@@ -138,6 +140,71 @@ Format the response in JSON with the following fields:
   }
 }
 
+/**
+ * Batch generate horoscopes for all signs for a specific local date
+ * This optimizes API usage by generating all signs at once when a cache miss occurs
+ * @param localDate - The user's local date in YYYY-MM-DD format
+ * @param type - The type of horoscope (daily, weekly, monthly)
+ * @returns Object with results and any errors
+ */
+async function batchGenerateHoroscopes(localDate: string, type: string = 'daily') {
+  console.log(`Batch generating horoscopes for all signs for local date: ${localDate}`);
+  
+  const results: Record<string, any> = {};
+  const errors: Record<string, string> = {};
+  
+  // Track philosopher usage to avoid repeating the same one more than twice
+  const philosopherUsage: Record<string, number> = {};
+  
+  // Generate horoscopes sequentially to manage philosopher assignment
+  for (const sign of VALID_SIGNS) {
+    try {
+      console.log(`Generating horoscope for ${sign} for local date ${localDate}...`);
+      
+      // Generate horoscope for this sign
+      let horoscope = await generateHoroscope(sign, type);
+      
+      // Count philosopher usage
+      const author = horoscope.quote_author;
+      philosopherUsage[author] = (philosopherUsage[author] || 0) + 1;
+      
+      // If this philosopher has been used more than twice, regenerate the horoscope
+      if (philosopherUsage[author] > 2) {
+        console.log(`Philosopher ${author} already used twice. Regenerating horoscope for ${sign}...`);
+        // Try up to 3 times to get a different philosopher
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const newHoroscope = await generateHoroscope(sign, type);
+          const newAuthor = newHoroscope.quote_author;
+          
+          // If this is a different philosopher who hasn't been used twice yet
+          if (newAuthor !== author && (!philosopherUsage[newAuthor] || philosopherUsage[newAuthor] < 2)) {
+            horoscope = newHoroscope;
+            philosopherUsage[newAuthor] = (philosopherUsage[newAuthor] || 0) + 1;
+            console.log(`Successfully assigned philosopher ${newAuthor} to ${sign}`);
+            break;
+          }
+        }
+      }
+      
+      // Generate timezone-aware cache key
+      const cacheKey = horoscopeKeys.timezoneDaily(sign, localDate);
+      
+      // Store in Redis with timezone-aware cache key
+      const storeSuccess = await safelyStoreInRedis(cacheKey, horoscope, {
+        ttl: CACHE_DURATIONS.ONE_DAY
+      });
+      
+      results[sign] = { success: storeSuccess, data: horoscope };
+      console.log(`Successfully cached ${sign} horoscope for local date ${localDate}`);
+    } catch (error) {
+      console.error(`Error generating horoscope for ${sign}:`, error);
+      errors[sign] = error instanceof Error ? error.message : 'Unknown error';
+    }
+  }
+  
+  return { results, errors, timestamp: new Date().toISOString() };
+}
+
 // Function to apply CORS headers directly
 function addCorsHeaders(response: NextResponse): NextResponse {
   // Allow all origins for maximum compatibility
@@ -169,6 +236,9 @@ export async function GET(request: NextRequest) {
     const sign = searchParams.get('sign')?.toLowerCase() || '';
     const type = searchParams.get('type')?.toLowerCase() || 'daily';
     
+    // New parameter: timezone for timezone-aware content
+    const timezone = searchParams.get('timezone') || 'UTC';
+    
     // Validate sign
     if (!sign || !VALID_SIGNS.includes(sign)) {
       const errorResponse = NextResponse.json(
@@ -197,50 +267,89 @@ export async function GET(request: NextRequest) {
       return addCorsHeaders(errorResponse);
     }
     
-    // Get today's date for daily horoscopes
-    const date = type === 'daily' ? getTodayDate() : '';
+    // Check if timezone-aware content is enabled
+    const useTimezoneContent = isFeatureEnabled(FEATURE_FLAGS.USE_TIMEZONE_CONTENT, false);
     
-    // Generate an appropriate cache key based on sign, type, and date
+    // Generate appropriate cache key
     let cacheKey: string;
+    let localDate: string = getTodayDate(); // Default to UTC date
     
-    if (type === 'daily') {
-      cacheKey = horoscopeKeys.daily(sign, date);
-    } else if (type === 'weekly') {
-      cacheKey = horoscopeKeys.weekly(sign);
+    if (useTimezoneContent && type === 'daily') {
+      // Calculate user's local date based on their timezone
+      localDate = getLocalDateForTimezone(getSafeTimezone(timezone));
+      cacheKey = horoscopeKeys.timezoneDaily(sign, localDate);
+      console.log(`Using timezone-aware cache key with timezone ${timezone} and local date ${localDate}`);
     } else {
-      cacheKey = horoscopeKeys.monthly(sign);
+      // Use original UTC-based cache key
+      cacheKey = horoscopeKeys.daily(sign, getTodayDate());
     }
-    
-    // Use different TTLs based on horoscope type
-    const cacheTTL = type === 'daily' 
-      ? CACHE_DURATIONS.ONE_DAY 
-      : type === 'weekly' 
-        ? CACHE_DURATIONS.ONE_WEEK 
-        : CACHE_DURATIONS.ONE_WEEK;
-    
-    // Function to fetch the horoscope
-    const fetchHoroscope = () => generateHoroscope(sign, type);
     
     // Use Redis caching if enabled
     const isCachingEnabled = isFeatureEnabled(FEATURE_FLAGS.USE_REDIS_CACHE, true);
     
     let horoscope;
+    let wasCached = false;
+    let generatedBatch = false;
+    
     if (isCachingEnabled) {
-      // Fetch with caching
-      horoscope = await withCache(
-        cacheKey,
-        fetchHoroscope,
-        { ttl: cacheTTL }
-      );
+      // Check if data exists in cache first
+      const cachedData = await getCachedData(cacheKey);
+      
+      if (cachedData) {
+        // Cache hit - return cached data
+        horoscope = cachedData;
+        wasCached = true;
+        console.log(`Cache hit for ${sign} with local date ${localDate}`);
+      } else {
+        // Cache miss - need to generate content
+        console.log(`Cache miss for ${sign} with local date ${localDate}`);
+        
+        if (useTimezoneContent && type === 'daily') {
+          // Generate horoscopes for ALL signs at once for this local date
+          console.log(`Generating batch horoscopes for all signs for local date ${localDate}`);
+          
+          const batchResult = await batchGenerateHoroscopes(localDate, type);
+          generatedBatch = true;
+          
+          // Get the requested sign's data from the batch results
+          if (batchResult.results[sign] && batchResult.results[sign].data) {
+            horoscope = batchResult.results[sign].data;
+            console.log(`Retrieved ${sign} data from batch generation`);
+          } else {
+            // Fallback: generate just this sign if batch generation failed for it
+            console.log(`Batch generation failed for ${sign}, generating individually`);
+            horoscope = await generateHoroscope(sign, type);
+            
+            // Cache the individual result
+            await safelyStoreInRedis(cacheKey, horoscope, { ttl: CACHE_DURATIONS.ONE_DAY });
+          }
+        } else {
+          // Regular non-timezone approach: generate just the requested sign
+          horoscope = await generateHoroscope(sign, type);
+          
+          // Cache the result with the appropriate key and TTL
+          const cacheTTL = type === 'daily' 
+            ? CACHE_DURATIONS.ONE_DAY 
+            : type === 'weekly' 
+              ? CACHE_DURATIONS.ONE_WEEK 
+              : CACHE_DURATIONS.ONE_WEEK;
+          
+          await safelyStoreInRedis(cacheKey, horoscope, { ttl: cacheTTL });
+        }
+      }
     } else {
-      // Fetch without caching
-      horoscope = await fetchHoroscope();
+      // Caching disabled, always generate fresh content
+      horoscope = await generateHoroscope(sign, type);
     }
     
-    // Create the success response
+    // Create the success response with detailed information
     const successResponse = NextResponse.json({
       success: true,
-      cached: isCachingEnabled,
+      cached: wasCached,
+      batchGenerated: generatedBatch,
+      timezoneAware: useTimezoneContent,
+      timezone: useTimezoneContent ? timezone : null,
+      localDate: useTimezoneContent ? localDate : null,
       data: horoscope
     });
     
@@ -249,20 +358,16 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Horoscope API error:', error);
     
-    // Return error response with proper type checking
-    const errorMessage = error instanceof Error ? error.message : 'An error occurred generating the horoscope';
-    
+    // Return an error response
     const errorResponse = NextResponse.json(
       { 
         success: false, 
-        error: errorMessage
+        error: error instanceof Error ? error.message : 'An unexpected error occurred' 
       },
-      { 
-        status: 500
-      }
+      { status: 500 }
     );
     
-    // Apply CORS headers directly to error response
+    // Apply CORS headers and return
     return addCorsHeaders(errorResponse);
   }
 } 

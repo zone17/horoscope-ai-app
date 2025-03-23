@@ -61,4 +61,13 @@ export const horoscopeKeys = {
     generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, { sign, type: 'weekly' }),
   monthly: (sign: string) => 
     generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, { sign, type: 'monthly' }),
+  /**
+   * Creates a timezone-aware daily horoscope key
+   * Used when the USE_TIMEZONE_CONTENT feature flag is enabled
+   * @param sign - Zodiac sign
+   * @param localDate - User's local date in YYYY-MM-DD format 
+   * @returns Cache key string
+   */
+  timezoneDaily: (sign: string, localDate: string) =>
+    generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, { sign, localDate, type: 'timezone-daily' }),
 }; 

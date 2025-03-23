@@ -101,7 +101,12 @@ async function corsAwareFetch(url: string, options: RequestInit = {}): Promise<R
 async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<HoroscopeData | null> {
   try {
     const baseUrl = getBaseUrl();
-    const url = `${baseUrl}/api/horoscope?sign=${sign}&type=${type}`;
+    
+    // Get the user's timezone for timezone-aware content
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    
+    // Include timezone parameter in the URL
+    const url = `${baseUrl}/api/horoscope?sign=${sign}&type=${type}&timezone=${encodeURIComponent(timezone)}`;
     console.log(`Fetching horoscope from: ${url}`);
     
     // Call the API endpoint with CORS awareness
@@ -117,6 +122,8 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
     console.log(`API response for ${sign}:`, {
       success: data.success,
       cached: data.cached,
+      timezoneAware: data.timezoneAware,
+      timezone: data.timezone,
       hasData: Boolean(data.data),
       dataPreview: data.data ? JSON.stringify(data.data).substring(0, 100) + '...' : 'No data'
     });

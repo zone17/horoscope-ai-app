@@ -93,6 +93,7 @@ OPENAI_API_KEY=your-openai-key
 # Feature flags
 FEATURE_FLAG_USE_REDIS_CACHE=true
 FEATURE_FLAG_USE_RATE_LIMITING=true
+FEATURE_FLAG_USE_TIMEZONE_CONTENT=true
 
 # Security (optional)
 CRON_SECRET=your-secret-for-cron-jobs
@@ -116,3 +117,26 @@ CRON_SECRET=your-secret-for-cron-jobs
 ### Local Development
 
 For local development, the application uses environment variables to determine API URLs. In development mode, both frontend and backend run on the same server (localhost:3000).
+
+## Features
+
+### Timezone-Aware Content Generation
+
+The application uses the user's local timezone to deliver horoscopes relevant to their current date, not UTC date:
+
+- Automatically detects user timezone via browser APIs
+- Generates and caches horoscopes based on local date in each timezone
+- Utilizes batch generation to optimize API usage (all zodiac signs generated at once)
+- Features a fallback to UTC date when timezone cannot be determined
+
+For detailed information, see:
+- [Timezone-Aware Content Technical Documentation](./docs/TIMEZONE_CONTENT.md)
+- [Timezone-Aware Deployment Guide](./docs/TIMEZONE_DEPLOYMENT.md)
+
+### Content Optimization
+
+The application includes several optimizations for content generation:
+
+- **Batch Generation**: When a user requests a horoscope that isn't cached for their local date, the system generates horoscopes for all zodiac signs at once, reducing API calls
+- **Philosopher Rotation**: Daily horoscopes feature content written in the style of different philosophers, rotating through a predefined list
+- **Lazy Loading**: Content is generated on-demand rather than using scheduled jobs, ensuring freshness while minimizing API usage

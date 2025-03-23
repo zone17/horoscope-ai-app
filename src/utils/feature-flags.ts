@@ -6,6 +6,8 @@ export const FEATURE_FLAGS = {
   USE_REDIS_CACHE: 'USE_REDIS_CACHE',
   // Whether to use Redis for rate limiting
   USE_RATE_LIMITING: 'USE_RATE_LIMITING',
+  // Whether to use timezone-aware content generation
+  USE_TIMEZONE_CONTENT: 'USE_TIMEZONE_CONTENT',
 };
 
 /**
