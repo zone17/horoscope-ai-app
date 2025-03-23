@@ -174,6 +174,105 @@ These tests verify that:
 - The feature flag correctly toggles between solar and lunar ordering
 - Both ordering systems contain all zodiac signs
 
+### Core Web Vitals Optimization
+
+The Core Web Vitals optimizations are tested in various files:
+
+#### 1. Web Vitals Utility Tests
+
+File: `src/utils/web-vitals.test.ts`
+
+These tests verify that:
+- Performance metrics are correctly captured and formatted
+- Analytics reporting functions properly
+- The feature flag correctly enables/disables metrics collection
+
+Example:
+```javascript
+it('should only report metrics when feature flag is enabled', () => {
+  // Mock feature flag as disabled
+  (isFeatureEnabled as jest.Mock).mockReturnValue(false);
+  reportWebVitals();
+  expect(mockSendBeacon).not.toHaveBeenCalled();
+
+  // Mock feature flag as enabled
+  (isFeatureEnabled as jest.Mock).mockReturnValue(true);
+  reportWebVitals();
+  expect(mockSendBeacon).toHaveBeenCalled();
+});
+```
+
+#### 2. CoreWebVitalsInitializer Tests
+
+File: `src/components/performance/CoreWebVitalsInitializer.test.tsx`
+
+These tests verify that:
+- The component only renders when the feature flag is enabled
+- The component initializes web vitals collection
+
+Example:
+```javascript
+it('should initialize web vitals when enabled', () => {
+  // Mock feature flag as enabled
+  (isFeatureEnabled as jest.Mock).mockReturnValue(true);
+  render(<CoreWebVitalsInitializer />);
+  expect(mockReportWebVitals).toHaveBeenCalled();
+});
+```
+
+#### 3. API Endpoint Tests
+
+File: `src/app/api/analytics/vitals/route.test.ts`
+
+These tests verify that:
+- The API endpoint correctly processes and stores metrics data
+- Invalid data is handled properly
+- Rate limiting is applied correctly
+
+#### 4. Toggle Script Tests
+
+File: `scripts/toggle-core-web-vitals.test.sh`
+
+These tests verify that:
+- The toggle script correctly modifies environment files
+- The script handles invalid arguments correctly
+- The script accurately reports current status
+
+#### 5. Lighthouse Performance Tests
+
+We run regular Lighthouse tests to verify Core Web Vitals improvements:
+
+- **Manual Testing**: Using Chrome DevTools Lighthouse panel
+- **CI Pipeline**: Automated Lighthouse tests in the CI pipeline
+- **PageSpeed Insights**: Regular checks with Google PageSpeed Insights API
+
+#### 6. Regression Tests
+
+File: `src/components/performance/CoreWebVitals.regression.test.tsx`
+
+```javascript
+// Critical regression test for Core Web Vitals
+it('@regression should correctly apply resource hints when enabled', () => {
+  // Mock feature flag as enabled
+  (isFeatureEnabled as jest.Mock).mockReturnValue(true);
+  
+  const { container } = render(<Head><CoreWebVitalsResourceHints /></Head>);
+  
+  // Verify preconnect and dns-prefetch links are present
+  const preconnectLinks = container.querySelectorAll('link[rel="preconnect"]');
+  const dnsPrefetchLinks = container.querySelectorAll('link[rel="dns-prefetch"]');
+  
+  expect(preconnectLinks.length).toBeGreaterThan(0);
+  expect(dnsPrefetchLinks.length).toBeGreaterThan(0);
+  
+  // Verify critical API domain is included
+  const apiDomainPreconnect = Array.from(preconnectLinks)
+    .some(link => link.getAttribute('href')?.includes('api.gettodayshoroscope.com'));
+  
+  expect(apiDomainPreconnect).toBe(true);
+});
+```
+
 ### Redis Caching
 
 The Redis caching functionality is tested in:

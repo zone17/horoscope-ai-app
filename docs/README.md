@@ -86,15 +86,18 @@ For detailed UI guidelines, see [UI_DESIGN_SYSTEM.md](./UI_DESIGN_SYSTEM.md).
 
 The application includes optimizations targeted at Core Web Vitals metrics:
 
-- **Performance Measuring**: Using the web-vitals library to track LCP, CLS, FID, and other metrics
+- **Current Status**: Fully implemented and enabled in both development and production environments
+- **Performance Measuring**: Using the web-vitals library to track LCP, CLS, INP, and other metrics
 - **Layout Shift Prevention**: Fixed dimensions for dynamic content
 - **Load Time Optimization**: Resource hints and prioritized loading
-- **Feature Flag Control**: All optimizations can be toggled via a feature flag
+- **Feature Flag Control**: All optimizations can be toggled via a feature flag (`FEATURE_FLAG_USE_CORE_WEB_VITALS_OPT`)
+- **Toggle Script**: Easy enabling/disabling with `./scripts/toggle-core-web-vitals.sh [on|off]`
 
 Key implementation files:
 - `src/utils/web-vitals.ts`: Core utilities for performance optimization
 - `src/components/performance/CoreWebVitalsInitializer.tsx`: Client component that initializes reporting
 - `src/app/api/analytics/vitals/route.ts`: API endpoint for metrics collection
+- `scripts/toggle-core-web-vitals.sh`: Script to toggle the feature flag in different environments
 
 For detailed documentation, see [CORE_WEB_VITALS.md](./CORE_WEB_VITALS.md).
 
