@@ -48,27 +48,24 @@ export default function HoroscopeDisplay() {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
-  const [useLunarOrder, setUseLunarOrder] = useState(false);
+  const [useLunarOrder, setUseLunarOrder] = useState(true); // Force lunar order
   
   // Check feature flag on component mount
   useEffect(() => {
-    // Check global variable injected from layout
+    // Log for debugging purposes but override the result
     const globalFlagValue = typeof window !== 'undefined' && window.ENV_LUNAR_ORDER;
-    // Check environment variable directly
     const envFlagValue = process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true';
-    // Check feature flag from utils
     const utilsFlagValue = isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER);
-    
-    const isLunarOrderEnabled = globalFlagValue || envFlagValue || utilsFlagValue;
     
     console.log('Lunar calendar ordering check:', { 
       envFlag: envFlagValue, 
       globalFlag: globalFlagValue, 
       utilsFlag: utilsFlagValue,
-      finalDecision: isLunarOrderEnabled
+      finalDecision: true // Always true for now
     });
     
-    setUseLunarOrder(!!isLunarOrderEnabled);
+    // Always use lunar ordering for now
+    setUseLunarOrder(true);
   }, []);
 
   // Format today's date
@@ -80,10 +77,8 @@ export default function HoroscopeDisplay() {
     year: 'numeric'
   });
 
-  // Determine zodiac sign order based on feature flag
-  const ZODIAC_SIGNS = useLunarOrder 
-    ? LUNAR_ZODIAC_SIGNS 
-    : TRADITIONAL_ZODIAC_SIGNS;
+  // Always use lunar zodiac signs for now
+  const ZODIAC_SIGNS = LUNAR_ZODIAC_SIGNS;
   
   // Fetch horoscopes data
   useEffect(() => {
