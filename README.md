@@ -133,6 +133,18 @@ For detailed information, see:
 - [Timezone-Aware Content Technical Documentation](./docs/TIMEZONE_CONTENT.md)
 - [Timezone-Aware Deployment Guide](./docs/TIMEZONE_DEPLOYMENT.md)
 
+### Lunar Calendar Zodiac Ordering
+
+The application supports displaying zodiac signs in lunar calendar order instead of the traditional solar order:
+
+- Controlled by a feature flag for easy enabling/disabling
+- Starts with Aquarius (lunar new year) instead of Capricorn
+- Maintains all functionality while providing an alternative viewing experience
+- Implemented only on the frontend with no impact on API or horoscope generation
+
+For detailed information, see:
+- [Lunar Calendar Ordering Documentation](./docs/LUNAR_CALENDAR_ORDER.md)
+
 ### Content Optimization
 
 The application includes several optimizations for content generation:

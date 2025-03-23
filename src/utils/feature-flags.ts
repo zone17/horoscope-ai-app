@@ -8,6 +8,8 @@ export const FEATURE_FLAGS = {
   USE_RATE_LIMITING: 'USE_RATE_LIMITING',
   // Whether to use timezone-aware content generation
   USE_TIMEZONE_CONTENT: 'USE_TIMEZONE_CONTENT',
+  // Whether to order zodiac signs according to lunar calendar
+  USE_LUNAR_ZODIAC_ORDER: 'USE_LUNAR_ZODIAC_ORDER',
 };
 
 /**

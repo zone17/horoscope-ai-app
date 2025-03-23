@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { RefreshCwIcon } from 'lucide-react';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
 import { useMode } from '@/hooks/useMode';
+import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 
-// Zodiac sign data with symbols, date ranges, and elements
-const ZODIAC_SIGNS = [
+// Traditional zodiac sign order (solar calendar)
+const TRADITIONAL_ZODIAC_SIGNS = [
   { sign: 'capricorn', symbol: '♑', dateRange: 'Dec 22 - Jan 19', element: 'Earth' },
   { sign: 'aquarius', symbol: '♒', dateRange: 'Jan 20 - Feb 18', element: 'Air' },
   { sign: 'pisces', symbol: '♓', dateRange: 'Feb 19 - Mar 20', element: 'Water' },
@@ -24,6 +25,27 @@ const ZODIAC_SIGNS = [
   { sign: 'scorpio', symbol: '♏', dateRange: 'Oct 23 - Nov 21', element: 'Water' },
   { sign: 'sagittarius', symbol: '♐', dateRange: 'Nov 22 - Dec 21', element: 'Fire' },
 ];
+
+// Lunar calendar order of zodiac signs
+const LUNAR_ZODIAC_SIGNS = [
+  { sign: 'aquarius', symbol: '♒', dateRange: 'Jan 20 - Feb 18', element: 'Air' },
+  { sign: 'pisces', symbol: '♓', dateRange: 'Feb 19 - Mar 20', element: 'Water' },
+  { sign: 'aries', symbol: '♈', dateRange: 'Mar 21 - Apr 19', element: 'Fire' },
+  { sign: 'taurus', symbol: '♉', dateRange: 'Apr 20 - May 20', element: 'Earth' },
+  { sign: 'gemini', symbol: '♊', dateRange: 'May 21 - Jun 20', element: 'Air' },
+  { sign: 'cancer', symbol: '♋', dateRange: 'Jun 21 - Jul 22', element: 'Water' },
+  { sign: 'leo', symbol: '♌', dateRange: 'Jul 23 - Aug 22', element: 'Fire' },
+  { sign: 'virgo', symbol: '♍', dateRange: 'Aug 23 - Sep 22', element: 'Earth' },
+  { sign: 'libra', symbol: '♎', dateRange: 'Sep 23 - Oct 22', element: 'Air' },
+  { sign: 'scorpio', symbol: '♏', dateRange: 'Oct 23 - Nov 21', element: 'Water' },
+  { sign: 'sagittarius', symbol: '♐', dateRange: 'Nov 22 - Dec 21', element: 'Fire' },
+  { sign: 'capricorn', symbol: '♑', dateRange: 'Dec 22 - Jan 19', element: 'Earth' },
+];
+
+// Determine zodiac sign order based on feature flag
+const ZODIAC_SIGNS = isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER) 
+  ? LUNAR_ZODIAC_SIGNS 
+  : TRADITIONAL_ZODIAC_SIGNS;
 
 // Helper functions to get zodiac sign information
 function getZodiacSymbol(sign: string): string {
