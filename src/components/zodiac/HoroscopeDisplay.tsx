@@ -42,42 +42,34 @@ const LUNAR_ZODIAC_SIGNS = [
   { sign: 'capricorn', symbol: '♑', dateRange: 'Dec 22 - Jan 19', element: 'Earth' },
 ];
 
-// Directly check for NEXT_PUBLIC environment variable on the client side for this feature
-const isLunarOrderEnabled = typeof window !== 'undefined' && 
-  (window.ENV_LUNAR_ORDER === 'true' || process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true');
-
-// Determine zodiac sign order based on direct environment check
-const useLunarOrder = isLunarOrderEnabled;
-// Log for debugging
-console.log('Lunar calendar ordering enabled:', useLunarOrder);
-
-const ZODIAC_SIGNS = useLunarOrder 
-  ? LUNAR_ZODIAC_SIGNS 
-  : TRADITIONAL_ZODIAC_SIGNS;
-
-// Helper functions to get zodiac sign information
-function getZodiacSymbol(sign: string): string {
-  const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
-  return zodiacSign ? zodiacSign.symbol : '';
-}
-
-function getZodiacDateRange(sign: string): string {
-  const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
-  return zodiacSign ? zodiacSign.dateRange : '';
-}
-
-function getZodiacElement(sign: string): string {
-  const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
-  return zodiacSign ? zodiacSign.element : '';
-}
-
 export default function HoroscopeDisplay() {
   const { mode } = useMode();
   const [horoscopes, setHoroscopes] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
+  const [useLunarOrder, setUseLunarOrder] = useState(false);
   
+  // Check feature flag on component mount
+  useEffect(() => {
+    // Check global variable injected from layout
+    const globalFlagValue = typeof window !== 'undefined' && window.ENV_LUNAR_ORDER;
+    // Check environment variable directly
+    const envFlagValue = process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true';
+    // Check feature flag from utils
+    const utilsFlagValue = isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER);
+    
+    const isLunarOrderEnabled = globalFlagValue || envFlagValue || utilsFlagValue;
+    console.log('Lunar calendar ordering check:', { 
+      globalFlag: globalFlagValue, 
+      envFlag: envFlagValue, 
+      utilsFlag: utilsFlagValue,
+      finalDecision: isLunarOrderEnabled
+    });
+    
+    setUseLunarOrder(!!isLunarOrderEnabled);
+  }, []);
+
   // Format today's date
   const today = new Date();
   const formattedDate = today.toLocaleDateString('en-US', {
@@ -86,6 +78,11 @@ export default function HoroscopeDisplay() {
     day: 'numeric',
     year: 'numeric'
   });
+
+  // Determine zodiac sign order based on feature flag
+  const ZODIAC_SIGNS = useLunarOrder 
+    ? LUNAR_ZODIAC_SIGNS 
+    : TRADITIONAL_ZODIAC_SIGNS;
   
   // Fetch horoscopes data
   useEffect(() => {
@@ -113,8 +110,29 @@ export default function HoroscopeDisplay() {
     fetchHoroscopes();
   }, []);
 
+  // Helper functions to get zodiac sign information
+  function getZodiacSymbol(sign: string): string {
+    const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
+    return zodiacSign ? zodiacSign.symbol : '';
+  }
+
+  function getZodiacDateRange(sign: string): string {
+    const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
+    return zodiacSign ? zodiacSign.dateRange : '';
+  }
+
+  function getZodiacElement(sign: string): string {
+    const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
+    return zodiacSign ? zodiacSign.element : '';
+  }
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
+      {/* Feature flag indicator for debugging */}
+      <div className="fixed top-2 right-2 z-50 bg-black/60 text-xs text-white/70 px-2 py-1 rounded">
+        Order: {useLunarOrder ? 'Lunar' : 'Traditional'}
+      </div>
+      
       {/* Hero section */}
       <div className="relative w-full mb-16 px-4 py-20 flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-black/80">
         {/* Background video */}
