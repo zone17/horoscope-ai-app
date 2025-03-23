@@ -19,7 +19,17 @@ export const FEATURE_FLAGS = {
  * @returns Whether the feature is enabled
  */
 export function isFeatureEnabled(flagName: string, defaultValue = false): boolean {
-  // Check for environment variable with the same name as the flag
+  // For client-side feature flags that need to be accessible in the browser
+  if (flagName === FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER && typeof window !== 'undefined') {
+    // Use NEXT_PUBLIC_ prefix for client-side flags
+    const publicEnvValue = process.env[`NEXT_PUBLIC_FEATURE_FLAG_${flagName}`];
+      
+    if (publicEnvValue !== undefined) {
+      return publicEnvValue.toLowerCase() === 'true';
+    }
+  }
+  
+  // Standard server-side feature flags
   const envValue = process.env[`FEATURE_FLAG_${flagName}`];
   
   // If environment variable is set, parse its value
