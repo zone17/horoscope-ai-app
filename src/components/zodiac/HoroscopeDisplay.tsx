@@ -42,8 +42,16 @@ const LUNAR_ZODIAC_SIGNS = [
   { sign: 'capricorn', symbol: '♑', dateRange: 'Dec 22 - Jan 19', element: 'Earth' },
 ];
 
-// Determine zodiac sign order based on feature flag
-const ZODIAC_SIGNS = isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER) 
+// Directly check for NEXT_PUBLIC environment variable on the client side for this feature
+const isLunarOrderEnabled = typeof window !== 'undefined' && 
+  (window.ENV_LUNAR_ORDER === 'true' || process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true');
+
+// Determine zodiac sign order based on direct environment check
+const useLunarOrder = isLunarOrderEnabled;
+// Log for debugging
+console.log('Lunar calendar ordering enabled:', useLunarOrder);
+
+const ZODIAC_SIGNS = useLunarOrder 
   ? LUNAR_ZODIAC_SIGNS 
   : TRADITIONAL_ZODIAC_SIGNS;
 
