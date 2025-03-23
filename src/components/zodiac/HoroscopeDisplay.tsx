@@ -9,6 +9,10 @@ import { RefreshCwIcon } from 'lucide-react';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
 import { useMode } from '@/hooks/useMode';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
+import dynamic from 'next/dynamic';
+
+// Dynamically import schema markup to avoid SSR issues with feature flag
+const SchemaMarkup = dynamic(() => import('@/components/seo/SchemaMarkup'), { ssr: false });
 
 // Traditional zodiac sign order (solar calendar)
 const TRADITIONAL_ZODIAC_SIGNS = [
@@ -52,20 +56,8 @@ export default function HoroscopeDisplay() {
   
   // Check feature flag on component mount
   useEffect(() => {
-    // Log for debugging purposes but override the result
-    const globalFlagValue = typeof window !== 'undefined' && window.ENV_LUNAR_ORDER;
-    const envFlagValue = process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true';
-    const utilsFlagValue = isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER);
-    
-    console.log('Lunar calendar ordering check:', { 
-      envFlag: envFlagValue, 
-      globalFlag: globalFlagValue, 
-      utilsFlag: utilsFlagValue,
-      finalDecision: true // Always true for now
-    });
-    
-    // Always use lunar ordering for now
-    setUseLunarOrder(true);
+    // Use feature flag to determine ordering instead of hardcoding
+    setUseLunarOrder(isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER));
   }, []);
 
   // Format today's date
@@ -77,8 +69,8 @@ export default function HoroscopeDisplay() {
     year: 'numeric'
   });
 
-  // Always use lunar zodiac signs for now
-  const ZODIAC_SIGNS = LUNAR_ZODIAC_SIGNS;
+  // Use zodiac signs based on feature flag
+  const ZODIAC_SIGNS = useLunarOrder ? LUNAR_ZODIAC_SIGNS : TRADITIONAL_ZODIAC_SIGNS;
   
   // Core Web Vitals optimization - Use memoized helper functions
   const getZodiacSymbol = useCallback((sign: string): string => {
@@ -164,6 +156,9 @@ export default function HoroscopeDisplay() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
+      {/* Add Schema Markup with zodiac and horoscope data */}
+      <SchemaMarkup zodiacSigns={ZODIAC_SIGNS} horoscopes={horoscopes} />
+      
       {/* Feature flag indicator for debugging */}
       <div className="fixed top-2 right-2 z-50 bg-black/60 text-xs text-white/70 px-2 py-1 rounded">
         Order: {useLunarOrder ? 'Lunar' : 'Traditional'}
