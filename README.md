@@ -173,11 +173,15 @@ For detailed information, see:
 
 The application implements performance optimizations targeted at Google's Core Web Vitals metrics:
 
-- Controlled by a feature flag for safe rollout and easy rollback
-- Optimizes Largest Contentful Paint (LCP) with resource hints and prioritized loading
-- Improves Cumulative Layout Shift (CLS) with fixed-size containers and placeholders
-- Enhances First Input Delay (FID) with optimized JavaScript handling
-- Collects and analyzes performance metrics via a dedicated API endpoint
+- **Current Status**: Fully implemented and enabled in both development and production
+- **Feature Flag Control**: Uses `FEATURE_FLAG_USE_CORE_WEB_VITALS_OPT` for safe rollout and easy rollback
+- **Toggle Script**: Easily enable/disable with `./scripts/toggle-core-web-vitals.sh [on|off]`
+- **Performance Improvements**:
+  - Optimizes Largest Contentful Paint (LCP) with resource hints and prioritized loading
+  - Improves Cumulative Layout Shift (CLS) with fixed-size containers and placeholders
+  - Enhances Interaction to Next Paint (INP) with optimized JavaScript handling
+- **Analytics**: Collects and analyzes performance metrics via a dedicated API endpoint
+- **Testing**: Comprehensive testing suite including unit tests, integration tests, and Lighthouse verification
 
 For detailed information, see:
 - [Core Web Vitals Documentation](./docs/CORE_WEB_VITALS.md)
