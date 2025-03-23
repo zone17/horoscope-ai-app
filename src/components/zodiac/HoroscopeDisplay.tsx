@@ -60,9 +60,10 @@ export default function HoroscopeDisplay() {
     const utilsFlagValue = isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER);
     
     const isLunarOrderEnabled = globalFlagValue || envFlagValue || utilsFlagValue;
+    
     console.log('Lunar calendar ordering check:', { 
-      globalFlag: globalFlagValue, 
       envFlag: envFlagValue, 
+      globalFlag: globalFlagValue, 
       utilsFlag: utilsFlagValue,
       finalDecision: isLunarOrderEnabled
     });
