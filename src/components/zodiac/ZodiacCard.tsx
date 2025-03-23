@@ -295,7 +295,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       className="px-4 py-1.5 text-xs bg-indigo-500/40 hover:bg-indigo-500/60 transition-all duration-300 rounded-full text-white font-medium shadow-sm border border-indigo-400/30"
                       aria-label={`Read full horoscope for ${sign}`}
                     >
-                      &lt;&gt; Read More &lt;&gt;
+                      Read More
                     </Button>
                   </div>
                 </div>

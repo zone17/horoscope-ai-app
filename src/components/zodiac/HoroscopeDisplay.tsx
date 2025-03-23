@@ -57,31 +57,6 @@ export default function HoroscopeDisplay() {
     year: 'numeric'
   });
   
-  // Calculate time until next update (midnight tonight)
-  const calculateTimeUntilNextUpdate = () => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    
-    const diffMs = tomorrow.getTime() - now.getTime();
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `Next update in ${diffHrs}h ${diffMins}m`;
-  };
-  
-  const [timeUntilUpdate, setTimeUntilUpdate] = useState(calculateTimeUntilNextUpdate());
-  
-  // Update the countdown every minute
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeUntilUpdate(calculateTimeUntilNextUpdate());
-    }, 60000);
-    
-    return () => clearInterval(timer);
-  }, []);
-  
   // Fetch horoscopes data
   useEffect(() => {
     async function fetchHoroscopes() {
@@ -137,17 +112,13 @@ export default function HoroscopeDisplay() {
         <p className="text-center text-white/80 max-w-2xl font-light text-lg mb-8 relative z-30">
           Your celestial guidance for what the cosmos has aligned today
         </p>
-        
-        <div className="px-4 py-2 rounded-full glassmorphic inline-flex items-center relative z-30">
-          <span className="text-white/90 font-normal text-sm tracking-wide">{timeUntilUpdate}</span>
-        </div>
       </div>
       
       {/* Refresh notification */}
       {refreshed && (
         <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm text-white/70 font-normal backdrop-blur-md bg-white/5 border border-white/10 flex items-center gap-2 z-50">
           <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          <span>{timeUntilUpdate}</span>
+          <span>Content refreshed</span>
         </div>
       )}
       
