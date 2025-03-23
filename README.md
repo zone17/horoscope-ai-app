@@ -1,3 +1,15 @@
+# Today's Horoscope Application
+
+## Recent Updates
+
+### Schema Markup Implementation (March 2024)
+- **Enhanced Schema Generator**: Added full support for all required schema types (WebSite, Organization, Service, ItemList, FAQ, and Article/CreativeWork)
+- **Improved Testing**: Added unit tests and regression tests for schema generation
+- **Documentation**: Added detailed documentation in [docs/seo/SCHEMA_MARKUP.md](./docs/seo/SCHEMA_MARKUP.md) and [docs/TESTING.md](./docs/TESTING.md)
+- **Feature Flag**: Enabled `FEATURE_FLAG_USE_SCHEMA_MARKUP` in production environment
+
+The schema markup feature improves SEO by adding structured data to our pages, making them more accessible to search engines and potentially improving search result display.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -118,6 +130,18 @@ CRON_SECRET=your-secret-for-cron-jobs
 
 For local development, the application uses environment variables to determine API URLs. In development mode, both frontend and backend run on the same server (localhost:3000).
 
+## Testing
+
+The application uses Jest for unit and integration testing. Tests are designed to verify component functionality, feature flag behavior, and business logic.
+
+Key testing approaches include:
+- **Unit Tests**: Verify individual components and utilities work correctly
+- **Integration Tests**: Verify components work together properly
+- **Feature Flag Testing**: Verify features can be toggled on/off via configuration
+
+For detailed information on testing approaches and best practices, see:
+- [Testing Documentation](./docs/TESTING.md)
+
 ## Features
 
 ### Timezone-Aware Content Generation
@@ -152,3 +176,15 @@ The application includes several optimizations for content generation:
 - **Batch Generation**: When a user requests a horoscope that isn't cached for their local date, the system generates horoscopes for all zodiac signs at once, reducing API calls
 - **Philosopher Rotation**: Daily horoscopes feature content written in the style of different philosophers, rotating through a predefined list
 - **Lazy Loading**: Content is generated on-demand rather than using scheduled jobs, ensuring freshness while minimizing API usage
+
+### Schema Markup for SEO
+
+The application implements comprehensive schema markup for improved search engine visibility:
+
+- **Feature Flag Control**: Easily enable/disable schema markup via environment variables
+- **Multiple Schema Types**: Includes WebSite, Organization, Service, ItemList, CreativeWork, and FAQPage schemas
+- **Dynamic Generation**: Schema content adapts to the actual horoscope data
+- **Structured Testing**: Comprehensive unit and integration tests validate schema generation
+
+For detailed information, see:
+- [Schema Markup Implementation Documentation](./docs/seo/SCHEMA_MARKUP.md)

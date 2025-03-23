@@ -137,3 +137,29 @@ If you encounter issues after deployment:
 4. **Domain Configuration**
    - Ensure DNS propagation is complete (can take up to 48 hours)
    - Verify Vercel domain settings match your DNS configuration 
+
+## Feature Flags
+
+The application uses several feature flags to control behavior. Set these in your environment variables:
+
+1. **Redis Cache**
+   - `FEATURE_FLAG_USE_REDIS_CACHE`: Enable/disable Redis caching
+   
+2. **Rate Limiting**
+   - `FEATURE_FLAG_USE_RATE_LIMITING`: Enable/disable API rate limiting
+
+3. **Timezone Content**
+   - `FEATURE_FLAG_USE_TIMEZONE_CONTENT`: Enable/disable timezone-aware content
+
+4. **Lunar Zodiac Order**
+   - `NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER`: Enable/disable lunar calendar ordering for zodiac signs
+
+5. **Core Web Vitals Optimizations**
+   - `NEXT_PUBLIC_FEATURE_FLAG_USE_CORE_WEB_VITALS_OPTIMIZATIONS`: Enable/disable Core Web Vitals optimizations
+
+6. **Schema Markup**
+   - `FEATURE_FLAG_USE_SCHEMA_MARKUP`: Enable/disable schema markup for SEO
+   - Current status: `true` (enabled in production)
+   - Adds structured data for improved search engine visibility and rich snippets
+   - Implemented types: WebSite, Organization, Service, ItemList, FAQ, and Article/CreativeWork
+   - See [Schema Markup Documentation](./docs/seo/SCHEMA_MARKUP.md) for details 
