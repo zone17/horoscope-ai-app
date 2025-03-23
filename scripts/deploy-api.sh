@@ -93,6 +93,25 @@ if [ ! -f "$TEMP_DIR/jsconfig.json" ] && [ ! -f "$TEMP_DIR/tsconfig.json" ]; the
 EOF
 fi
 
+# Create .env file
+cat > $TEMP_DIR/.env.production << 'EOF'
+# Redis configuration
+UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL:-"your-redis-url-here"}
+UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN:-"your-redis-token-here"}
+
+# Feature flags
+FEATURE_FLAG_USE_REDIS_CACHE=true
+FEATURE_FLAG_USE_RATE_LIMITING=true
+FEATURE_FLAG_USE_TIMEZONE_CONTENT=true
+FEATURE_FLAG_USE_SCHEMA_MARKUP=false
+
+# OpenAI
+OPENAI_API_KEY=${OPENAI_API_KEY:-"your-openai-key-here"}
+
+# Security
+CRON_SECRET=${CRON_SECRET:-"your-cron-secret-here"}
+EOF
+
 # Navigate to the temp directory
 cd $TEMP_DIR
 
