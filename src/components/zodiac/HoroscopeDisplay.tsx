@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ZodiacCard } from './ZodiacCard';
 import { getHoroscopesForAllSigns } from '@/utils/horoscope-service';
@@ -80,47 +80,87 @@ export default function HoroscopeDisplay() {
   // Always use lunar zodiac signs for now
   const ZODIAC_SIGNS = LUNAR_ZODIAC_SIGNS;
   
-  // Fetch horoscopes data
-  useEffect(() => {
-    async function fetchHoroscopes() {
-      try {
-        setIsLoading(true);
-        const data = await getHoroscopesForAllSigns();
-        setHoroscopes(data);
-        setIsError(false);
-        setRefreshed(true);
-        
-        // Hide the refresh confirmation after 5 seconds
-        const timer = setTimeout(() => {
-          setRefreshed(false);
-        }, 5000);
-        return () => clearTimeout(timer);
-      } catch (error) {
-        console.error('Error fetching horoscopes:', error);
+  // Core Web Vitals optimization - Use memoized helper functions
+  const getZodiacSymbol = useCallback((sign: string): string => {
+    const zodiacInfo = ZODIAC_SIGNS.find(info => info.sign === sign);
+    return zodiacInfo ? zodiacInfo.symbol : '';
+  }, [ZODIAC_SIGNS]);
+  
+  const getZodiacDateRange = useCallback((sign: string): string => {
+    const zodiacInfo = ZODIAC_SIGNS.find(info => info.sign === sign);
+    return zodiacInfo ? zodiacInfo.dateRange : '';
+  }, [ZODIAC_SIGNS]);
+  
+  const getZodiacElement = useCallback((sign: string): string => {
+    const zodiacInfo = ZODIAC_SIGNS.find(info => info.sign === sign);
+    return zodiacInfo ? zodiacInfo.element : '';
+  }, [ZODIAC_SIGNS]);
+
+  // Core Web Vitals optimization - Memoize fetch function
+  const fetchHoroscopes = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setIsError(false);
+      
+      // Get horoscopes for all signs
+      const response = await getHoroscopesForAllSigns();
+      
+      if (response && response.horoscopes) {
+        setHoroscopes(response.horoscopes);
+      } else {
         setIsError(true);
-      } finally {
-        setIsLoading(false);
       }
+    } catch (error) {
+      console.error('Error fetching horoscopes:', error);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
-    
-    fetchHoroscopes();
   }, []);
 
-  // Helper functions to get zodiac sign information
-  function getZodiacSymbol(sign: string): string {
-    const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
-    return zodiacSign ? zodiacSign.symbol : '';
-  }
+  // Load horoscopes on mount
+  useEffect(() => {
+    fetchHoroscopes();
+  }, [fetchHoroscopes]);
 
-  function getZodiacDateRange(sign: string): string {
-    const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
-    return zodiacSign ? zodiacSign.dateRange : '';
-  }
+  // Handle refresh button click - Core Web Vitals optimization for event handlers
+  const handleRefresh = useCallback(async () => {
+    await fetchHoroscopes();
+    setRefreshed(true);
+    setTimeout(() => setRefreshed(false), 2000);
+  }, [fetchHoroscopes]);
 
-  function getZodiacElement(sign: string): string {
-    const zodiacSign = ZODIAC_SIGNS.find(z => z.sign === sign);
-    return zodiacSign ? zodiacSign.element : '';
-  }
+  // Core Web Vitals optimization - Memoize the zodiac grid
+  const zodiacGrid = useMemo(() => {
+    // Check if Core Web Vitals optimizations are enabled
+    const useOptimizations = isFeatureEnabled(FEATURE_FLAGS.USE_CORE_WEB_VITALS_OPTIMIZATIONS, false);
+    
+    return (
+      <motion.div 
+        initial={useOptimizations ? { opacity: 0 } : undefined}
+        animate={useOptimizations ? { opacity: 1 } : undefined}
+        transition={useOptimizations ? { duration: 0.5 } : undefined}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4"
+      >
+        {ZODIAC_SIGNS.map((zodiacInfo, index) => (
+          <div 
+            key={zodiacInfo.sign}
+            className={index === 0 ? 'lcp-target' : ''}
+            style={useOptimizations && index === 0 ? { contain: 'layout' } : undefined}
+          >
+            <ZodiacCard
+              sign={zodiacInfo.sign}
+              symbol={zodiacInfo.symbol}
+              dateRange={zodiacInfo.dateRange}
+              element={zodiacInfo.element}
+              horoscope={horoscopes[zodiacInfo.sign]}
+              isLoading={isLoading}
+            />
+          </div>
+        ))}
+      </motion.div>
+    );
+  }, [ZODIAC_SIGNS, horoscopes, isLoading]);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
@@ -190,19 +230,7 @@ export default function HoroscopeDisplay() {
 
       {/* Zodiac cards grid */}
       {!isLoading && !isError && Object.keys(horoscopes).length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ZODIAC_SIGNS.map(({ sign, symbol, dateRange, element }) => (
-            <ZodiacCard 
-              key={sign}
-              sign={sign}
-              symbol={symbol}
-              dateRange={dateRange}
-              element={element}
-              horoscope={horoscopes[sign] || null}
-              isLoading={isLoading}
-            />
-          ))}
-        </div>
+        zodiacGrid
       )}
     </div>
   );

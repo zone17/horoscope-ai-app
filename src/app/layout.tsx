@@ -2,15 +2,20 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "../styles/animations.css";
+import CoreWebVitalsOptimizer from "@/components/performance/CoreWebVitalsOptimizer";
+import WebVitalsMonitor from "@/components/performance/WebVitalsMonitor";
+import { isFeatureEnabled, FEATURE_FLAGS } from "@/utils/feature-flags";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: 'swap', // Core Web Vitals optimization - prevents FOIT
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: 'swap', // Core Web Vitals optimization - prevents FOIT
 });
 
 export const metadata: Metadata = {
@@ -36,6 +41,7 @@ export default function RootLayout({
 }>) {
   // Get environment variables for feature flags
   const lunarOrderEnabled = process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true';
+  const coreWebVitalsEnabled = process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_CORE_WEB_VITALS_OPTIMIZATIONS === 'true';
   
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
@@ -45,14 +51,27 @@ export default function RootLayout({
         {/* Inject feature flags as global variables */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.ENV_LUNAR_ORDER = ${JSON.stringify(lunarOrderEnabled)};`,
+            __html: `
+              window.ENV_LUNAR_ORDER = ${JSON.stringify(lunarOrderEnabled)};
+              window.ENV_CORE_WEB_VITALS = ${JSON.stringify(coreWebVitalsEnabled)};
+            `,
           }}
         />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-br from-indigo-950 via-[#0f0b30] to-[#0c0921] text-white`}
       >
-        {children}
+        {/* Only include the Core Web Vitals components if the feature flag is enabled */}
+        {coreWebVitalsEnabled ? (
+          <>
+            <CoreWebVitalsOptimizer>
+              {children}
+            </CoreWebVitalsOptimizer>
+            <WebVitalsMonitor />
+          </>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );

@@ -148,7 +148,7 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
   ],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.gettodayshoroscope.com",
-    "FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "true"
+    "NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "true"
   }
 }
 EOF
