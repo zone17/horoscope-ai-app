@@ -312,10 +312,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote Author</h3>
-                    <p className="font-light text-white text-lg leading-none capitalize">
-                      {processedHoroscope?.quote_author || 'Coming soon'}
-                    </p>
+                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote</h3>
+                    <div className="flex flex-col">
+                      <p className="font-light text-white text-xs italic line-clamp-2">
+                        {processedHoroscope?.inspirational_quote ? 
+                         `"${processedHoroscope.inspirational_quote}"` : 
+                         'Coming soon'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardFooter>
@@ -428,21 +432,18 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                         </p>
                       </div>
                       <div>
-                        <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote Author</h3>
-                        <p className="font-light text-white text-lg leading-none capitalize">
-                          {processedHoroscope?.quote_author || 'Coming soon'}
+                        <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
+                        <p className="font-light text-white text-lg leading-none">
+                          {processedHoroscope?.inspirational_quote ? 
+                           `"${processedHoroscope.inspirational_quote}"` : 
+                           'Coming soon'}
                         </p>
+                        {processedHoroscope?.quote_author && (
+                          <p className="font-light text-indigo-200 text-xs mt-1">
+                            - {processedHoroscope.quote_author}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
-                    <div className="flex flex-col">
-                      <p className="font-light text-white text-sm italic">
-                        {processedHoroscope?.inspirational_quote ? 
-                         `"${processedHoroscope.inspirational_quote}"` : 
-                         'Coming soon'}
-                      </p>
                     </div>
                   </div>
                 </CardFooter>
