@@ -11,7 +11,7 @@
   },
   "crons": [
     {
-      "path": "/api/cron/daily-horoscope",
+      "path": "/api/cron/generate-horoscopes",
       "schedule": "0 0 * * *"
     }
   ],
@@ -19,6 +19,6 @@
     "FEATURE_FLAG_USE_REDIS_CACHE": "true",
     "FEATURE_FLAG_USE_RATE_LIMITING": "true",
     "FEATURE_FLAG_USE_TIMEZONE_CONTENT": "true",
-    "FEATURE_FLAG_USE_XML_SITEMAP": "true"
+    "FEATURE_FLAG_USE_SCHEMA_MARKUP": "true"
   }
 } 
