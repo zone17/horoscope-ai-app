@@ -39,7 +39,17 @@ cp -r src/app/robots.ts $TEMP_DIR/src/app/ 2>/dev/null || :
 
 # Copy components
 echo "Copying components..."
-cp -r src/components/* $TEMP_DIR/src/components/
+# Copy only frontend-specific components and UI components
+cp -r src/components/ui $TEMP_DIR/src/components/
+cp -r src/components/zodiac $TEMP_DIR/src/components/
+cp -r src/components/layout $TEMP_DIR/src/components/
+cp -r src/components/performance $TEMP_DIR/src/components/
+cp -r src/components/seo $TEMP_DIR/src/components/
+cp -r src/components/Header.tsx $TEMP_DIR/src/components/
+cp -r src/components/HoroscopeDisplay.tsx $TEMP_DIR/src/components/
+cp -r src/components/ModeProvider.tsx $TEMP_DIR/src/components/
+cp -r src/components/ModeToggle.tsx $TEMP_DIR/src/components/
+cp -r src/components/VideoBanner.tsx $TEMP_DIR/src/components/
 
 # Copy styles
 echo "Copying styles..."
