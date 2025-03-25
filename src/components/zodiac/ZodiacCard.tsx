@@ -180,7 +180,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 <div className="h-5 w-20 animate-pulse bg-indigo-800/30 rounded"></div>
               </div>
               <div>
-                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote</h3>
+                <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote Author</h3>
                 <div className="flex flex-col">
                   <div className="h-3 w-full animate-pulse bg-indigo-800/30 rounded mb-1"></div>
                   <div className="h-2 w-16 animate-pulse bg-indigo-800/30 rounded"></div>
@@ -311,14 +311,12 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       {processedHoroscope?.best_match || 'Coming soon'}
                     </p>
                   </div>
-                  {isFeatureEnabled(FEATURE_FLAGS.USE_TIMEZONE_CONTENT, false) && (
-                    <div>
-                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote Author</h3>
-                      <p className="font-light text-white text-lg leading-none capitalize">
-                        {processedHoroscope?.quote_author || 'Coming soon'}
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote Author</h3>
+                    <p className="font-light text-white text-lg leading-none capitalize">
+                      {processedHoroscope?.quote_author || 'Coming soon'}
+                    </p>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
@@ -429,33 +427,24 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                           {processedHoroscope?.best_match || 'Coming soon'}
                         </p>
                       </div>
-                      {isFeatureEnabled(FEATURE_FLAGS.USE_TIMEZONE_CONTENT, false) && (
-                        <div>
-                          <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote Author</h3>
-                          <p className="font-light text-white text-lg leading-none capitalize">
-                            {processedHoroscope?.quote_author || 'Coming soon'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {isFeatureEnabled(FEATURE_FLAGS.USE_TIMEZONE_CONTENT, false) && (
-                    <div>
-                      <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
-                      <div className="flex flex-col">
-                        <p className="font-light text-white text-sm italic">
-                          {processedHoroscope?.inspirational_quote ? 
-                           `"${processedHoroscope.inspirational_quote}"` : 
-                           'Coming soon'}
+                      <div>
+                        <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote Author</h3>
+                        <p className="font-light text-white text-lg leading-none capitalize">
+                          {processedHoroscope?.quote_author || 'Coming soon'}
                         </p>
-                        {processedHoroscope?.quote_author && (
-                          <p className="font-light text-indigo-200 text-xs mt-1">
-                            - {processedHoroscope.quote_author}
-                          </p>
-                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
+                  <div>
+                    <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
+                    <div className="flex flex-col">
+                      <p className="font-light text-white text-sm italic">
+                        {processedHoroscope?.inspirational_quote ? 
+                         `"${processedHoroscope.inspirational_quote}"` : 
+                         'Coming soon'}
+                      </p>
+                    </div>
+                  </div>
                 </CardFooter>
               </Card>
             </motion.div>
