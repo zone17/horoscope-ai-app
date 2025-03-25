@@ -2,6 +2,22 @@
 
 ## Recent Updates
 
+### Timezone-Aware Content Generation (March 2024)
+- **Feature Flag Implementation**: Added FEATURE_FLAG_USE_TIMEZONE_CONTENT to production environment
+- **Enhanced Caching**: Implemented timezone-aware cache keys for better content delivery
+- **API Improvements**: Enhanced responses to include timezone and local date information
+- **Documentation**: Updated deployment configuration and technical documentation
+
+The timezone-aware content generation feature ensures that users receive horoscopes based on their local date, improving the relevance and accuracy of predictions across different time zones.
+
+### XML Sitemap Implementation (March 2024)
+- **Dynamic Sitemap Generation**: Added XML sitemap for improved search engine crawling
+- **Feature Flag Control**: Easily enable/disable with `FEATURE_FLAG_USE_XML_SITEMAP`
+- **Documentation**: Added detailed documentation in [docs/seo/XML_SITEMAP.md](./docs/seo/XML_SITEMAP.md)
+- **Testing**: Comprehensive unit tests for all sitemap components
+
+The XML sitemap feature improves SEO by providing search engines with a comprehensive map of the site structure, helping them discover and index all pages more efficiently.
+
 ### Schema Markup Implementation (March 2024)
 - **Enhanced Schema Generator**: Added full support for all required schema types (WebSite, Organization, Service, ItemList, FAQ, and Article/CreativeWork)
 - **Improved Testing**: Added unit tests and regression tests for schema generation
