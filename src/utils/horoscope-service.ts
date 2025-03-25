@@ -104,11 +104,16 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
   try {
     const baseUrl = getBaseUrl();
     
-    // Get the user's timezone for timezone-aware content
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    // Build the base URL
+    let url = `${baseUrl}/api/horoscope?sign=${sign}&type=${type}`;
     
-    // Include timezone parameter in the URL
-    const url = `${baseUrl}/api/horoscope?sign=${sign}&type=${type}&timezone=${encodeURIComponent(timezone)}`;
+    // Add timezone parameter only if the feature is enabled
+    const useTimezoneContent = isFeatureEnabled(FEATURE_FLAGS.USE_TIMEZONE_CONTENT, false);
+    if (useTimezoneContent) {
+      const timezone = getUserTimezone();
+      url += `&timezone=${encodeURIComponent(timezone)}`;
+    }
+    
     console.log(`Fetching horoscope from: ${url}`);
     
     // Call the API endpoint with CORS awareness
