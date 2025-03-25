@@ -26,7 +26,11 @@ cp -r src/app/api/* "$TEMP_DIR/src/app/api/"
 
 # Copy backend utility files
 echo "Copying backend utility files..."
-cp -r src/utils/* "$TEMP_DIR/src/utils/"
+# Only copy backend-specific utilities
+cp -r src/utils/redis.ts "$TEMP_DIR/src/utils/"
+cp -r src/utils/feature-flags.ts "$TEMP_DIR/src/utils/"
+cp -r src/utils/openai.ts "$TEMP_DIR/src/utils/"
+cp -r src/utils/rate-limit.ts "$TEMP_DIR/src/utils/"
 
 # Copy middleware in all possible locations to ensure it's picked up
 echo "Copying middleware files..."
