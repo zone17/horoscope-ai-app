@@ -17,6 +17,8 @@
   ],
   "env": {
     "FEATURE_FLAG_USE_REDIS_CACHE": "true",
-    "FEATURE_FLAG_USE_RATE_LIMITING": "true"
+    "FEATURE_FLAG_USE_RATE_LIMITING": "true",
+    "FEATURE_FLAG_USE_TIMEZONE_CONTENT": "true",
+    "FEATURE_FLAG_USE_XML_SITEMAP": "true"
   }
 } 
