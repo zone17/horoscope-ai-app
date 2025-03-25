@@ -63,22 +63,6 @@ if [ ! -f "$TEMP_DIR/src/app/layout.js" ]; then
   echo "export default function Page() { return <h1>API Only</h1>; }" > "$TEMP_DIR/src/app/page.js"
 fi
 
-# Create vercel.json for API configuration
-cat > $TEMP_DIR/vercel.json << 'EOF'
-{
-  "version": 2,
-  "framework": "nextjs",
-  "buildCommand": "next build",
-  "outputDirectory": ".next",
-  "crons": [
-    {
-      "path": "/api/cron/generate-horoscopes",
-      "schedule": "0 0 * * *"
-    }
-  ]
-}
-EOF
-
 # Create jsconfig.json if it doesn't exist
 if [ ! -f "$TEMP_DIR/jsconfig.json" ] && [ ! -f "$TEMP_DIR/tsconfig.json" ]; then
   cat > $TEMP_DIR/jsconfig.json << 'EOF'
