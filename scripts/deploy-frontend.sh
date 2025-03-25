@@ -34,6 +34,8 @@ cp -r src/app/favicon.ico $TEMP_DIR/src/app/ 2>/dev/null || :
 cp -r src/app/not-found.tsx $TEMP_DIR/src/app/ 2>/dev/null || :
 cp -r src/app/error.tsx $TEMP_DIR/src/app/ 2>/dev/null || :
 cp -r src/app/loading.tsx $TEMP_DIR/src/app/ 2>/dev/null || :
+cp -r src/app/sitemap.ts $TEMP_DIR/src/app/ 2>/dev/null || :
+cp -r src/app/robots.ts $TEMP_DIR/src/app/ 2>/dev/null || :
 
 # Copy components
 echo "Copying components..."
@@ -171,7 +173,7 @@ cat > $TEMP_DIR/vercel.json << 'EOF'
     "NEXT_PUBLIC_API_URL": "https://api.gettodayshoroscope.com",
     "NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "false",
     "NEXT_PUBLIC_FEATURE_FLAG_USE_CORE_WEB_VITALS_OPTIMIZATIONS": "true", 
-    "NEXT_PUBLIC_FEATURE_FLAG_USE_SCHEMA_MARKUP": "false"
+    "NEXT_PUBLIC_FEATURE_FLAG_USE_SCHEMA_MARKUP": "true"
   }
 }
 EOF

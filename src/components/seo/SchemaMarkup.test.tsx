@@ -1,17 +1,11 @@
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 
-// Mock next/script and React imports
-jest.mock('next/script', () => 'script');
-jest.mock('react', () => ({
-  ...jest.requireActual('react'),
-  useEffect: jest.fn(cb => cb())
-}));
-
 // Mock the feature flag utility
 jest.mock('@/utils/feature-flags', () => ({
   isFeatureEnabled: jest.fn(),
   FEATURE_FLAGS: {
     USE_SCHEMA_MARKUP: 'USE_SCHEMA_MARKUP',
+    USE_ENHANCED_SCHEMA_MARKUP: 'USE_ENHANCED_SCHEMA_MARKUP'
   },
 }));
 
@@ -37,75 +31,108 @@ describe('SchemaMarkup', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.resetModules();
   });
 
   it('should not generate schemas when feature flag is disabled', () => {
-    // Arrange
-    jest.isolateModules(() => {
-      // Mock feature flag as disabled
-      (isFeatureEnabled as jest.Mock).mockReturnValue(false);
-      
-      // Act
-      const SchemaMarkup = require('./SchemaMarkup').default;
-      const result = SchemaMarkup({ zodiacSigns, horoscopes });
-      
-      // Assert
-      expect(result).toBeNull();
-    });
+    // Mock feature flag as disabled
+    const { isFeatureEnabled } = require('@/utils/feature-flags');
+    (isFeatureEnabled as jest.Mock).mockReturnValue(false);
+    
+    // Import the component after mocking
+    const { generateSchemaMarkup } = require('./SchemaMarkup');
+    const result = generateSchemaMarkup(zodiacSigns, horoscopes);
+    
+    // Assert
+    expect(result).toBeNull();
   });
 
   it('should generate all required schema types when feature flag is enabled', () => {
-    // Arrange
-    jest.isolateModules(() => {
-      // Mock feature flag as enabled
-      (isFeatureEnabled as jest.Mock).mockReturnValue(true);
-      
-      // Mock Script component to capture schema data
-      let capturedSchemas: any[] = [];
-      jest.doMock('next/script', () => {
-        return function MockScript(props: any) {
-          if (props.type === 'application/ld+json' && props.dangerouslySetInnerHTML) {
-            try {
-              const schema = JSON.parse(props.dangerouslySetInnerHTML.__html);
-              capturedSchemas.push(schema);
-            } catch (e) {
-              // Ignore parsing errors
-            }
-          }
-          return null;
-        };
-      });
-      
-      // Act
-      const SchemaMarkup = require('./SchemaMarkup').default;
-      SchemaMarkup({ zodiacSigns, horoscopes });
-      
-      // Assert
-      expect(capturedSchemas.length).toBeGreaterThan(0);
-      
-      // Check for WebSite schema
-      const websiteSchema = capturedSchemas.find(schema => 
-        schema['@type'] === 'WebSite'
-      );
-      expect(websiteSchema).toBeDefined();
-      
-      // Check for Organization schema
-      const organizationSchema = capturedSchemas.find(schema => 
-        schema['@type'] === 'Organization'
-      );
-      expect(organizationSchema).toBeDefined();
-      
-      // Check for ItemList schema
-      const itemListSchema = capturedSchemas.find(schema => 
-        schema['@type'] === 'ItemList'
-      );
-      expect(itemListSchema).toBeDefined();
-      
-      // Check for FAQPage schema
-      const faqSchema = capturedSchemas.find(schema => 
-        schema['@type'] === 'FAQPage'
-      );
-      expect(faqSchema).toBeDefined();
+    // Mock feature flags
+    const { isFeatureEnabled } = require('@/utils/feature-flags');
+    (isFeatureEnabled as jest.Mock).mockImplementation((flag) => {
+      // Enable schema markup but not enhanced schema
+      return flag === 'USE_SCHEMA_MARKUP';
     });
+    
+    // Import the component after mocking
+    const { generateSchemaMarkup } = require('./SchemaMarkup');
+    const schemas = generateSchemaMarkup(zodiacSigns, horoscopes);
+    
+    // Assert
+    expect(schemas).toBeTruthy();
+    expect(Array.isArray(schemas)).toBe(true);
+    expect(schemas!.length).toBeGreaterThan(0);
+    
+    // Check for WebSite schema
+    const websiteSchema = schemas!.find(schema => 
+      schema['@type'] === 'WebSite'
+    );
+    expect(websiteSchema).toBeDefined();
+    
+    // Check for Organization schema
+    const organizationSchema = schemas!.find(schema => 
+      schema['@type'] === 'Organization'
+    );
+    expect(organizationSchema).toBeDefined();
+    
+    // Check for ItemList schema
+    const itemListSchema = schemas!.find(schema => 
+      schema['@type'] === 'ItemList'
+    );
+    expect(itemListSchema).toBeDefined();
+    
+    // Check for FAQPage schema
+    const faqSchema = schemas!.find(schema => 
+      schema['@type'] === 'FAQPage'
+    );
+    expect(faqSchema).toBeDefined();
+    
+    // Check for CreativeWork schema (horoscope content)
+    const creativeWorkSchema = schemas!.find(schema => 
+      schema['@type'] === 'CreativeWork'
+    );
+    expect(creativeWorkSchema).toBeDefined();
+    
+    // Verify enhanced schemas are NOT included
+    const howToSchema = schemas!.find(schema => 
+      schema['@type'] === 'HowTo'
+    );
+    expect(howToSchema).toBeUndefined();
+    
+    const eventSchema = schemas!.find(schema => 
+      schema['@type'] === 'Event'
+    );
+    expect(eventSchema).toBeUndefined();
+  });
+  
+  it('should include enhanced schemas when both feature flags are enabled', () => {
+    // Mock both feature flags as enabled
+    const { isFeatureEnabled } = require('@/utils/feature-flags');
+    (isFeatureEnabled as jest.Mock).mockReturnValue(true);
+    
+    // Import the component after mocking
+    const { generateSchemaMarkup } = require('./SchemaMarkup');
+    const schemas = generateSchemaMarkup(zodiacSigns, horoscopes);
+    
+    // Assert
+    expect(schemas).toBeTruthy();
+    expect(Array.isArray(schemas)).toBe(true);
+    expect(schemas!.length).toBeGreaterThan(0);
+    
+    // Check for base schemas
+    expect(schemas!.find(schema => schema['@type'] === 'WebSite')).toBeDefined();
+    expect(schemas!.find(schema => schema['@type'] === 'Organization')).toBeDefined();
+    
+    // Check for enhanced schemas
+    const howToSchema = schemas!.find(schema => 
+      schema['@type'] === 'HowTo'
+    );
+    expect(howToSchema).toBeDefined();
+    
+    const eventSchema = schemas!.find(schema => 
+      schema['@type'] === 'Event'
+    );
+    expect(eventSchema).toBeDefined();
   });
 }); 

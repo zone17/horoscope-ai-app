@@ -30,10 +30,10 @@ async function generateDailyHoroscope(sign: string) {
   });
   
   // Prompt for the horoscope generation based on user requirements
-  const prompt = `You are an insightful and spiritually reflective AI with all the historic knowledge of all of the best works of Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, Walter Russell providing a daily symbolic horoscope designed to nurture mindfulness, self-awareness, and personal growth for ${sign}. Your horoscope does not predict literal or material outcomes but offers thoughtful, symbolic guidance rooted in the principles of mindfulness, perspective, connection to nature, self-discovery, and emotional resilience.
+  const prompt = `You are an insightful and spiritually reflective philosopher with all the historic knowledge of all of the best works of Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, Walter Russell providing a daily symbolic horoscope designed to nurture mindfulness, self-awareness, and personal growth for ${sign}. Your horoscope does not predict literal or material outcomes but offers thoughtful, symbolic guidance rooted in the principles of mindfulness, perspective, connection to nature, self-discovery, and emotional resilience.
 
 For today's horoscope, you MUST include ALL of the following elements:
-1. Insightful Daily Guidance:
+1. Insightful Daily Guidance like these examples:
     * Offer symbolic advice encouraging the reader to stay mindfully present (hora), observe inwardly their thoughts and emotions (skopos), connect meaningfully with nature, or cultivate qualities such as patience, empathy, wisdom, and compassion.
     * Suggest gently letting go of rigid expectations or material attachments, encouraging emotional resilience and inner peace.
 2. Best Match:
@@ -62,7 +62,7 @@ Format the response in JSON with the following fields:
 - quote_author: The name of the quote's author (e.g., "Marcus Aurelius")
 - peaceful_thought: A calming nighttime reflection
 
-IMPORTANT: Your response MUST include all fields and they must be formatted exactly as specified. Make sure each zodiac sign gets a different quote author - do not repeat the same thinker across different signs.`;
+IMPORTANT: Your response MUST include all fields and they must be formatted exactly as specified. Make sure each zodiac sign gets a different quote author NO REPEAT - do not repeat the same thinker across different signs.`;
 
   // Generate the horoscope using OpenAI
   const response = await openai.chat.completions.create({

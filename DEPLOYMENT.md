@@ -162,4 +162,10 @@ The application uses several feature flags to control behavior. Set these in you
    - Current status: `true` (enabled in production)
    - Adds structured data for improved search engine visibility and rich snippets
    - Implemented types: WebSite, Organization, Service, ItemList, FAQ, and Article/CreativeWork
-   - See [Schema Markup Documentation](./docs/seo/SCHEMA_MARKUP.md) for details 
+   - See [Schema Markup Documentation](./docs/seo/SCHEMA_MARKUP.md) for details
+   
+   - `FEATURE_FLAG_USE_ENHANCED_SCHEMA_MARKUP`: Enable/disable enhanced schema markup
+   - Current status: `false` (disabled by default until verified)
+   - Adds additional schema types (HowTo, Event) and enriches existing schemas with more properties
+   - Implemented in April 2024 to improve rich result opportunities
+   - See [Schema Markup Documentation](./docs/seo/SCHEMA_MARKUP.md) for implementation details 

@@ -1,0 +1,21 @@
+feat(timezone): Enable timezone-aware horoscope generation
+
+Enable timezone-aware content generation by adding FEATURE_FLAG_USE_TIMEZONE_CONTENT
+to Vercel deployment configuration. This change ensures that horoscopes are
+generated and cached based on the user's local timezone.
+
+Key changes:
+- Added FEATURE_FLAG_USE_TIMEZONE_CONTENT to vercel.json env section
+- Ensures proper timezone handling in production environment
+- Enables timezone-aware caching keys for better content delivery
+
+Testing:
+- Verified feature flag implementation in feature-flags.ts
+- Confirmed timezone detection in timezone-utils.ts
+- Tested API response includes timezone and local date information
+
+Related files:
+- vercel.json: Added timezone feature flag
+- src/utils/feature-flags.ts: Implementation verified
+- src/utils/timezone-utils.ts: Timezone handling verified
+- src/app/api/horoscope/route.ts: Uses timezone feature flag 

@@ -1,3 +1,5 @@
+import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
+
 // Valid zodiac signs
 const VALID_SIGNS = [
   'aries', 'taurus', 'gemini', 'cancer', 
@@ -44,57 +46,57 @@ function getBaseUrl(): string {
 }
 
 /**
+ * Get the user's timezone
+ * @returns The user's timezone string
+ */
+function getUserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch (error) {
+    console.error('Error getting user timezone:', error);
+    return 'UTC';
+  }
+}
+
+/**
  * Creates a fetch request with proper CORS credentials
  * @param url The URL to fetch
  * @param options Additional fetch options
  * @returns Promise resolving to the fetch Response
  */
 async function corsAwareFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  console.log(`Making corsAwareFetch request to: ${url}`);
+  // Check if timezone feature is enabled
+  const useTimezoneContent = isFeatureEnabled(FEATURE_FLAGS.USE_TIMEZONE_CONTENT, false);
   
-  // Ensure URL is correctly formatted
-  const normalizedUrl = url.replace(/\/+$/, '');
-  
-  // For cross-domain requests, we need specific CORS settings
-  const corsOptions: RequestInit = {
-    ...options,
-    // Use 'cors' mode for same-origin or properly configured CORS
-    // when dealing with a remote API endpoint
-    mode: 'cors',
-    // Don't send credentials by default for cross-origin
-    credentials: 'same-origin',
-    headers: {
-      ...options.headers,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
+  // Only add timezone if feature is enabled
+  if (useTimezoneContent) {
+    const timezone = getUserTimezone();
+    const urlObj = new URL(url);
+    if (!urlObj.searchParams.has('timezone')) {
+      urlObj.searchParams.append('timezone', timezone);
     }
+    url = urlObj.toString();
+  }
+  
+  // Add CORS headers
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
   };
   
-  // Make the fetch call with appropriate error handling
-  try {
-    console.log(`Fetch request options:`, {
-      url: normalizedUrl,
-      method: corsOptions.method || 'GET'
-    });
-    
-    const response = await fetch(normalizedUrl, corsOptions);
-    
-    // Log detailed response info for debugging
-    console.log(`Fetch response for ${normalizedUrl}:`, {
-      status: response.status,
-      ok: response.ok,
-      statusText: response.statusText
-    });
-    
-    if (!response.ok) {
-      console.error(`Response not OK (${response.status}): ${response.statusText}`);
-    }
-    
-    return response;
-  } catch (error) {
-    console.error(`Network error for ${normalizedUrl}:`, error);
-    throw error;
+  // Make the request
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'omit', // Don't send cookies
+  });
+  
+  // Check for errors
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+  
+  return response;
 }
 
 // Function to fetch a horoscope for a specific sign

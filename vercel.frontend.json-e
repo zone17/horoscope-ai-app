@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "chmod +x scripts/frontend-build.sh && ./scripts/frontend-build.sh",
+  "outputDirectory": ".next",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://api.gettodayshoroscope.com/api/:path*"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://api.gettodayshoroscope.com",
+    "FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "true",
+    "FEATURE_FLAG_USE_CORE_WEB_VITALS_OPT": "true"
+  }
+}

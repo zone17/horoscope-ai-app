@@ -12,6 +12,12 @@ export const FEATURE_FLAGS = {
   USE_LUNAR_ZODIAC_ORDER: 'USE_LUNAR_ZODIAC_ORDER',
   // Whether to enable Core Web Vitals optimizations
   USE_CORE_WEB_VITALS_OPT: 'USE_CORE_WEB_VITALS_OPT',
+  // Whether to enable schema markup for SEO
+  USE_SCHEMA_MARKUP: 'USE_SCHEMA_MARKUP',
+  // Whether to enable enhanced schema markup with additional types
+  USE_ENHANCED_SCHEMA_MARKUP: 'USE_ENHANCED_SCHEMA_MARKUP',
+  // Whether to enable XML sitemap generation
+  USE_XML_SITEMAP: 'USE_XML_SITEMAP',
 };
 
 /**
@@ -29,6 +35,23 @@ export function isFeatureEnabled(flagName: string, defaultValue = false): boolea
     if (publicEnvValue !== undefined) {
       return publicEnvValue.toLowerCase() === 'true';
     }
+  }
+  
+  // Special handling for schema markup flags, which can be client or server-side
+  if (flagName === FEATURE_FLAGS.USE_SCHEMA_MARKUP || flagName === FEATURE_FLAGS.USE_ENHANCED_SCHEMA_MARKUP) {
+    // Check for NEXT_PUBLIC_ prefix first (client-side)
+    const publicEnvValue = process.env[`NEXT_PUBLIC_FEATURE_FLAG_${flagName}`];
+    if (publicEnvValue !== undefined) {
+      return publicEnvValue.toLowerCase() === 'true';
+    }
+    
+    // Then check for regular version (server-side)
+    const envValue = process.env[`FEATURE_FLAG_${flagName}`];
+    if (envValue !== undefined) {
+      return envValue.toLowerCase() === 'true';
+    }
+    
+    return defaultValue;
   }
   
   // Standard server-side feature flags

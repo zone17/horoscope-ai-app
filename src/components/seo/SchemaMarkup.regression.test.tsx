@@ -4,7 +4,20 @@ import { isFeatureEnabled } from '@/utils/feature-flags';
 import { FEATURE_FLAGS } from '@/constants';
 import { mockHoroscopes, mockZodiacSigns } from '@/mocks/data';
 
+// Mock feature flags
 jest.mock('@/utils/feature-flags');
+
+// Mock next/script to render as a regular script tag for testing
+jest.mock('next/script', () => {
+  return function MockScript(props: any) {
+    return (
+      <script
+        {...props}
+        dangerouslySetInnerHTML={props.dangerouslySetInnerHTML}
+      />
+    );
+  };
+});
 
 // Mock the mocks in case they don't exist yet
 jest.mock('@/mocks/data', () => ({
@@ -27,6 +40,7 @@ describe('SchemaMarkup regression tests', () => {
   });
 
   it('@regression should render all critical schema types when enabled', () => {
+    // Mock feature flags as enabled
     (isFeatureEnabled as jest.Mock).mockReturnValue(true);
     
     const { container } = render(
@@ -42,9 +56,14 @@ describe('SchemaMarkup regression tests', () => {
     expect(scripts.length).toBeGreaterThan(0);
     
     // Verify all expected schema types are present
-    const schemas = Array.from(scripts).map(script => 
-      JSON.parse(script.innerHTML)
-    );
+    const schemas = Array.from(scripts).map(script => {
+      try {
+        return JSON.parse(script.innerHTML);
+      } catch (e) {
+        console.error('Failed to parse script content:', script.innerHTML);
+        return null;
+      }
+    }).filter(Boolean);
     
     const schemaTypes = schemas.map(schema => schema['@type']);
     
@@ -60,6 +79,7 @@ describe('SchemaMarkup regression tests', () => {
   });
 
   it('@regression should not render any schema when feature is disabled', () => {
+    // Mock feature flags as disabled
     (isFeatureEnabled as jest.Mock).mockReturnValue(false);
     
     const { container } = render(

@@ -88,37 +88,37 @@ For today's horoscope, include the following elements:
     * Purpose & Tone:
         * Calming & Reflective: The message should help the reader unwind, feel at ease, and transition peacefully into sleep.
         * Tailored to the Sign: Infuse subtle references or imagery that resonate with the unique qualities of the zodiac sign (e.g., water imagery for Pisces, airy imagery for Gemini).
-        * Foster Gratitude & Letting Go: Encourage gratitude for the day’s positive moments and invite the reader to gently release any lingering concerns.
+        * Foster Gratitude & Letting Go: Encourage gratitude for the day's positive moments and invite the reader to gently release any lingering concerns.
     * Uniqueness in Structure:
         * Vary Sentence Structure: Change up the sentence length, rhythm, and order of ideas across different signs. For one sign, you might start with a reflective question; for another, a descriptive narrative or even a brief poetic stanza.
         * Different Literary Devices: Incorporate diverse elements such as metaphors, similes, or brief anecdotal reflections that differ in presentation from one sign to the next.
-    * Avoid a Template: Do not use the same introductory phrase or closing line for every sign. Each sign’s message should feel organically crafted with its own unique cadence and focus.
+    * Avoid a Template: Do not use the same introductory phrase or closing line for every sign. Each sign's message should feel organically crafted with its own unique cadence and focus.
     * Content Considerations:
-        * Imagery & Metaphors: Use imagery that corresponds with both nighttime calm and the sign’s archetypal energy (e.g., a starlit sky for a water sign, gentle rustling leaves for an earth sign).
-        * Actionable Reflection: Include a subtle invitation to reflect—whether it’s to count small blessings, observe the quiet of the night, or simply breathe deeply and let go.
-        * Sign-Specific Nuances: If appropriate, include a gentle nod to the sign’s strengths or challenges. For example, an Aries might receive a note on channeling their dynamic energy into quiet focus, while a Taurus might be encouraged to savor the serene pace of the night.
+        * Imagery & Metaphors: Use imagery that corresponds with both nighttime calm and the sign's archetypal energy (e.g., a starlit sky for a water sign, gentle rustling leaves for an earth sign).
+        * Actionable Reflection: Include a subtle invitation to reflect—whether it's to count small blessings, observe the quiet of the night, or simply breathe deeply and let go.
+        * Sign-Specific Nuances: If appropriate, include a gentle nod to the sign's strengths or challenges. For example, an Aries might receive a note on channeling their dynamic energy into quiet focus, while a Taurus might be encouraged to savor the serene pace of the night.
     * Formatting:
         * Concise & Impactful: While unique, the message should remain succinct enough to leave a lasting impression without overwhelming the reader.
         * Natural Flow: The final output should feel like a gentle whisper rather than a rigidly structured message.
     * Implementation Approach:
         * Step 1: Analyze the central theme or advice from the daily guidance for the sign.
-        * Step 2: Choose imagery and phrasing that aligns with that advice and the sign’s qualities.
+        * Step 2: Choose imagery and phrasing that aligns with that advice and the sign's qualities.
         * Step 3: Construct a brief, varied narrative that might differ from other signs by:
             * Starting with a reflective question or a vivid descriptive sentence.
-            * Employing unique metaphors tied to the sign’s natural elements.
+            * Employing unique metaphors tied to the sign's natural elements.
             * Concluding with an actionable or reflective thought that gently encourages restful sleep.
-        * Step 4: Verify that the overall structure is not identical to that used for any other zodiac sign’s nighttime thought.
+        * Step 4: Verify that the overall structure is not identical to that used for any other zodiac sign's nighttime thought.
     * Your tone should remain nurturing, reflective, and empowering, guiding readers gently toward self-awareness, inner reflection, and a mindful, purposeful approach to daily life.
     * Concise & Impactful: While unique, the message should remain succinct enough to leave a lasting impression without overwhelming the reader.
     * Natural Flow: The final output should feel like a gentle whisper rather than a rigidly structured message.
     * Implementation Approach:
       * Step 1: Analyze the central theme or advice from the daily guidance for the sign.
-      * Step 2: Choose imagery and phrasing that aligns with that advice and the sign’s qualities.
+      * Step 2: Choose imagery and phrasing that aligns with that advice and the sign's qualities.
       * Step 3: Construct a brief, varied narrative that might differ from other signs by:
           * Starting with a reflective question or a vivid descriptive sentence.
-          * Employing unique metaphors tied to the sign’s natural elements.
+          * Employing unique metaphors tied to the sign's natural elements.
           * Concluding with an actionable or reflective thought that gently encourages restful sleep.
-      * Step 4: Verify that the overall structure is not identical to that used for any other zodiac sign’s nighttime thought.
+      * Step 4: Verify that the overall structure is not identical to that used for any other zodiac sign's nighttime thought.
 
 Format the response in JSON with the following fields:
 - message: The main horoscope guidance message
@@ -162,8 +162,8 @@ Format the response in JSON with the following fields:
     
     // Ensure sign is not included in its own best matches
     if (horoscopeData.best_match) {
-      const bestMatches = horoscopeData.best_match.toLowerCase().split(',').map(s => s.trim());
-      const filteredMatches = bestMatches.filter(match => match !== sign.toLowerCase());
+      const bestMatches = horoscopeData.best_match.toLowerCase().split(',').map((s: string) => s.trim());
+      const filteredMatches = bestMatches.filter((match: string) => match !== sign.toLowerCase());
       horoscopeData.best_match = filteredMatches.join(', ');
     }
     
@@ -311,7 +311,7 @@ export async function GET(request: NextRequest) {
     
     // Generate appropriate cache key
     let cacheKey: string;
-    let localDate: string = getTodayDate(); // Default to UTC date
+    let localDate: string = getTodayDate();
     
     if (useTimezoneContent && type === 'daily') {
       // Calculate user's local date based on their timezone

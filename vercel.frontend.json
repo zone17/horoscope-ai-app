@@ -12,6 +12,8 @@
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.gettodayshoroscope.com",
     "FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER": "true",
-    "FEATURE_FLAG_USE_CORE_WEB_VITALS_OPT": "false"
+    "FEATURE_FLAG_USE_CORE_WEB_VITALS_OPT": "true"
+  ,
+    "FEATURE_FLAG_USE_XML_SITEMAP": "true"
   }
-} 
+}

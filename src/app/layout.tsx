@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "../styles/animations.css";
 import { CoreWebVitalsInitializer } from '@/components/performance/CoreWebVitalsInitializer';
+import SchemaMarkupServer from '@/components/seo/SchemaMarkupServer';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +53,8 @@ export default function RootLayout({
             __html: `window.ENV_LUNAR_ORDER = ${JSON.stringify(lunarOrderEnabled)};`,
           }}
         />
+        {/* Server-side schema markup */}
+        <SchemaMarkupServer />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-br from-indigo-950 via-[#0f0b30] to-[#0c0921] text-white`}
