@@ -53,7 +53,7 @@ cp .env.production "$TEMP_DIR/"
 cp next.config.js "$TEMP_DIR/"
 cp package.json "$TEMP_DIR/"
 cp tsconfig.json "$TEMP_DIR/"
-cp vercel.json "$TEMP_DIR/"
+cp vercel.backend.json "$TEMP_DIR/vercel.json"
 
 # Create minimal app layout
 mkdir -p "$TEMP_DIR/src/app"
