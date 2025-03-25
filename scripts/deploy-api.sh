@@ -50,7 +50,7 @@ fi
 # Copy configuration files
 echo "Copying configuration files..."
 cp .env.production "$TEMP_DIR/"
-cp next.config.js "$TEMP_DIR/"
+cp next.config.backend.js "$TEMP_DIR/next.config.js"
 cp package.json "$TEMP_DIR/"
 cp tsconfig.json "$TEMP_DIR/"
 cp vercel.backend.json "$TEMP_DIR/vercel.json"
