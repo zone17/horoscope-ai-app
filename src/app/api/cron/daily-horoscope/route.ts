@@ -4,6 +4,7 @@ import { redis, CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
 import { safelyStoreInRedis } from '@/utils/redis-helpers';
 import { applyCorsHeaders, isAllowedOrigin } from '@/utils/cors-service';
+import { buildHoroscopePrompt, getPhilosopherAssignment, VALID_AUTHORS } from '@/utils/horoscope-prompts';
 
 // Valid zodiac signs
 const VALID_SIGNS = [
@@ -18,53 +19,16 @@ const getTodayDate = () => new Date().toISOString().split('T')[0];
 /**
  * Generate a daily horoscope using OpenAI for a specific sign
  */
-async function generateDailyHoroscope(sign: string) {
-  // Check if API key is configured
+async function generateDailyHoroscope(sign: string, assignedPhilosopher?: string) {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI API key not configured');
   }
 
-  // Initialize OpenAI client
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-  
-  // Prompt for the horoscope generation based on user requirements
-  const prompt = `You are an insightful and spiritually reflective philosopher with all the historic knowledge of all of the best works of Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, Walter Russell providing a daily symbolic horoscope designed to nurture mindfulness, self-awareness, and personal growth for ${sign}. Your horoscope does not predict literal or material outcomes but offers thoughtful, symbolic guidance rooted in the principles of mindfulness, perspective, connection to nature, self-discovery, and emotional resilience.
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const today = getTodayDate();
+  const philosopher = assignedPhilosopher || getPhilosopherAssignment(sign, today);
+  const prompt = buildHoroscopePrompt(sign, philosopher);
 
-For today's horoscope, you MUST include ALL of the following elements:
-1. Insightful Daily Guidance like these examples:
-    * Offer symbolic advice encouraging the reader to stay mindfully present (hora), observe inwardly their thoughts and emotions (skopos), connect meaningfully with nature, or cultivate qualities such as patience, empathy, wisdom, and compassion.
-    * Suggest gently letting go of rigid expectations or material attachments, encouraging emotional resilience and inner peace.
-2. Best Match:
-    * Provide 3-4 zodiac signs that harmonize well with this sign today, listed in alphabetical order.
-    * Format the list as a comma-separated string (e.g., "aries, gemini, libra").
-    * Follow these traditional astrological compatibility patterns:
-        - Fire signs (Aries, Leo, Sagittarius) harmonize with other Fire signs and Air signs (Gemini, Libra, Aquarius)
-        - Earth signs (Taurus, Virgo, Capricorn) harmonize with other Earth signs and Water signs (Cancer, Scorpio, Pisces)
-        - Air signs (Gemini, Libra, Aquarius) harmonize with other Air signs and Fire signs (Aries, Leo, Sagittarius)
-        - Water signs (Cancer, Scorpio, Pisces) harmonize with other Water signs and Earth signs (Taurus, Virgo, Capricorn)
-    * IMPORTANT: If the sign is Libra, ALWAYS include Aquarius in best matches. If the sign is Aquarius, ALWAYS include Libra in best matches.
-3. Inspirational Quote:
-    * IMPORTANT: Include a quote EXCLUSIVELY from ONE of these thinkers: Allan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, or Walter Russell.
-    * DO NOT use quotes from ANY other sources (no Buddha, Gandhi, Rumi, etc.) - ONLY use quotes from the philosophers listed above.
-    * Attribute the quote correctly to the exact name from the list above.
-    * Keep the quote concise (under 150 characters).
-4. Peaceful Nighttime Thought:
-    * End with a calming, reflective thought designed to help the reader peacefully unwind, foster gratitude, and encourage restful sleep by releasing attachment to the day's outcomes.
-
-Your tone should remain nurturing, reflective, and empowering, guiding readers gently toward self-awareness, inner reflection, and a mindful, purposeful approach to daily life.
-
-Format the response in JSON with the following fields:
-- message: The main horoscope guidance message
-- best_match: A comma-separated list of compatible zodiac signs in alphabetical order (e.g., "aries, gemini, libra")
-- inspirational_quote: The quote text
-- quote_author: The name of the quote's author (e.g., "Marcus Aurelius")
-- peaceful_thought: A calming nighttime reflection
-
-IMPORTANT: Your response MUST include all fields and they must be formatted exactly as specified. Make sure each zodiac sign gets a different quote author NO REPEAT - do not repeat the same thinker across different signs.`;
-
-  // Generate the horoscope using OpenAI
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini-2024-07-18',
     messages: [{ role: 'user', content: prompt }],
@@ -73,100 +37,50 @@ IMPORTANT: Your response MUST include all fields and they must be formatted exac
   });
 
   const content = response.choices[0].message.content;
-  
-  // Parse the JSON response and add metadata
-  try {
-    const horoscopeData = JSON.parse(content || '{}');
-    
-    // Valid quote authors list
-    const validAuthors = [
-      'Allan Watts', 'Alan Watts', 'Richard Feynman', 'Albert Einstein', 
-      'Friedrich Nietzsche', 'Lao Tzu', 'Socrates', 'Plato', 'Aristotle', 
-      'Epicurus', 'Marcus Aurelius', 'Seneca', 'Jiddu Krishnamurti', 
-      'Dr. Joe Dispenza', 'Joe Dispenza', 'Walter Russell'
-    ];
-    
-    // Validate the required fields exist
-    if (!horoscopeData.message || horoscopeData.best_match === undefined || 
-        !horoscopeData.inspirational_quote || !horoscopeData.quote_author) {
-      throw new Error('Missing required horoscope fields');
-    }
-    
-    // Validate the quote author is from our approved list
-    if (!validAuthors.some(author => 
-        horoscopeData.quote_author.toLowerCase().includes(author.toLowerCase()))) {
-      console.error(`Invalid quote author: ${horoscopeData.quote_author}. Using fallback.`);
-      // Use a fallback author from our list
-      horoscopeData.quote_author = validAuthors[Math.floor(Math.random() * validAuthors.length)];
-    }
-    
-    // Ensure sign is not included in its own best matches
-    if (horoscopeData.best_match) {
-      const bestMatches = horoscopeData.best_match.toLowerCase().split(',').map(s => s.trim());
-      const filteredMatches = bestMatches.filter(match => match !== sign.toLowerCase());
-      horoscopeData.best_match = filteredMatches.join(', ');
-    }
-    
-    return {
-      sign,
-      type: 'daily',
-      date: getTodayDate(),
-      ...horoscopeData,
-    };
-  } catch (error) {
-    console.error('Error parsing horoscope JSON:', error);
-    throw new Error('Failed to generate horoscope');
+  const horoscopeData = JSON.parse(content || '{}');
+
+  // Validate required fields
+  if (!horoscopeData.message || !horoscopeData.inspirational_quote || !horoscopeData.quote_author) {
+    throw new Error('Missing required horoscope fields');
   }
+
+  // Validate quote author is from approved list
+  if (!VALID_AUTHORS.some(author =>
+      horoscopeData.quote_author.toLowerCase().includes(author.toLowerCase()))) {
+    console.error(`Invalid quote author: ${horoscopeData.quote_author}. Using assigned: ${philosopher}`);
+    horoscopeData.quote_author = philosopher;
+  }
+
+  // Ensure sign is not in its own best matches
+  if (horoscopeData.best_match) {
+    const matches = horoscopeData.best_match.toLowerCase().split(',').map((s: string) => s.trim());
+    horoscopeData.best_match = matches.filter((m: string) => m !== sign.toLowerCase()).join(', ');
+  }
+
+  return { sign, type: 'daily', date: today, ...horoscopeData };
 }
 
 /**
- * Generate and cache horoscopes for all signs
+ * Generate and cache horoscopes for all signs.
+ * Uses pre-assigned philosopher rotation — no retries needed.
  */
 async function generateAllHoroscopes() {
   const date = getTodayDate();
   const results = [];
   const errors = [];
-  
-  // Track philosopher usage to avoid repeating the same one more than twice
-  const philosopherUsage = {};
-  
-  // Generate horoscopes sequentially to manage philosopher assignment
+
   for (const sign of VALID_SIGNS) {
     try {
-      // Generate horoscope for this sign
-      let horoscope = await generateDailyHoroscope(sign);
-      
-      // Count philosopher usage
-      const author = horoscope.quote_author;
-      philosopherUsage[author] = (philosopherUsage[author] || 0) + 1;
-      
-      // If this philosopher has been used more than twice, regenerate the horoscope
-      if (philosopherUsage[author] > 2) {
-        console.log(`Philosopher ${author} already used twice. Regenerating horoscope for ${sign}...`);
-        // Try up to 3 times to get a different philosopher
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const newHoroscope = await generateDailyHoroscope(sign);
-          const newAuthor = newHoroscope.quote_author;
-          
-          // If this is a different philosopher who hasn't been used twice yet
-          if (newAuthor !== author && (!philosopherUsage[newAuthor] || philosopherUsage[newAuthor] < 2)) {
-            horoscope = newHoroscope;
-            philosopherUsage[newAuthor] = (philosopherUsage[newAuthor] || 0) + 1;
-            console.log(`Successfully assigned philosopher ${newAuthor} to ${sign}`);
-            break;
-          }
-        }
-      }
-      
-      // Generate cache key
+      const philosopher = getPhilosopherAssignment(sign, date);
+      console.log(`Generating ${sign} with philosopher: ${philosopher}`);
+      const horoscope = await generateDailyHoroscope(sign, philosopher);
+
       const cacheKey = horoscopeKeys.daily(sign, date);
-      
-      // Store in Redis using the helper function for proper serialization
       const storeSuccess = await safelyStoreInRedis(cacheKey, horoscope, {
         ttl: CACHE_DURATIONS.ONE_DAY
       });
-      
-      results.push({ sign, success: storeSuccess });
+
+      results.push({ sign, success: storeSuccess, philosopher });
     } catch (error) {
       console.error(`Error generating horoscope for ${sign}:`, error);
       errors.push({ sign, error: error instanceof Error ? error.message : 'Unknown error' });
