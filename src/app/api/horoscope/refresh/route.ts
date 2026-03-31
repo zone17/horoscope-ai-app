@@ -1,61 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { redis, CACHE_DURATIONS } from '@/utils/redis';
+import { CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
-import { safelyStoreInRedis } from '@/utils/redis-helpers';
-import fetch from 'node-fetch';
-
-// Valid zodiac signs
-const VALID_SIGNS = [
-  'aries', 'taurus', 'gemini', 'cancer', 
-  'leo', 'virgo', 'libra', 'scorpio', 
-  'sagittarius', 'capricorn', 'aquarius', 'pisces'
-];
-
-// Helper to get today's date in YYYY-MM-DD format
-const getTodayDate = () => new Date().toISOString().split('T')[0];
+import { safelyStoreInRedis, safelyRetrieveForUI } from '@/utils/redis-helpers';
+import { generateHoroscope, VALID_SIGNS, getTodayDate } from '@/utils/horoscope-generator';
 
 /**
- * Force refresh endpoint to regenerate all horoscopes and fix any caching issues
+ * Force refresh endpoint to regenerate all horoscopes.
+ * Requires CRON_SECRET for authorization.
+ * Uses the shared generator directly — no HTTP self-calls, no node-fetch.
  */
 export async function GET(request: NextRequest) {
+  // Require CRON_SECRET
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
   try {
-    // Get environment variables for base URL
-    const apiUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    
-    console.log(`Using API base URL: ${apiUrl}`);
-    
-    // Call the regenerate endpoint
-    const response = await fetch(`${apiUrl}/api/debug/regenerate-horoscopes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`Error from regenerate endpoint: ${error}`);
-      return NextResponse.json({
-        success: false,
-        error: `Regeneration API failed: ${response.status}`,
-        date: getTodayDate(),
-      }, { status: 500 });
-    }
-    
-    const data = await response.json();
-    
-    // For each sign, verify the cache has the correct data
-    const verificationResults = [];
-    
+    const date = getTodayDate();
+
+    // Generate horoscopes for all signs using the shared generator
+    const generationResults: { sign: string; success: boolean; error?: string }[] = [];
+
     for (const sign of VALID_SIGNS) {
-      const date = getTodayDate();
+      try {
+        const horoscope = await generateHoroscope(sign, 'daily');
+        const cacheKey = horoscopeKeys.daily(sign, date);
+        const storeSuccess = await safelyStoreInRedis(cacheKey, horoscope, {
+          ttl: CACHE_DURATIONS.ONE_DAY
+        });
+        generationResults.push({ sign, success: storeSuccess });
+      } catch (error) {
+        generationResults.push({
+          sign,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Verify each sign's cache entry using safelyRetrieveForUI (handles namespacing correctly)
+    const verificationResults = [];
+
+    for (const sign of VALID_SIGNS) {
       const cacheKey = horoscopeKeys.daily(sign, date);
-      
-      // Get the cached data
-      const cachedData = await redis.get(`horoscope-prod:${cacheKey}`);
-      
+      const cachedData = await safelyRetrieveForUI<Record<string, unknown>>(cacheKey);
+
       if (!cachedData) {
         verificationResults.push({
           sign,
@@ -64,38 +65,24 @@ export async function GET(request: NextRequest) {
         });
         continue;
       }
-      
-      try {
-        // Parse the cached data
-        const horoscope = JSON.parse(cachedData);
-        
-        // Verify critical fields
-        const hasBestMatch = Boolean(horoscope.best_match);
-        const hasQuote = Boolean(horoscope.inspirational_quote);
-        
-        verificationResults.push({
-          sign,
-          cached: true,
-          hasBestMatch,
-          hasQuote,
-          bestMatch: horoscope.best_match,
-          quote: horoscope.inspirational_quote ? 
-            `${horoscope.inspirational_quote.substring(0, 20)}...` : null
-        });
-      } catch (error) {
-        verificationResults.push({
-          sign,
-          cached: true,
-          error: 'Failed to parse cached data'
-        });
-      }
+
+      verificationResults.push({
+        sign,
+        cached: true,
+        hasBestMatch: Boolean(cachedData.best_match),
+        hasQuote: Boolean(cachedData.inspirational_quote),
+        bestMatch: cachedData.best_match,
+        quote: cachedData.inspirational_quote
+          ? String(cachedData.inspirational_quote).substring(0, 40) + '...'
+          : null
+      });
     }
-    
+
     return NextResponse.json({
       success: true,
       message: 'Successfully refreshed all horoscopes',
-      date: getTodayDate(),
-      regenerationResults: data,
+      date,
+      generationResults,
       verificationResults
     });
   } catch (error) {
@@ -106,4 +93,4 @@ export async function GET(request: NextRequest) {
       date: getTodayDate()
     }, { status: 500 });
   }
-} 
+}
