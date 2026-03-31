@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { corsHandler, handlePreflight, isAllowedOrigin, applyCorsHeaders } from '@/utils/cors-service';
 
 /**
  * Middleware to handle API requests and CORS
