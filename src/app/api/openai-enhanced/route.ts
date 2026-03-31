@@ -7,7 +7,6 @@ import { safelyStoreInRedis, safelyRetrieveForUI } from '@/utils/redis-helpers';
 
 // Set route to be publicly accessible but dynamic to avoid edge caching
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 // Namespace for Redis keys
 const NAMESPACE = 'openai-cache';

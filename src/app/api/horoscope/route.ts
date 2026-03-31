@@ -10,7 +10,6 @@ import { safelyStoreInRedis } from '@/utils/redis-helpers';
 
 // Set route to be dynamic to prevent caching at edge level
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 // Valid zodiac signs
 const VALID_SIGNS = [

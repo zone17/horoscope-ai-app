@@ -6,7 +6,6 @@ import OpenAI from 'openai';
 
 // Set route to be dynamic to prevent caching at edge level
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const status = {
