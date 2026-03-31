@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     console.log('DEBUG-REDIS: Redis connection info:', redisInfo);
     
     // Check each sign in Redis
-    const redisResults = {};
-    const redisErrors = [];
+    const redisResults: Record<string, unknown> = {};
+    const redisErrors: Array<Record<string, unknown>> = [];
     
     for (const sign of VALID_SIGNS) {
       try {

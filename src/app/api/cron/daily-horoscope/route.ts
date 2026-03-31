@@ -3,13 +3,12 @@ import OpenAI from 'openai';
 import { redis, CACHE_DURATIONS } from '@/utils/redis';
 import { horoscopeKeys } from '@/utils/cache-keys';
 import { safelyStoreInRedis } from '@/utils/redis-helpers';
-import { applyCorsHeaders, isAllowedOrigin } from '@/utils/cors-service';
 import { buildHoroscopePrompt, getPhilosopherAssignment, VALID_AUTHORS } from '@/utils/horoscope-prompts';
 
 // Valid zodiac signs
 const VALID_SIGNS = [
-  'aries', 'taurus', 'gemini', 'cancer', 
-  'leo', 'virgo', 'libra', 'scorpio', 
+  'aries', 'taurus', 'gemini', 'cancer',
+  'leo', 'virgo', 'libra', 'scorpio',
   'sagittarius', 'capricorn', 'aquarius', 'pisces'
 ];
 
@@ -90,115 +89,55 @@ async function generateAllHoroscopes() {
   return { results, errors };
 }
 
-// Function to apply CORS headers directly
-function addCorsHeaders(response: NextResponse, origin: string): NextResponse {
-  // Define allowed origins
-  const allowedOrigins = [
-    'https://www.gettodayshoroscope.com',
-    'https://gettodayshoroscope.com',
-  ];
-  
-  // Add localhost for development
-  if (process.env.NODE_ENV === 'development') {
-    allowedOrigins.push('http://localhost:3000');
-  }
-  
-  // Use the specific origin if it's allowed, otherwise use the first allowed origin
-  const responseOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-  
-  response.headers.set('Access-Control-Allow-Origin', responseOrigin);
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control');
-  response.headers.set('Access-Control-Allow-Credentials', 'true');
-  response.headers.set('Access-Control-Max-Age', '86400');
-  
-  return response;
+// CORS preflight is handled by middleware.ts for all /api/* routes
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204 });
 }
 
 /**
  * Vercel Cron handler - runs at midnight daily
+ * Requires CRON_SECRET in Authorization header for all requests.
+ * The Vercel cron scheduler sends this automatically.
  */
 export async function GET(request: NextRequest) {
-  // Get the origin for CORS
-  const origin = request.headers.get('origin') || '';
-  console.log(`Request from origin: ${origin}`);
-  
-  // Define allowed origins
-  const allowedOrigins = [
-    'https://www.gettodayshoroscope.com',
-    'https://gettodayshoroscope.com',
-  ];
-  
-  // Add localhost for development
-  if (process.env.NODE_ENV === 'development') {
-    allowedOrigins.push('http://localhost:3000');
+  // Require CRON_SECRET for all requests — no origin-based bypass
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error('CRON_SECRET environment variable is not configured — denying all requests');
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
-  
-  // Handle preflight requests
-  if (request.method === 'OPTIONS') {
-    // Use the specific origin if it's allowed, otherwise use the first allowed origin
-    const responseOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-    
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': responseOrigin,
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control',
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Max-Age': '86400'
-      }
-    });
+
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    console.log('Unauthorized request to generate horoscopes');
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
 
   try {
-    // Always allow this endpoint to be called from the frontend
-    // We only check for CRON_SECRET if it's not from our frontend domains
-    const authHeader = request.headers.get('authorization');
-    const isFrontendOrigin = origin && (
-      origin.includes('gettodayshoroscope.com') || 
-      origin.includes('localhost:3000')
-    );
-
-    // Skip auth check for frontend requests
-    const isAuthorized = isFrontendOrigin || 
-      (process.env.CRON_SECRET ? authHeader === `Bearer ${process.env.CRON_SECRET}` : true);
-
-    if (!isAuthorized) {
-      console.log('Unauthorized request to generate horoscopes');
-      const errorResponse = NextResponse.json(
-        { success: false, error: 'Unauthorized access to horoscope generation' },
-        { status: 401 }
-      );
-      return addCorsHeaders(errorResponse, origin);
-    }
-    
     // Generate and cache all horoscopes
     const result = await generateAllHoroscopes();
-    
-    // Create success response
-    const successResponse = NextResponse.json({
+
+    return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: getTodayDate(),
       ...result
     });
-    
-    // Apply CORS headers directly and return
-    return addCorsHeaders(successResponse, origin);
   } catch (error) {
     console.error('Cron job error:', error);
-    
-    // Create error response
-    const errorResponse = NextResponse.json(
-      { 
-        success: false, 
+
+    return NextResponse.json(
+      {
+        success: false,
         error: error instanceof Error ? error.message : 'An error occurred during horoscope generation'
       },
       { status: 500 }
     );
-    
-    // Apply CORS headers to error response
-    return addCorsHeaders(errorResponse, origin);
   }
-} 
+}
