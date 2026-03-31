@@ -2,8 +2,8 @@ import { Suspense } from 'react';
 import HoroscopeDisplay from '@/components/zodiac/HoroscopeDisplay';
 import { Header } from '@/components/layout/Header';
 
-// Disable static generation
-export const dynamic = 'force-dynamic';
+// ISR: revalidate every hour (content changes once daily)
+export const revalidate = 3600;
 
 export default function Home() {
   return (

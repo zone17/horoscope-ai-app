@@ -292,7 +292,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                   </p>
                   <div className="mt-auto mb-0 flex justify-center">
                     <Button
-                      onClick={() => setIsExpanded(true)}
+                      onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
                       className="px-4 py-1.5 text-xs bg-indigo-500/40 hover:bg-indigo-500/60 transition-all duration-300 rounded-full text-white font-medium shadow-sm border border-indigo-400/30"
                       aria-label={`Read full horoscope for ${sign}`}
                     >
@@ -374,14 +374,6 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               </div>
               
               <Card className="w-full h-full max-h-[90vh] overflow-auto border-0 bg-transparent shadow-none">
-                {/* Close button */}
-                <button 
-                  onClick={() => setIsExpanded(false)}
-                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-all duration-300"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-                
                 {/* Card video/image container */}
                 <div className="relative h-48 sm:h-56 overflow-hidden rounded-t-xl">
                   <VideoBanner sign={sign} />
