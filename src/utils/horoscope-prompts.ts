@@ -4,6 +4,8 @@
  * so that outputs feel like they were written by different people.
  */
 
+import { getQuotesForPrompt } from './verified-quotes';
+
 // Each sign has a distinct personality that shapes the writing voice
 const SIGN_PERSONALITIES: Record<string, {
   voice: string;
@@ -118,9 +120,23 @@ export function buildHoroscopePrompt(sign: string, assignedPhilosopher?: string)
   const formatIndex = getFormatIndex(sign.toLowerCase(), today);
   const writingFormat = WRITING_FORMATS[formatIndex];
 
-  const philosopherInstruction = assignedPhilosopher
-    ? `Use a quote from ${assignedPhilosopher} specifically.`
-    : 'Use a quote from ONE of: Alan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, Walter Russell.';
+  // Build philosopher instruction with verified quotes
+  let philosopherInstruction: string;
+  let quoteBankSection: string;
+
+  if (assignedPhilosopher) {
+    const verifiedQuotes = getQuotesForPrompt(assignedPhilosopher, 4);
+    if (verifiedQuotes.length > 0) {
+      philosopherInstruction = `You MUST use one of the verified quotes below from ${assignedPhilosopher}. Do NOT invent or recall quotes from memory.`;
+      quoteBankSection = `\n## VERIFIED QUOTE BANK (pick the most relevant one)\nPhilosopher: ${assignedPhilosopher}\n${verifiedQuotes.map((q, i) => `${i + 1}. "${q}"`).join('\n')}\n\nYou MUST select one of these exact quotes. Do NOT modify, paraphrase, or generate a different quote.`;
+    } else {
+      philosopherInstruction = `Use a quote from ${assignedPhilosopher} specifically.`;
+      quoteBankSection = '';
+    }
+  } else {
+    philosopherInstruction = 'Use a quote from ONE of: Alan Watts, Richard Feynman, Albert Einstein, Friedrich Nietzsche, Lao Tzu, Socrates, Plato, Aristotle, Epicurus, Marcus Aurelius, Seneca, Jiddu Krishnamurti, Dr. Joe Dispenza, Walter Russell.';
+    quoteBankSection = '';
+  }
 
   return `Write a daily horoscope for ${sign.toUpperCase()}. This is not fortune-telling — it's philosophical guidance that feels personally written for someone born under this sign.
 
@@ -141,6 +157,7 @@ ${personality.avoidPatterns}
 ${writingFormat}
 
 ## ${personality.exampleOpener}
+${quoteBankSection}
 
 ## WHAT TO INCLUDE (as JSON fields)
 1. **message**: The main horoscope (40-80 words, following the voice and format above)
@@ -151,7 +168,7 @@ ${writingFormat}
    - Air pairs with Air + Fire
    - Water pairs with Water + Earth
    ${sign.toLowerCase() === 'libra' ? '- MUST include aquarius' : ''}${sign.toLowerCase() === 'aquarius' ? '- MUST include libra' : ''}
-3. **inspirational_quote**: A real quote (under 120 characters) from the assigned philosopher. ${philosopherInstruction}
+3. **inspirational_quote**: ${philosopherInstruction} Copy the quote EXACTLY as provided — do not modify it.
 4. **quote_author**: Exact name of the philosopher
 5. **peaceful_thought**: A 1-2 sentence nighttime wind-down thought. Not generic — make it specific to this sign's energy today. No greeting, no "dear [sign]."
 
