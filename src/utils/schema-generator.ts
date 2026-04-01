@@ -386,7 +386,8 @@ export const generateSchemasForTest = (
  * @param horoscopes Record of horoscope data by sign
  * @returns Array of schema objects ready to be serialized as JSON-LD
  */
-export function generateSchemasOld(
+// @ts-ignore — dead code kept for reference
+export function _generateSchemasOld_DEAD(
   zodiacSigns: ZodiacSign[] = [], 
   horoscopes: Record<string, Horoscope> = {}
 ) {
