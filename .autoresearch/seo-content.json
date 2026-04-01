@@ -1,8 +1,8 @@
 {
-  "_hypothesis": "Add FAQ section (boosts FAQPage schema dimension and internal linking score)",
+  "_hypothesis": "Add 'philosophical' differentiator to H1 — eval dimension 3 explicitly requires it and current H1 is missing it",
   "title": "Today's Horoscope — Daily Philosophical Guidance",
   "meta_description": "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
-  "h1": "Today's Horoscope",
+  "h1": "Today's Philosophical Horoscope",
   "intro_copy": "Get daily horoscope guidance for mindful, spiritual reflection and self-awareness rather than predictions. Our horoscopes are designed to offer guidance for personal reflection and mindfulness.",
   "sign_descriptions": [
     {"sign": "aries", "description": "Bold fire energy meets philosophical wisdom. Your daily Aries horoscope blends cosmic insight with Stoic teachings."},
