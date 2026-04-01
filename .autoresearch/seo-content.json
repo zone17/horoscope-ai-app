@@ -1,5 +1,5 @@
 {
-  "_hypothesis": "Add email_cta text — dimension 7 (CTA elements) explicitly scores email signup, and current value is empty string scoring zero points",
+  "_hypothesis": "Add 'breadcrumblist' to schemas array — eval dimension 9 explicitly lists BreadcrumbList as a scored schema type, currently missing from the array",
   "title": "Today's Horoscope — Daily Philosophical Guidance",
   "meta_description": "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
   "h1": "Today's Philosophical Horoscope",
@@ -45,5 +45,5 @@
   "freshness_signals": ["today"],
   "shows_date": true,
   "current_events": false,
-  "schemas": ["website", "creativework", "faqpage"]
+  "schemas": ["website", "creativework", "faqpage", "breadcrumblist"]
 }
