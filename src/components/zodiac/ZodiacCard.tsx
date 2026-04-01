@@ -307,7 +307,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 <div className="grid grid-cols-2 gap-3 w-full">
                   <div>
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Best Match</h3>
-                    <p className="font-light text-white text-lg leading-none capitalize">
+                    <p className="font-light text-white text-sm leading-snug capitalize">
                       {processedHoroscope?.best_match || 'Coming soon'}
                     </p>
                   </div>
@@ -427,7 +427,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Best Match</h3>
-                        <p className="font-light text-white text-lg leading-none capitalize">
+                        <p className="font-light text-white text-sm leading-snug capitalize">
                           {processedHoroscope?.best_match || 'Coming soon'}
                         </p>
                       </div>
