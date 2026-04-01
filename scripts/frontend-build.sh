@@ -1,29 +1,38 @@
 #!/bin/bash
+# Frontend build: excludes API routes so they're proxied via Vercel rewrites.
+# API routes live on api.gettodayshoroscope.com (separate Vercel project).
 
-# Script to build the frontend without API routes
+set -e
 
-echo "Building frontend application with API routes excluded..."
+echo "Building frontend (API routes excluded)..."
 
-# Create temp directory for storing API routes
-mkdir -p temp_api_backup
+# Move API routes and middleware out of build path
+mkdir -p /tmp/horoscope-api-backup
 
-# Move API routes out of the way for frontend build
 if [ -d src/app/api ]; then
-  echo "Temporarily moving API routes out of build path..."
-  mv src/app/api temp_api_backup/
+  mv src/app/api /tmp/horoscope-api-backup/
+  echo "Moved API routes to temp backup"
 fi
 
-# Run the build command
+if [ -f src/middleware.ts ]; then
+  mv src/middleware.ts /tmp/horoscope-api-backup/
+  echo "Moved middleware to temp backup"
+fi
+
+# Build
 echo "Running Next.js build..."
 next build
 
-# Restore API routes
-if [ -d temp_api_backup/api ]; then
-  echo "Restoring API routes..."
-  mv temp_api_backup/api src/app/
+# Restore everything
+if [ -d /tmp/horoscope-api-backup/api ]; then
+  mv /tmp/horoscope-api-backup/api src/app/
+  echo "Restored API routes"
 fi
 
-# Clean up
-rm -rf temp_api_backup
+if [ -f /tmp/horoscope-api-backup/middleware.ts ]; then
+  mv /tmp/horoscope-api-backup/middleware.ts src/
+  echo "Restored middleware"
+fi
 
-echo "Frontend build completed" 
+rm -rf /tmp/horoscope-api-backup
+echo "Frontend build completed"
