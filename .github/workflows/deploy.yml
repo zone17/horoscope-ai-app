@@ -103,17 +103,19 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Prepare frontend build
-        run: |
-          # The frontend build excludes API routes (they're proxied via rewrites)
-          # Use the frontend-specific configs
-          cp next.config.frontend.js next.config.js
-          chmod +x scripts/frontend-build.sh
-
       - name: Pull Vercel Environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FRONTEND_PROJECT_ID }}
+
+      - name: Prepare frontend build
+        run: |
+          # Use frontend-specific Next.js config (excludes API routes, adds rewrites)
+          cp next.config.frontend.js next.config.js
+          chmod +x scripts/frontend-build.sh
+          # Remove API routes from build (frontend proxies them via rewrites)
+          rm -rf src/app/api
+          rm -f src/middleware.ts
 
       - name: Build
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
