@@ -37,6 +37,10 @@ cp -r src/app/loading.tsx $TEMP_DIR/src/app/ 2>/dev/null || :
 cp -r src/app/sitemap.ts $TEMP_DIR/src/app/ 2>/dev/null || :
 cp -r src/app/robots.ts $TEMP_DIR/src/app/ 2>/dev/null || :
 
+# Copy sign pages (horoscope/[sign]) — these are frontend pages, not API routes
+echo "Copying sign pages..."
+cp -r src/app/horoscope $TEMP_DIR/src/app/ 2>/dev/null || :
+
 # Copy components
 echo "Copying components..."
 # Copy only frontend-specific components and UI components
@@ -50,6 +54,7 @@ cp -r src/components/HoroscopeDisplay.tsx $TEMP_DIR/src/components/
 cp -r src/components/ModeProvider.tsx $TEMP_DIR/src/components/
 cp -r src/components/ModeToggle.tsx $TEMP_DIR/src/components/
 cp -r src/components/VideoBanner.tsx $TEMP_DIR/src/components/
+cp -r src/components/ServiceWorkerRegistration.tsx $TEMP_DIR/src/components/ 2>/dev/null || :
 
 # Copy styles
 echo "Copying styles..."
@@ -64,6 +69,7 @@ cp -r src/lib/* $TEMP_DIR/src/lib/ 2>/dev/null || :
 echo "Copying utility files..."
 cp -r src/utils/feature-flags.ts $TEMP_DIR/src/utils/
 cp -r src/utils/horoscope-service.ts $TEMP_DIR/src/utils/
+cp -r src/utils/analytics.ts $TEMP_DIR/src/utils/ 2>/dev/null || :
 
 # Adding shared utilities needed by both frontend and backend
 echo "Copying shared utility files..."
@@ -235,7 +241,8 @@ cat > $TEMP_DIR/package.json << 'EOF'
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
     "web-vitals": "^3.5.2",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "@vercel/analytics": "^1.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",

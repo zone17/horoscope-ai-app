@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       <Header />
-      
+
       <Suspense fallback={
         <div className="text-center py-32 text-white">
           <div className="inline-flex space-x-2 items-center">
@@ -22,9 +22,9 @@ export default function Home() {
       }>
         <HoroscopeDisplay />
       </Suspense>
-      
-      <footer className="text-center py-6 text-indigo-300/60 text-sm">
-        <p>© {new Date().getFullYear()} Get Today's Horoscope. All rights reserved.</p>
+
+      <footer className="text-center py-6 text-indigo-200/80 text-sm">
+        <p>&copy; {new Date().getFullYear()} Get Today&apos;s Horoscope. All rights reserved.</p>
       </footer>
     </main>
   );
