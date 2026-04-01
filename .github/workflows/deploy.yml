@@ -133,7 +133,7 @@ jobs:
       - name: Verify Frontend
         run: |
           sleep 10
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://gettodayshoroscope.com)
+          STATUS=$(curl -sL -o /dev/null -w "%{http_code}" https://www.gettodayshoroscope.com)
           if [ "$STATUS" != "200" ]; then
             echo "Frontend health check failed: HTTP $STATUS"
             exit 1
@@ -164,5 +164,5 @@ jobs:
 
       - name: Verify sign page
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://gettodayshoroscope.com/horoscope/aries)
+          STATUS=$(curl -sL -o /dev/null -w "%{http_code}" https://www.gettodayshoroscope.com/horoscope/aries)
           echo "Sign page: HTTP $STATUS"
