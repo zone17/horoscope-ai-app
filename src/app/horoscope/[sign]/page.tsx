@@ -100,8 +100,31 @@ export default async function SignPage({ params }: PageProps) {
 
   const meta = SIGN_META[lower];
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.gettodayshoroscope.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: capitalize(lower),
+        item: `https://www.gettodayshoroscope.com/horoscope/${lower}`,
+      },
+    ],
+  };
+
   return (
     <main className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Back link */}
         <Link

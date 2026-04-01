@@ -50,34 +50,56 @@ export default function SchemaMarkupServer() {
     }
   };
   
-  // Create a generic FAQPage schema
+  // FAQPage schema with AutoResearch-optimized content
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "How are the daily horoscopes generated?",
+        "name": "What makes this horoscope different from other daily horoscopes?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Our daily horoscopes are created using a combination of astrological principles and advanced AI to provide insightful guidance focused on mindfulness and self-reflection."
+          "text": "Rather than predicting events, each reading draws on philosophical traditions — Stoicism, Epicureanism, and scientific thinking — to offer genuine guidance for how to approach your day with intention and clarity."
         }
       },
       {
         "@type": "Question",
-        "name": "What zodiac signs are covered?",
+        "name": "How is today\u2019s horoscope personalized to my zodiac sign?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "We cover all twelve traditional zodiac signs: Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, and Pisces."
+          "text": "Each sign\u2019s reading reflects the distinct temperament, strengths, and challenges associated with that sign, filtered through a philosophical lens that speaks to the real questions you face each morning."
         }
       },
       {
         "@type": "Question",
-        "name": "Are the horoscopes predictive?",
+        "name": "Is this a philosophical horoscope or a traditional astrology reading?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Rather than making specific predictions, our horoscopes are designed to offer guidance for personal reflection and mindfulness."
+          "text": "It\u2019s both \u2014 we use your zodiac sign as a framework for personalization, but the guidance itself is rooted in philosophy, not fortune-telling. Think of it as a philosopher in your corner, every morning."
         }
+      },
+      {
+        "@type": "Question",
+        "name": "How often is the horoscope content updated?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Every day. Today\u2019s horoscope is generated fresh each morning so the guidance stays relevant to the current moment, not recycled from last week or last year."
+        }
+      }
+    ]
+  };
+
+  // BreadcrumbList schema for homepage
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://www.gettodayshoroscope.com"
       }
     ]
   };
@@ -124,6 +146,7 @@ export default function SchemaMarkupServer() {
     organizationSchema,
     serviceSchema,
     faqSchema,
+    breadcrumbSchema,
     itemListSchema,
     articleSchema
   ];
