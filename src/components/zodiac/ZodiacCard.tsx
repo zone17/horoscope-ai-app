@@ -297,7 +297,7 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       className="px-4 py-1.5 text-xs bg-indigo-500/40 hover:bg-indigo-500/60 transition-all duration-300 rounded-full text-white font-medium shadow-sm border border-indigo-400/30"
                       aria-label={`Read full horoscope for ${sign}`}
                     >
-                      Read More
+                      Quick Look
                     </Button>
                   </div>
                 </div>
@@ -437,9 +437,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       </div>
                       <div>
                         <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
-                        <p className="font-light text-white text-lg leading-none">
-                          {processedHoroscope?.inspirational_quote ? 
-                           `"${processedHoroscope.inspirational_quote}"` : 
+                        <p className="font-light text-white text-sm italic leading-relaxed">
+                          {processedHoroscope?.inspirational_quote ?
+                           `"${processedHoroscope.inspirational_quote}"` :
                            'Coming soon'}
                         </p>
                         {processedHoroscope?.quote_author && (

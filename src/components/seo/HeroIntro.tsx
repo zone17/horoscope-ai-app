@@ -7,7 +7,7 @@ import Link from 'next/link';
 export default function HeroIntro() {
   return (
     <section
-      className="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-4 text-center"
+      className="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-24 pb-4 text-center"
       aria-label="Site introduction"
     >
       <h1 className="text-3xl sm:text-4xl font-normal text-white tracking-tight mb-4">
@@ -22,7 +22,7 @@ export default function HeroIntro() {
       </p>
       <Link
         href="#horoscope"
-        className="inline-block px-6 py-2.5 rounded-lg bg-indigo-500/20 border border-indigo-400/30 text-sm text-indigo-200 hover:bg-indigo-500/30 transition-colors font-medium"
+        className="inline-block px-6 py-2.5 rounded-full bg-indigo-500/40 border border-indigo-400/30 text-sm text-white hover:bg-indigo-500/60 transition-all duration-300 font-medium shadow-sm"
       >
         Read your sign
       </Link>
