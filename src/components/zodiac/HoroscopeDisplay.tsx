@@ -126,34 +126,7 @@ export default function HoroscopeDisplay() {
   return (
     <>
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        {/* Hero section */}
-        <div className="relative w-full mb-16 px-4 py-20 flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-black/80">
-          {/* Background video */}
-          <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl">
-            <video
-              className="w-full h-full object-cover opacity-40"
-              autoPlay
-              muted
-              loop
-              playsInline
-            >
-              <source src="/videos/zodiac/space.mp4" type="video/mp4" />
-            </video>
-            <div className="absolute inset-0 bg-black/50 z-10"></div>
-          </div>
-          
-          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 mix-blend-overlay z-20"></div>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"></div>
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"></div>
-          
-          <h1 className="text-4xl md:text-5xl font-normal text-center bg-clip-text text-transparent bg-gradient-to-b from-purple-200 to-indigo-200 mb-4 relative z-30">
-            Today's Horoscope
-          </h1>
-          
-          <p className="text-center text-white/80 max-w-2xl font-light text-lg mb-8 relative z-30">
-            Your celestial guidance for what the cosmos has aligned today
-          </p>
-        </div>
+        {/* Hero section moved to HeroIntro server component in page.tsx */}
         
         {/* Refresh notification */}
         {refreshed && (

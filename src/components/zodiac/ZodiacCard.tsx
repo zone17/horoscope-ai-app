@@ -433,9 +433,9 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                       </div>
                       <div>
                         <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Inspirational Quote</h3>
-                        <p className="font-light text-white text-lg leading-none">
-                          {processedHoroscope?.inspirational_quote ? 
-                           `"${processedHoroscope.inspirational_quote}"` : 
+                        <p className="font-light text-white text-sm italic leading-relaxed">
+                          {processedHoroscope?.inspirational_quote ?
+                           `"${processedHoroscope.inspirational_quote}"` :
                            'Coming soon'}
                         </p>
                         {processedHoroscope?.quote_author && (
