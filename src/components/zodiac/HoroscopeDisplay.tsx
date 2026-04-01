@@ -6,7 +6,8 @@ import { ZodiacCard } from './ZodiacCard';
 import { SignPicker } from './SignPicker';
 import { getHoroscopesForAllSigns } from '@/utils/horoscope-service';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, RotateCcw } from 'lucide-react';
+import { CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { useMode } from '@/hooks/useMode';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 import SchemaMarkup from '@/components/seo/SchemaMarkup';
@@ -35,7 +36,6 @@ export default function HoroscopeDisplay() {
   const [refreshed, setRefreshed] = useState(false);
   const userSignRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch horoscopes data
   useEffect(() => {
     async function fetchHoroscopes() {
       try {
@@ -44,7 +44,6 @@ export default function HoroscopeDisplay() {
         setHoroscopes(data);
         setIsError(false);
         setRefreshed(true);
-
         const timer = setTimeout(() => setRefreshed(false), 5000);
         return () => clearTimeout(timer);
       } catch (error) {
@@ -54,11 +53,9 @@ export default function HoroscopeDisplay() {
         setIsLoading(false);
       }
     }
-
     fetchHoroscopes();
   }, []);
 
-  // Auto-scroll to the user's sign card when data loads or sign changes
   useEffect(() => {
     if (!isLoading && userSign && userSignRef.current) {
       setTimeout(() => {
@@ -67,7 +64,6 @@ export default function HoroscopeDisplay() {
     }
   }, [isLoading, userSign]);
 
-  // Reorder signs: user's sign goes first, rest follow in natural order
   const orderedSigns = userSign
     ? [
         ...LUNAR_ZODIAC_SIGNS.filter((z) => z.sign === userSign),
@@ -78,40 +74,42 @@ export default function HoroscopeDisplay() {
   return (
     <>
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        {/* Hero section */}
-        <div className="relative w-full mb-10 px-4 py-20 flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-black/80">
-          {/* Background — poster image by default (no autoplay video) */}
-          <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/posters/space.jpg"
-              alt="cosmic background"
-              loading="lazy"
-              className="w-full h-full object-cover opacity-40"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-            <div className="absolute inset-0 bg-black/50 z-10"></div>
-          </div>
-
+        {/* Hero section — compact, reading IS the hero (C1) */}
+        <div className="relative w-full mb-10 px-4 py-10 flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-black/80">
           <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 mix-blend-overlay z-20"></div>
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"></div>
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"></div>
 
-          <h1 className="text-4xl md:text-5xl font-normal text-center bg-clip-text text-transparent bg-gradient-to-b from-purple-200 to-indigo-200 mb-4 relative z-30">
-            Today&apos;s Horoscope
+          <h1 className="text-4xl md:text-5xl font-display font-medium text-center bg-clip-text text-transparent bg-gradient-to-b from-purple-200 to-indigo-200 mb-4 relative z-30">
+            Your sign is not a prediction.
           </h1>
 
-          <p className="text-center text-white/80 max-w-2xl font-light text-lg mb-8 relative z-30">
-            Your celestial guidance for what the cosmos has aligned today
+          <p className="text-center text-white/80 max-w-2xl font-light text-lg mb-4 relative z-30">
+            It is a lens. Every morning, a philosopher looks through it — and says the one thing you needed to hear.
           </p>
         </div>
 
-        {/* Sign Picker — below the hero */}
+        {/* Return visitor CTA (C2) */}
+        {userSign && !isLoading && (
+          <div className="flex justify-center mb-8">
+            <Link
+              href={`/horoscope/${userSign}`}
+              className="group inline-flex items-center gap-3 px-6 py-3 rounded-full bg-indigo-500/30 border border-indigo-400/40 hover:bg-indigo-500/50 hover:border-indigo-400/60 transition-all duration-300 text-white font-medium"
+            >
+              Read your {userSign.charAt(0).toUpperCase() + userSign.slice(1)} reading
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        )}
+
+        {/* Sign Picker */}
         <SignPicker />
 
-        {/* Refresh notification */}
+        {/* Browse all signs label (C2) */}
+        {userSign && !isLoading && !isError && Object.keys(horoscopes).length > 0 && (
+          <p className="text-center text-indigo-200/60 text-sm font-light mb-4 mt-2">Browse all signs</p>
+        )}
+
         {refreshed && (
           <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm text-white/70 font-normal backdrop-blur-md bg-white/5 border border-white/10 flex items-center gap-2 z-50">
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
@@ -119,14 +117,12 @@ export default function HoroscopeDisplay() {
           </div>
         )}
 
-        {/* Loading state */}
         {isLoading && (
           <div className="flex justify-center my-20">
             <div className="w-20 h-20 rounded-full border-t-2 border-b-2 border-purple-300 animate-spin"></div>
           </div>
         )}
 
-        {/* Error state */}
         {isError && (
           <div className="max-w-xl mx-auto glassmorphic text-center my-20">
             <p className="text-white/70 mb-4 font-normal">We couldn&apos;t connect to the cosmos right now.</p>
@@ -141,7 +137,6 @@ export default function HoroscopeDisplay() {
           </div>
         )}
 
-        {/* Zodiac cards grid */}
         {!isLoading && !isError && Object.keys(horoscopes).length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {orderedSigns.map(({ sign, symbol, dateRange, element }) => {
@@ -167,7 +162,6 @@ export default function HoroscopeDisplay() {
         )}
       </div>
 
-      {/* Add Schema Markup if horoscopes are loaded */}
       {!isLoading && !isError && Object.keys(horoscopes).length > 0 && (
         <SchemaMarkup zodiacSigns={LUNAR_ZODIAC_SIGNS} horoscopes={horoscopes} />
       )}

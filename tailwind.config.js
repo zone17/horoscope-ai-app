@@ -5,7 +5,7 @@ module.exports = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  darkMode: 'class', // Enable class-based dark mode
+  darkMode: 'class',
   theme: {
     container: {
       center: true,
@@ -16,8 +16,8 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-geist-sans)'],
-        mono: ['var(--font-geist-mono)'],
+        sans: ['Satoshi', 'system-ui', 'sans-serif'],
+        display: ['var(--font-playfair-display)', 'Playfair Display', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(240 3.7% 15.9%)",
@@ -122,4 +122,4 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}; 
+};

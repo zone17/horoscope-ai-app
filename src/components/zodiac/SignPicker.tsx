@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMode } from '@/hooks/useMode';
 
@@ -22,6 +23,7 @@ const ZODIAC_SYMBOLS: { sign: string; symbol: string; label: string }[] = [
 export function SignPicker() {
   const { userSign, setUserSign } = useMode();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
@@ -55,7 +57,10 @@ export function SignPicker() {
               role="option"
               aria-selected={isSelected}
               whileTap={{ scale: 0.92 }}
-              onClick={() => setUserSign(sign)}
+              onClick={() => {
+                setUserSign(sign);
+                router.push(`/horoscope/${sign}`);
+              }}
               className={`
                 flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl
                 border transition-all duration-200 cursor-pointer select-none
@@ -76,7 +81,7 @@ export function SignPicker() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center text-indigo-300/60 text-xs mt-2 font-light"
+          className="text-center text-indigo-200/80 text-xs mt-2 font-light"
         >
           Your sign is highlighted below.{' '}
           <button

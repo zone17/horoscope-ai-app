@@ -1,23 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Playfair_Display } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import "../styles/animations.css";
 import { CoreWebVitalsInitializer } from '@/components/performance/CoreWebVitalsInitializer';
 import SchemaMarkupServer from '@/components/seo/SchemaMarkupServer';
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair-display",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Today's Horoscope - Daily Celestial Guidance",
-  description: "Get daily horoscope guidance for mindful, spiritual reflection and self-awareness rather than predictions.",
+  title: "Today's Horoscope — Daily Philosophical Guidance",
+  description: "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
   keywords: "horoscope, mindfulness, spiritual reflection, zodiac, self-awareness, daily guidance",
   icons: {
     icon: [
@@ -38,12 +36,14 @@ export default function RootLayout({
 }>) {
   // Get environment variables for feature flags
   const lunarOrderEnabled = process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true';
-  
+
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0C0B1E" />
         {/* Resource hints for improved performance */}
         <link rel="preconnect" href="https://api.gettodayshoroscope.com" />
         <link rel="dns-prefetch" href="https://api.gettodayshoroscope.com" />
@@ -57,10 +57,12 @@ export default function RootLayout({
         <SchemaMarkupServer />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-br from-indigo-950 via-[#0f0b30] to-[#0c0921] text-white`}
+        className={`${playfairDisplay.variable} antialiased min-h-screen bg-gradient-to-br from-indigo-950 via-[#0f0b30] to-[#0c0921] text-white`}
       >
         <CoreWebVitalsInitializer />
         {children}
+        <Analytics />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

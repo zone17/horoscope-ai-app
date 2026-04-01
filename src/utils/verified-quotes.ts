@@ -102,7 +102,7 @@ export const VERIFIED_QUOTES: Record<string, VerifiedQuote[]> = {
     { text: 'The snake which cannot cast its skin has to die.', source: 'Daybreak (1881)' },
   ],
   'Plato': [
-    { text: 'Be kind, for everyone you meet is fighting a hard battle.', source: 'Attributed (via Ian Maclaren)' },
+    { text: 'There is nothing permanent except change.', source: 'Cratylus, via Diogenes Laertius' },
     { text: 'The beginning is the most important part of the work.', source: 'The Republic, Book 2' },
     { text: 'Wise men speak because they have something to say; fools because they have to say something.', source: 'Attributed, various dialogues' },
     { text: 'We can easily forgive a child who is afraid of the dark; the real tragedy is men who are afraid of the light.', source: 'The Republic' },
@@ -140,7 +140,7 @@ export const VERIFIED_QUOTES: Record<string, VerifiedQuote[]> = {
   'Dr. Joe Dispenza': [
     { text: 'Your personality creates your personal reality.', source: 'Breaking the Habit of Being Yourself (2012)' },
     { text: 'Change as a choice, instead of a reaction.', source: 'You Are the Placebo (2014)' },
-    { text: 'The best way to predict the future is to create it.', source: 'Breaking the Habit of Being Yourself (2012)' },
+    { text: 'The hardest part about change is not making the same choices you made the day before.', source: 'Breaking the Habit of Being Yourself (2012)' },
     { text: 'Where you place your attention is where you place your energy.', source: 'Becoming Supernatural (2017)' },
     { text: 'If you want a new outcome, you will have to break the habit of being yourself.', source: 'Breaking the Habit of Being Yourself (2012)' },
     { text: 'We cannot create a new future by holding on to the emotions of the past.', source: 'You Are the Placebo (2014)' },
@@ -178,12 +178,12 @@ export const VERIFIED_QUOTES: Record<string, VerifiedQuote[]> = {
     { text: 'I know that I know nothing.', source: 'Plato, Apology 21d (paraphrase)' },
     { text: 'The only true wisdom is in knowing you know nothing.', source: 'Plato, Apology (paraphrase)' },
     { text: 'To find yourself, think for yourself.', source: 'Attributed' },
-    { text: 'Strong minds discuss ideas, average minds discuss events, weak minds discuss people.', source: 'Attributed' },
+    { text: 'Be slow to fall into friendship, but when you are in, continue firm and constant.', source: 'via Diogenes Laertius' },
     { text: 'Education is the kindling of a flame, not the filling of a vessel.', source: 'Attributed (via Plutarch)' },
     { text: 'He is richest who is content with the least.', source: 'Attributed (via Diogenes Laertius)' },
     { text: 'Let him who would move the world first move himself.', source: 'Attributed' },
     { text: 'Wonder is the beginning of wisdom.', source: 'Attributed (via Plato, Theaetetus)' },
-    { text: 'The secret of change is to focus all your energy not on fighting the old but on building the new.', source: 'Attributed (via Dan Millman\'s Way of the Peaceful Warrior)' },
+    { text: 'True wisdom comes to each of us when we realize how little we understand about life.', source: 'via Plato, Apology' },
   ],
 };
 

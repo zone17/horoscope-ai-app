@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import SignPageClient from './SignPageClient';
+import PushPrompt from '@/components/zodiac/PushPrompt';
+import EmailCapture from '@/components/zodiac/EmailCapture';
 
 export const revalidate = 3600; // ISR: revalidate every hour
 
@@ -14,18 +16,18 @@ const VALID_SIGNS = [
 type ValidSign = (typeof VALID_SIGNS)[number];
 
 const SIGN_META: Record<ValidSign, { symbol: string; dateRange: string; element: string }> = {
-  aries:       { symbol: '♈', dateRange: 'Mar 21 – Apr 19', element: 'Fire' },
-  taurus:      { symbol: '♉', dateRange: 'Apr 20 – May 20', element: 'Earth' },
-  gemini:      { symbol: '♊', dateRange: 'May 21 – Jun 20', element: 'Air' },
-  cancer:      { symbol: '♋', dateRange: 'Jun 21 – Jul 22', element: 'Water' },
-  leo:         { symbol: '♌', dateRange: 'Jul 23 – Aug 22', element: 'Fire' },
-  virgo:       { symbol: '♍', dateRange: 'Aug 23 – Sep 22', element: 'Earth' },
-  libra:       { symbol: '♎', dateRange: 'Sep 23 – Oct 22', element: 'Air' },
-  scorpio:     { symbol: '♏', dateRange: 'Oct 23 – Nov 21', element: 'Water' },
-  sagittarius: { symbol: '♐', dateRange: 'Nov 22 – Dec 21', element: 'Fire' },
-  capricorn:   { symbol: '♑', dateRange: 'Dec 22 – Jan 19', element: 'Earth' },
-  aquarius:    { symbol: '♒', dateRange: 'Jan 20 – Feb 18', element: 'Air' },
-  pisces:      { symbol: '♓', dateRange: 'Feb 19 – Mar 20', element: 'Water' },
+  aries:       { symbol: '\u2648', dateRange: 'Mar 21 \u2013 Apr 19', element: 'Fire' },
+  taurus:      { symbol: '\u2649', dateRange: 'Apr 20 \u2013 May 20', element: 'Earth' },
+  gemini:      { symbol: '\u264A', dateRange: 'May 21 \u2013 Jun 20', element: 'Air' },
+  cancer:      { symbol: '\u264B', dateRange: 'Jun 21 \u2013 Jul 22', element: 'Water' },
+  leo:         { symbol: '\u264C', dateRange: 'Jul 23 \u2013 Aug 22', element: 'Fire' },
+  virgo:       { symbol: '\u264D', dateRange: 'Aug 23 \u2013 Sep 22', element: 'Earth' },
+  libra:       { symbol: '\u264E', dateRange: 'Sep 23 \u2013 Oct 22', element: 'Air' },
+  scorpio:     { symbol: '\u264F', dateRange: 'Oct 23 \u2013 Nov 21', element: 'Water' },
+  sagittarius: { symbol: '\u2650', dateRange: 'Nov 22 \u2013 Dec 21', element: 'Fire' },
+  capricorn:   { symbol: '\u2651', dateRange: 'Dec 22 \u2013 Jan 19', element: 'Earth' },
+  aquarius:    { symbol: '\u2652', dateRange: 'Jan 20 \u2013 Feb 18', element: 'Air' },
+  pisces:      { symbol: '\u2653', dateRange: 'Feb 19 \u2013 Mar 20', element: 'Water' },
 };
 
 function capitalize(s: string) {
@@ -50,8 +52,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { symbol, dateRange } = SIGN_META[lower];
   const title = `${capitalize(lower)} Horoscope Today ${symbol} | Get Today's Horoscope`;
-  const description = `Daily horoscope for ${capitalize(lower)} (${dateRange}). Discover what the stars have in store for you today — love, career, and personal growth.`;
+  const description = `Daily horoscope for ${capitalize(lower)} (${dateRange}). Discover what the stars have in store for you today \u2014 love, career, and personal growth.`;
   const url = `https://www.gettodayshoroscope.com/horoscope/${lower}`;
+  const ogImage = `https://www.gettodayshoroscope.com/api/og/${lower}`;
 
   return {
     title,
@@ -62,11 +65,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url,
       siteName: "Get Today's Horoscope",
       type: 'website',
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `${capitalize(lower)} horoscope`,
+        },
+      ],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title,
       description,
+      images: [ogImage],
     },
     alternates: {
       canonical: url,
@@ -96,7 +108,7 @@ export default async function SignPage({ params }: PageProps) {
           href="/"
           className="inline-flex items-center gap-1.5 text-indigo-300/70 hover:text-indigo-200 text-sm font-light mb-8 transition-colors"
         >
-          ← All signs
+          &larr; All signs
         </Link>
 
         {/* Sign header */}
@@ -114,6 +126,10 @@ export default async function SignPage({ params }: PageProps) {
 
         {/* Client component handles data fetching + share button */}
         <SignPageClient sign={lower} symbol={meta.symbol} />
+
+        {/* Growth: push notifications + email capture */}
+        <PushPrompt sign={lower} />
+        <EmailCapture sign={lower} />
       </div>
     </main>
   );

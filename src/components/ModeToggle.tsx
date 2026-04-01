@@ -6,13 +6,13 @@ import { useMode } from '@/hooks/useMode';
 
 export function ModeToggle() {
   const { mode, toggleMode } = useMode();
-  
+
   return (
     <Button
       variant="outline"
       size="sm"
       onClick={toggleMode}
-      className="rounded-full h-8 px-3 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+      className="rounded-full h-11 px-4 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 min-w-[44px]"
     >
       <span className="flex items-center gap-2">
         <span className="text-xs font-light text-white/70">
@@ -26,4 +26,4 @@ export function ModeToggle() {
       </span>
     </Button>
   );
-} 
+}
