@@ -17,6 +17,18 @@ export const metadata: Metadata = {
   title: "Today's Horoscope — Daily Philosophical Guidance",
   description: "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
   keywords: "horoscope, mindfulness, spiritual reflection, zodiac, self-awareness, daily guidance",
+  openGraph: {
+    title: "Today's Horoscope — Daily Philosophical Guidance",
+    description: "A philosopher in your corner. Every morning. Daily readings personalized by your zodiac sign.",
+    url: "https://www.gettodayshoroscope.com",
+    siteName: "Today's Horoscope",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Today's Horoscope — Daily Philosophical Guidance",
+    description: "A philosopher in your corner. Every morning.",
+  },
   icons: {
     icon: [
       {
