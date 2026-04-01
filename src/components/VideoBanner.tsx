@@ -83,28 +83,15 @@ export function VideoBanner({ sign, autoPlayOnHover = true }: VideoBannerProps) 
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-indigo-500/5 to-indigo-950/20 mix-blend-overlay"></div>
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400/30 via-purple-500/50 to-indigo-400/30"></div>
 
-      {/* Poster image — always rendered, hidden when video is active */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`/images/posters/${sign}.jpg`}
-        alt={`${sign} zodiac`}
-        loading="lazy"
-        className={`absolute inset-0 w-full h-full object-cover brightness-110 contrast-125 transition-opacity duration-300 ${isVideoActive ? 'opacity-0' : 'opacity-100'}`}
-        onError={(e) => {
-          // If poster image fails to load, show gradient fallback
-          (e.target as HTMLImageElement).style.display = 'none';
-        }}
-      />
-
-      {/* Video — only loaded (src set) when card is in viewport */}
+      {/* Video — autoplay when in viewport, lazy loaded */}
       <video
         ref={videoRef}
-        className={`absolute inset-0 w-full h-full object-cover brightness-110 contrast-125 transition-opacity duration-300 ${isVideoActive ? 'opacity-100' : 'opacity-0'}`}
+        className="absolute inset-0 w-full h-full object-cover brightness-110 contrast-125"
         loop
         muted
         playsInline
+        autoPlay
         preload="none"
-        poster={`/images/posters/${sign}.jpg`}
         onError={() => setVideoError(true)}
       >
         {isInViewport && (
