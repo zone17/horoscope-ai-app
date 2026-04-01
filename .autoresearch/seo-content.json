@@ -1,5 +1,5 @@
 {
-  "_hypothesis": "Add 'breadcrumblist' to schemas array — eval dimension 9 explicitly lists BreadcrumbList as a scored schema type, currently missing from the array",
+  "_hypothesis": "Add related_links array with weekly horoscope, compatibility, and zodiac guide links — dimension 6 explicitly scores 'related content links' and currently related_links is an empty array",
   "title": "Today's Horoscope — Daily Philosophical Guidance",
   "meta_description": "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
   "h1": "Today's Philosophical Horoscope",
@@ -19,7 +19,11 @@
     {"sign": "pisces", "description": "Dreamlike water wisdom for the intuitive soul. Your daily Pisces horoscope dissolves boundaries between self and cosmos."}
   ],
   "sign_links": ["/horoscope/aries", "/horoscope/taurus", "/horoscope/gemini", "/horoscope/cancer", "/horoscope/leo", "/horoscope/virgo", "/horoscope/libra", "/horoscope/scorpio", "/horoscope/sagittarius", "/horoscope/capricorn", "/horoscope/aquarius", "/horoscope/pisces"],
-  "related_links": [],
+  "related_links": [
+    {"text": "Weekly Horoscope", "url": "/horoscope/weekly"},
+    {"text": "Zodiac Compatibility Guide", "url": "/compatibility"},
+    {"text": "Zodiac Elements Explained", "url": "/zodiac/elements"}
+  ],
   "faqs": [
     {
       "question": "What makes this horoscope different from other daily horoscopes?",
