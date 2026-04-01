@@ -6,7 +6,8 @@ import { useMode } from '@/hooks/useMode';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { capitalize, getColorFromString } from '@/lib/utils';
-import { ArrowRightIcon, X, ChevronDown } from 'lucide-react';
+import { ArrowRightIcon, X, ChevronDown, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { VideoBanner } from '@/components/VideoBanner';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 
@@ -315,13 +316,16 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                     <h3 className="text-xs uppercase mb-1 font-normal tracking-wider text-indigo-100/80">Quote</h3>
                     <div className="flex flex-col">
                       <p className="font-light text-white text-xs italic line-clamp-2">
-                        {processedHoroscope?.inspirational_quote ? 
-                         `"${processedHoroscope.inspirational_quote}"` : 
+                        {processedHoroscope?.inspirational_quote ?
+                         `"${processedHoroscope.inspirational_quote}"` :
                          'Coming soon'}
                       </p>
                     </div>
                   </div>
                 </div>
+                <Link href={`/horoscope/${sign.toLowerCase()}`} className="text-xs text-indigo-300/70 hover:text-indigo-200 transition-colors text-center mt-1" onClick={(e) => e.stopPropagation()}>
+                  View full reading &rarr;
+                </Link>
               </CardFooter>
             </Card>
           </motion.div>
