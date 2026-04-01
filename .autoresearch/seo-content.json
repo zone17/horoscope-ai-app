@@ -1,9 +1,9 @@
 {
-  "_hypothesis": "Add related_links array with weekly horoscope, compatibility, and zodiac guide links — dimension 6 explicitly scores 'related content links' and currently related_links is an empty array",
+  "_hypothesis": "Rewrite intro_copy with stronger value proposition, action words, and explicit CTA — current intro is generic and repeats 'guidance' twice with no call-to-action, weakening dimension 4 score",
   "title": "Today's Horoscope — Daily Philosophical Guidance",
   "meta_description": "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
   "h1": "Today's Philosophical Horoscope",
-  "intro_copy": "Get daily horoscope guidance for mindful, spiritual reflection and self-awareness rather than predictions. Our horoscopes are designed to offer guidance for personal reflection and mindfulness.",
+  "intro_copy": "Start your day with a philosopher in your corner. Today's horoscope for your zodiac sign draws on Stoic wisdom, Eastern philosophy, and scientific thinking — not predictions, but genuine guidance for how to live well. Each daily reading is tailored to your sign's temperament and the real questions you face each morning. Read your sign below and meet the day with clarity.",
   "sign_descriptions": [
     {"sign": "aries", "description": "Bold fire energy meets philosophical wisdom. Your daily Aries horoscope blends cosmic insight with Stoic teachings."},
     {"sign": "taurus", "description": "Grounded earth wisdom for the steady soul. Your daily Taurus horoscope roots celestial patterns in practical philosophy."},
