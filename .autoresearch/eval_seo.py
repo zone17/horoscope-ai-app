@@ -13,7 +13,8 @@ import json
 import math
 
 # Target file is the SEO content config
-TARGET_FILE = os.environ.get("AUTORESEARCH_TARGET", "seo-content.json")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+TARGET_FILE = os.environ.get("AUTORESEARCH_TARGET", os.path.join(SCRIPT_DIR, "seo-content.json"))
 
 def load_content():
     """Load the SEO content JSON file."""
