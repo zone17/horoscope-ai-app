@@ -138,6 +138,21 @@ PLAN: Read docs/plans/plan-file.md — execute Units A1-A5
 | New pages created | 92 (12 sign + 12 weekly + 66 compatibility + pricing + home) |
 | CI/CD pipeline | GitHub Actions with dual Vercel project deployment |
 
+## Critical Lesson: Visual Regression from Squad Changes
+
+Sprint 3 (7 additional PRs) was entirely caused by the design squad's changes degrading the visual quality. Root causes:
+
+1. **Tailwind v3/v4 mismatch**: Squad C's agent changed PostCSS to v4 syntax while the entire codebase used v3. V4 silently produced zero utility CSS — cards lost all styling.
+2. **Removing videos without replacing them**: Removing the 480px video-banner cards and replacing with 280px text-only cards made the site look like a prototype, not a product.
+3. **Cascade of hotfixes**: 7 PRs (#16-#23) to restore what was working before the squad changes.
+
+**Prevention rules for future visual work:**
+- Never change CSS framework version (v3↔v4) without verifying the ENTIRE output
+- Never remove visual elements (videos, images) without confirming the replacement looks equivalent or better
+- Always screenshot before/after and compare side-by-side before merging visual PRs
+- When visual regression is detected, revert to the last known-good version from git history rather than trying to forward-fix
+- The original visual files can always be recovered: `git show <commit>:path/to/file`
+
 ## Related
 
 - docs/plans/2026-03-31-001-fix-horoscope-production-remediation-plan.md
