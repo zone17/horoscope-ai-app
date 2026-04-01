@@ -1,4 +1,5 @@
 import { ZODIAC_SIGNS } from '@/constants/index';
+import { FAQS } from '@/constants/faqs';
 import { generateSchemas } from '@/utils/schema-generator';
 
 /**
@@ -50,44 +51,18 @@ export default function SchemaMarkupServer() {
     }
   };
   
-  // FAQPage schema with AutoResearch-optimized content
+  // FAQPage schema with AutoResearch-optimized content (shared from constants/faqs.ts)
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "What makes this horoscope different from other daily horoscopes?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Rather than predicting events, each reading draws on philosophical traditions — Stoicism, Epicureanism, and scientific thinking — to offer genuine guidance for how to approach your day with intention and clarity."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How is today\u2019s horoscope personalized to my zodiac sign?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Each sign\u2019s reading reflects the distinct temperament, strengths, and challenges associated with that sign, filtered through a philosophical lens that speaks to the real questions you face each morning."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Is this a philosophical horoscope or a traditional astrology reading?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "It\u2019s both \u2014 we use your zodiac sign as a framework for personalization, but the guidance itself is rooted in philosophy, not fortune-telling. Think of it as a philosopher in your corner, every morning."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How often is the horoscope content updated?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Every day. Today\u2019s horoscope is generated fresh each morning so the guidance stays relevant to the current moment, not recycled from last week or last year."
-        }
+    "mainEntity": FAQS.map((faq) => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
       }
-    ]
+    }))
   };
 
   // BreadcrumbList schema for homepage

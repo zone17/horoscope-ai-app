@@ -1,14 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { AUTHOR } from '@/constants/author';
+import { VALID_SIGNS } from '@/constants/zodiac';
 
 export const revalidate = 86400; // ISR: revalidate once per day (author content rarely changes)
-
-const VALID_SIGNS = [
-  'aries', 'taurus', 'gemini', 'cancer',
-  'leo', 'virgo', 'libra', 'scorpio',
-  'sagittarius', 'capricorn', 'aquarius', 'pisces',
-] as const;
 
 export const metadata: Metadata = {
   title: `${AUTHOR.name} — ${AUTHOR.title} | Get Today's Horoscope`,

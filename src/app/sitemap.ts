@@ -1,11 +1,6 @@
 import { MetadataRoute } from 'next';
 import { getValidMonthSlugs } from '@/utils/monthly-content';
-
-const ZODIAC_SIGNS = [
-  'aries', 'taurus', 'gemini', 'cancer',
-  'leo', 'virgo', 'libra', 'scorpio',
-  'sagittarius', 'capricorn', 'aquarius', 'pisces',
-] as const;
+import { VALID_SIGNS } from '@/constants/zodiac';
 
 /**
  * Generate the sitemap according to Next.js App Router conventions.
@@ -33,14 +28,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const signPages: MetadataRoute.Sitemap = ZODIAC_SIGNS.map((sign) => ({
+  const signPages: MetadataRoute.Sitemap = VALID_SIGNS.map((sign) => ({
     url: `${baseUrl}/horoscope/${sign}`,
     lastModified: today,
     changeFrequency: 'daily',
     priority: 0.8,
   }));
 
-  const monthlyPages: MetadataRoute.Sitemap = ZODIAC_SIGNS.flatMap((sign) =>
+  const monthlyPages: MetadataRoute.Sitemap = VALID_SIGNS.flatMap((sign) =>
     monthSlugs.map((monthSlug) => ({
       url: `${baseUrl}/horoscope/${sign}/monthly/${monthSlug}`,
       lastModified: today,

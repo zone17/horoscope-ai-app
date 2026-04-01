@@ -2,30 +2,13 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import EmailCapture from '@/components/zodiac/EmailCapture';
-import { generateHoroscope, VALID_SIGNS } from '@/utils/horoscope-generator';
+import { generateHoroscope } from '@/utils/horoscope-generator';
 import { VALID_MONTH_SLUGS, getMonthMeta, getValidMonthSlugs, isValidMonthSlug } from '@/utils/monthly-content';
 import { AUTHOR } from '@/constants/author';
+import { VALID_SIGNS, SIGN_META, isValidSign } from '@/constants/zodiac';
+import { capitalize } from '@/lib/utils';
 
 export const revalidate = 86400; // ISR: revalidate daily
-
-const SIGN_META: Record<string, { symbol: string; dateRange: string; element: string }> = {
-  aries:       { symbol: '\u2648', dateRange: 'Mar 21 \u2013 Apr 19', element: 'Fire' },
-  taurus:      { symbol: '\u2649', dateRange: 'Apr 20 \u2013 May 20', element: 'Earth' },
-  gemini:      { symbol: '\u264A', dateRange: 'May 21 \u2013 Jun 20', element: 'Air' },
-  cancer:      { symbol: '\u264B', dateRange: 'Jun 21 \u2013 Jul 22', element: 'Water' },
-  leo:         { symbol: '\u264C', dateRange: 'Jul 23 \u2013 Aug 22', element: 'Fire' },
-  virgo:       { symbol: '\u264D', dateRange: 'Aug 23 \u2013 Sep 22', element: 'Earth' },
-  libra:       { symbol: '\u264E', dateRange: 'Sep 23 \u2013 Oct 22', element: 'Air' },
-  scorpio:     { symbol: '\u264F', dateRange: 'Oct 23 \u2013 Nov 21', element: 'Water' },
-  sagittarius: { symbol: '\u2650', dateRange: 'Nov 22 \u2013 Dec 21', element: 'Fire' },
-  capricorn:   { symbol: '\u2651', dateRange: 'Dec 22 \u2013 Jan 19', element: 'Earth' },
-  aquarius:    { symbol: '\u2652', dateRange: 'Jan 20 \u2013 Feb 18', element: 'Air' },
-  pisces:      { symbol: '\u2653', dateRange: 'Feb 19 \u2013 Mar 20', element: 'Water' },
-};
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 interface PageProps {
   params: Promise<{ sign: string; monthYear: string }>;
@@ -35,11 +18,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { sign, monthYear } = await params;
   const lower = sign.toLowerCase();
 
-  if (!(VALID_SIGNS as readonly string[]).includes(lower) || !isValidMonthSlug(monthYear)) {
+  if (!isValidSign(lower) || !isValidMonthSlug(monthYear)) {
     return { title: 'Not Found' };
   }
 
-  const monthMeta = getMonthMeta(monthYear)!;
+  const monthMeta = getMonthMeta(monthYear);
+  if (!monthMeta) return { title: 'Not Found' };
   const capitalizedSign = capitalize(lower);
   const title = `${capitalizedSign} Horoscope ${monthMeta.display} — Monthly Philosophical Guidance`;
   const description = `${capitalizedSign} horoscope for ${monthMeta.display}. Philosophical guidance on the month's themes, challenges, and growth opportunities for ${capitalizedSign} (${SIGN_META[lower].dateRange}).`;
@@ -91,11 +75,12 @@ export default async function MonthlyHoroscopePage({ params }: PageProps) {
   const { sign, monthYear } = await params;
   const lower = sign.toLowerCase();
 
-  if (!(VALID_SIGNS as readonly string[]).includes(lower) || !isValidMonthSlug(monthYear)) {
+  if (!isValidSign(lower) || !isValidMonthSlug(monthYear)) {
     notFound();
   }
 
-  const monthMeta = getMonthMeta(monthYear)!;
+  const monthMeta = getMonthMeta(monthYear);
+  if (!monthMeta) notFound();
   const meta = SIGN_META[lower];
   const capitalizedSign = capitalize(lower);
   const otherMonths = getValidMonthSlugs().filter((m) => m !== monthYear);
