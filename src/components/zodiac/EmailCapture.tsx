@@ -45,10 +45,15 @@ export default function EmailCapture({ sign }: EmailCaptureProps) {
 
   return (
     <div className="mt-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Mail className="h-4 w-4 text-indigo-300/70" />
-        <p className="text-sm text-white/80 font-light">
-          Get your daily {sign.charAt(0).toUpperCase() + sign.slice(1)} reading by email
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Mail className="h-4 w-4 text-indigo-300/70 shrink-0" />
+          <p className="text-sm text-white/90 font-normal">
+            Your morning philosophy, delivered to your inbox
+          </p>
+        </div>
+        <p className="text-xs text-indigo-200/60 font-light pl-6">
+          Start each day with a fresh philosophical horoscope for your sign — sign up free.
         </p>
       </div>
 
