@@ -53,6 +53,8 @@ export default function RootLayout({
             __html: `window.ENV_LUNAR_ORDER = ${JSON.stringify(lunarOrderEnabled)};`,
           }}
         />
+        {/* Ahrefs Web Analytics */}
+        <script src="https://analytics.ahrefs.com/analytics.js" data-key="d8iBwaSm9yiczOTx1CK83A" async />
         {/* Server-side schema markup */}
         <SchemaMarkupServer />
       </head>
