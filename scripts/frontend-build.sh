@@ -21,7 +21,7 @@ fi
 
 # Build
 echo "Running Next.js build..."
-next build
+npx next build
 
 # Restore everything
 if [ -d /tmp/horoscope-api-backup/api ]; then
