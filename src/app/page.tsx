@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
 import HoroscopeDisplay from '@/components/zodiac/HoroscopeDisplay';
 import { Header } from '@/components/layout/Header';
+import HeroIntro from '@/components/seo/HeroIntro';
+import FAQSection from '@/components/seo/FAQSection';
 
 // ISR: revalidate every hour (content changes once daily)
 export const revalidate = 3600;
@@ -10,18 +12,24 @@ export default function Home() {
     <main className="min-h-screen">
       <Header />
 
-      <Suspense fallback={
-        <div className="text-center py-32 text-white">
-          <div className="inline-flex space-x-2 items-center">
-            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></div>
-            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-            <span className="ml-2">Loading cosmic insights...</span>
+      <HeroIntro />
+
+      <div id="horoscope">
+        <Suspense fallback={
+          <div className="text-center py-32 text-white">
+            <div className="inline-flex space-x-2 items-center">
+              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></div>
+              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              <span className="ml-2">Loading cosmic insights...</span>
+            </div>
           </div>
-        </div>
-      }>
-        <HoroscopeDisplay />
-      </Suspense>
+        }>
+          <HoroscopeDisplay />
+        </Suspense>
+      </div>
+
+      <FAQSection />
 
       <footer className="text-center py-6 text-indigo-200/80 text-sm">
         <p>&copy; {new Date().getFullYear()} Get Today&apos;s Horoscope. All rights reserved.</p>

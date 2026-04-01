@@ -1,0 +1,10 @@
+{
+  "target_file": ".autoresearch/seo-content.json",
+  "eval_command": ["python3", ".autoresearch/eval_seo.py"],
+  "metric_direction": "higher",
+  "eval_budget_seconds": 30,
+  "max_experiments": 20,
+  "model": "sonnet",
+  "min_delta_threshold": 0.5,
+  "telegram_chat_id": "7078639008"
+}

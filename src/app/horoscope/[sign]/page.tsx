@@ -4,39 +4,10 @@ import Link from 'next/link';
 import SignPageClient from './SignPageClient';
 import PushPrompt from '@/components/zodiac/PushPrompt';
 import EmailCapture from '@/components/zodiac/EmailCapture';
+import { VALID_SIGNS, SIGN_META, isValidSign } from '@/constants/zodiac';
+import { capitalize } from '@/lib/utils';
 
 export const revalidate = 3600; // ISR: revalidate every hour
-
-const VALID_SIGNS = [
-  'aries', 'taurus', 'gemini', 'cancer',
-  'leo', 'virgo', 'libra', 'scorpio',
-  'sagittarius', 'capricorn', 'aquarius', 'pisces',
-] as const;
-
-type ValidSign = (typeof VALID_SIGNS)[number];
-
-const SIGN_META: Record<ValidSign, { symbol: string; dateRange: string; element: string }> = {
-  aries:       { symbol: '\u2648', dateRange: 'Mar 21 \u2013 Apr 19', element: 'Fire' },
-  taurus:      { symbol: '\u2649', dateRange: 'Apr 20 \u2013 May 20', element: 'Earth' },
-  gemini:      { symbol: '\u264A', dateRange: 'May 21 \u2013 Jun 20', element: 'Air' },
-  cancer:      { symbol: '\u264B', dateRange: 'Jun 21 \u2013 Jul 22', element: 'Water' },
-  leo:         { symbol: '\u264C', dateRange: 'Jul 23 \u2013 Aug 22', element: 'Fire' },
-  virgo:       { symbol: '\u264D', dateRange: 'Aug 23 \u2013 Sep 22', element: 'Earth' },
-  libra:       { symbol: '\u264E', dateRange: 'Sep 23 \u2013 Oct 22', element: 'Air' },
-  scorpio:     { symbol: '\u264F', dateRange: 'Oct 23 \u2013 Nov 21', element: 'Water' },
-  sagittarius: { symbol: '\u2650', dateRange: 'Nov 22 \u2013 Dec 21', element: 'Fire' },
-  capricorn:   { symbol: '\u2651', dateRange: 'Dec 22 \u2013 Jan 19', element: 'Earth' },
-  aquarius:    { symbol: '\u2652', dateRange: 'Jan 20 \u2013 Feb 18', element: 'Air' },
-  pisces:      { symbol: '\u2653', dateRange: 'Feb 19 \u2013 Mar 20', element: 'Water' },
-};
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function isValidSign(sign: string): sign is ValidSign {
-  return (VALID_SIGNS as readonly string[]).includes(sign);
-}
 
 interface PageProps {
   params: Promise<{ sign: string }>;
@@ -100,8 +71,31 @@ export default async function SignPage({ params }: PageProps) {
 
   const meta = SIGN_META[lower];
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.gettodayshoroscope.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: capitalize(lower),
+        item: `https://www.gettodayshoroscope.com/horoscope/${lower}`,
+      },
+    ],
+  };
+
   return (
     <main className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Back link */}
         <Link

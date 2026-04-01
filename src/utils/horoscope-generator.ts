@@ -7,6 +7,7 @@
 import OpenAI from 'openai';
 import { buildHoroscopePrompt, getPhilosopherAssignment, VALID_AUTHORS } from './horoscope-prompts';
 import { VERIFIED_QUOTES } from './verified-quotes';
+import { buildMonthlyPromptAddition, getMonthMeta, isValidMonthSlug } from './monthly-content';
 
 // Valid zodiac signs
 export const VALID_SIGNS = [
@@ -35,17 +36,23 @@ export interface HoroscopeData {
   [key: string]: unknown; // Allow additional fields from OpenAI
 }
 
+export interface GenerateHoroscopeOptions {
+  /** For monthly type: the month-year slug, e.g. "april-2026" */
+  month?: string;
+}
+
 /**
  * Generate a horoscope using OpenAI for the given sign and type.
  * This is the SINGLE generation function — all callers use this.
  *
  * - Uses buildHoroscopePrompt() with verified quote bank
+ * - For monthly type, injects monthly prompt additions (300-500 words)
  * - Validates required fields
  * - Normalizes data types
  * - Filters self-matches from best_match
  * - Validates quote author against approved list
  */
-export async function generateHoroscope(sign: string, type: string = 'daily'): Promise<HoroscopeData> {
+export async function generateHoroscope(sign: string, type: string = 'daily', options: GenerateHoroscopeOptions = {}): Promise<HoroscopeData> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey || apiKey === 'your_openai_api_key_here') {
     throw new Error('OpenAI API key not properly configured');
@@ -59,15 +66,28 @@ export async function generateHoroscope(sign: string, type: string = 'daily'): P
   const openai = new OpenAI({ apiKey });
   const today = getTodayDate();
   const philosopher = getPhilosopherAssignment(normalizedSign, today);
-  const prompt = buildHoroscopePrompt(normalizedSign, philosopher);
+  let prompt = buildHoroscopePrompt(normalizedSign, philosopher);
+
+  // For monthly type, inject the monthly prompt additions
+  if (type === 'monthly') {
+    const monthSlug = options.month;
+    if (!monthSlug || !isValidMonthSlug(monthSlug)) {
+      throw new Error(`Monthly generation requires a valid month slug. Got: ${monthSlug}`);
+    }
+    const monthMeta = getMonthMeta(monthSlug)!;
+    prompt += buildMonthlyPromptAddition(normalizedSign, monthMeta);
+  }
 
   console.log(`[horoscope-generator] Generating ${normalizedSign} (${type}) with philosopher: ${philosopher}`);
+
+  // Monthly horoscopes require more tokens for 300-500 word messages
+  const maxTokens = type === 'monthly' ? 1200 : 800;
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini-2024-07-18',
     messages: [{ role: 'user', content: prompt }],
     response_format: { type: 'json_object' },
-    max_tokens: 800,
+    max_tokens: maxTokens,
   });
 
   const content = response.choices[0].message.content;

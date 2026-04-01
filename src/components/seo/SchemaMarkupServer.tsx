@@ -1,4 +1,5 @@
 import { ZODIAC_SIGNS } from '@/constants/index';
+import { FAQS } from '@/constants/faqs';
 import { generateSchemas } from '@/utils/schema-generator';
 
 /**
@@ -50,34 +51,30 @@ export default function SchemaMarkupServer() {
     }
   };
   
-  // Create a generic FAQPage schema
+  // FAQPage schema with AutoResearch-optimized content (shared from constants/faqs.ts)
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": [
+    "mainEntity": FAQS.map((faq) => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  };
+
+  // BreadcrumbList schema for homepage
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
       {
-        "@type": "Question",
-        "name": "How are the daily horoscopes generated?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Our daily horoscopes are created using a combination of astrological principles and advanced AI to provide insightful guidance focused on mindfulness and self-reflection."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "What zodiac signs are covered?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "We cover all twelve traditional zodiac signs: Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, and Pisces."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Are the horoscopes predictive?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Rather than making specific predictions, our horoscopes are designed to offer guidance for personal reflection and mindfulness."
-        }
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://www.gettodayshoroscope.com"
       }
     ]
   };
@@ -124,6 +121,7 @@ export default function SchemaMarkupServer() {
     organizationSchema,
     serviceSchema,
     faqSchema,
+    breadcrumbSchema,
     itemListSchema,
     articleSchema
   ];

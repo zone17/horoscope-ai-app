@@ -1,0 +1,53 @@
+{
+  "_hypothesis": "Rewrite intro_copy with stronger value proposition, action words, and explicit CTA — current intro is generic and repeats 'guidance' twice with no call-to-action, weakening dimension 4 score",
+  "title": "Today's Horoscope — Daily Philosophical Guidance",
+  "meta_description": "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
+  "h1": "Today's Philosophical Horoscope",
+  "intro_copy": "Start your day with a philosopher in your corner. Today's horoscope for your zodiac sign draws on Stoic wisdom, Eastern philosophy, and scientific thinking — not predictions, but genuine guidance for how to live well. Each daily reading is tailored to your sign's temperament and the real questions you face each morning. Read your sign below and meet the day with clarity.",
+  "sign_descriptions": [
+    {"sign": "aries", "description": "Bold fire energy meets philosophical wisdom. Your daily Aries horoscope blends cosmic insight with Stoic teachings."},
+    {"sign": "taurus", "description": "Grounded earth wisdom for the steady soul. Your daily Taurus horoscope roots celestial patterns in practical philosophy."},
+    {"sign": "gemini", "description": "Dual perspectives illuminated by starlight. Your daily Gemini horoscope weaves curiosity with cosmic guidance."},
+    {"sign": "cancer", "description": "Deep waters stirred by celestial tides. Your daily Cancer horoscope channels emotional wisdom through the stars."},
+    {"sign": "leo", "description": "Radiant fire wisdom for the courageous heart. Your daily Leo horoscope ignites purpose with philosophical insight."},
+    {"sign": "virgo", "description": "Precise earth wisdom for the analytical mind. Your daily Virgo horoscope aligns detail with cosmic perspective."},
+    {"sign": "libra", "description": "Balanced air wisdom for the harmonious soul. Your daily Libra horoscope weighs cosmic truth with philosophical grace."},
+    {"sign": "scorpio", "description": "Raw intensity meets deep cosmic truth. Your daily Scorpio horoscope dives beneath the surface of the stars."},
+    {"sign": "sagittarius", "description": "Expansive fire wisdom for the seeker. Your daily Sagittarius horoscope stretches horizons with philosophical adventure."},
+    {"sign": "capricorn", "description": "Structured earth wisdom for the ambitious builder. Your daily Capricorn horoscope grounds ambition in cosmic patience."},
+    {"sign": "aquarius", "description": "Visionary air wisdom for the revolutionary mind. Your daily Aquarius horoscope channels innovation through the stars."},
+    {"sign": "pisces", "description": "Dreamlike water wisdom for the intuitive soul. Your daily Pisces horoscope dissolves boundaries between self and cosmos."}
+  ],
+  "sign_links": ["/horoscope/aries", "/horoscope/taurus", "/horoscope/gemini", "/horoscope/cancer", "/horoscope/leo", "/horoscope/virgo", "/horoscope/libra", "/horoscope/scorpio", "/horoscope/sagittarius", "/horoscope/capricorn", "/horoscope/aquarius", "/horoscope/pisces"],
+  "related_links": [
+    {"text": "Weekly Horoscope", "url": "/horoscope/weekly"},
+    {"text": "Zodiac Compatibility Guide", "url": "/compatibility"},
+    {"text": "Zodiac Elements Explained", "url": "/zodiac/elements"}
+  ],
+  "faqs": [
+    {
+      "question": "What makes this horoscope different from other daily horoscopes?",
+      "answer": "Rather than predicting events, each reading draws on philosophical traditions — Stoicism, Epicureanism, and scientific thinking — to offer genuine guidance for how to approach your day with intention and clarity."
+    },
+    {
+      "question": "How is today's horoscope personalized to my zodiac sign?",
+      "answer": "Each sign's reading reflects the distinct temperament, strengths, and challenges associated with that sign, filtered through a philosophical lens that speaks to the real questions you face each morning."
+    },
+    {
+      "question": "Is this a philosophical horoscope or a traditional astrology reading?",
+      "answer": "It's both — we use your zodiac sign as a framework for personalization, but the guidance itself is rooted in philosophy, not fortune-telling. Think of it as a philosopher in your corner, every morning."
+    },
+    {
+      "question": "How often is the horoscope content updated?",
+      "answer": "Every day. Today's horoscope is generated fresh each morning so the guidance stays relevant to the current moment, not recycled from last week or last year."
+    }
+  ],
+  "email_cta": "Your morning philosophy, delivered to your inbox. Start each day with a fresh philosophical horoscope for your sign — sign up free.",
+  "push_prompt": false,
+  "social_share": false,
+  "secondary_cta": "",
+  "freshness_signals": ["today"],
+  "shows_date": true,
+  "current_events": false,
+  "schemas": ["website", "creativework", "faqpage", "breadcrumblist"]
+}
