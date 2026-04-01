@@ -1,5 +1,5 @@
 {
-  "_hypothesis": "Add 'philosophical' differentiator to H1 — eval dimension 3 explicitly requires it and current H1 is missing it",
+  "_hypothesis": "Add email_cta text — dimension 7 (CTA elements) explicitly scores email signup, and current value is empty string scoring zero points",
   "title": "Today's Horoscope — Daily Philosophical Guidance",
   "meta_description": "Every morning, a philosopher looks through your sign and says the one thing you needed to hear. Daily readings grounded in Seneca, Epictetus, and Feynman.",
   "h1": "Today's Philosophical Horoscope",
@@ -38,7 +38,7 @@
       "answer": "Every day. Today's horoscope is generated fresh each morning so the guidance stays relevant to the current moment, not recycled from last week or last year."
     }
   ],
-  "email_cta": "",
+  "email_cta": "Your morning philosophy, delivered to your inbox. Start each day with a fresh philosophical horoscope for your sign — sign up free.",
   "push_prompt": false,
   "social_share": false,
   "secondary_cta": "",
