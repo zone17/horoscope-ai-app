@@ -1,7 +1,7 @@
 # Project Context: gettodayshoroscope.com
 
 > **Last updated**: 2026-04-01
-> **Status**: Production — all remediation complete, CI/CD active
+> **Status**: Production — 23 PRs shipped, CI/CD active, visual design restored
 
 ---
 
@@ -405,6 +405,9 @@ Or regenerate individual signs by hitting `/api/horoscope?sign=X` (generates on 
 | **node-fetch import** | `import fetch from 'node-fetch'` crashes at runtime (not in dependencies) | Next.js has built-in fetch. Never import node-fetch |
 | **Frontend build excludes API** | `frontend-build.sh` removes `src/app/api/` during build | API routes are proxied via Vercel rewrites in `vercel.frontend.json` |
 | **Non-www redirect** | `gettodayshoroscope.com` returns 308 → `www.gettodayshoroscope.com` | Always use `www.` in health checks and links. Use `curl -L` to follow redirects |
+| **Tailwind v3 vs v4** | PostCSS uses `tailwindcss` (v3), NOT `@tailwindcss/postcss` (v4). CSS must use `@tailwind base/components/utilities` directives, NOT `@import "tailwindcss"`. V4 silently produces zero utility CSS. | Never install `@tailwindcss/postcss`. Never use `@import "tailwindcss"`, `@config`, or `@plugin` directives. |
+| **@layer in globals.css** | `@layer components` and `@layer utilities` in `globals.css` may not survive CSS processing in some Next.js build configurations | Keep custom classes outside `@layer` wrappers as plain CSS. Tailwind's own `@layer` directives (`@tailwind base/components/utilities`) handle layer ordering. |
+| **VideoBanner poster images** | `public/images/posters/` directory was never populated. Poster image refs cause 404s. | Use direct video `src` attribute, not conditional `<source>` rendering. Videos autoplay (muted) via IntersectionObserver. |
 
 ---
 
@@ -472,13 +475,32 @@ Activated via `data-mode="night"` on `<html>`. CSS custom properties shift:
 | #13 | CI/CD pipeline | GitHub Actions dual-project deploy with health checks |
 | #14-15 | CI fixes | Frontend build ordering, health check URL (www redirect) |
 
-### Agent Audit (16 agents total)
+### Sprint 3 — Visual Restoration + Hotfixes (2026-04-01)
 
-**Wave 1 (10 agents):** Architect, Engineer, PM, QA, Design/UX, 5 user personas (wellness seeker, skeptic tech worker, astrology creator, older reader, philosophy student)
+| PR | Change | Impact |
+|----|--------|--------|
+| #16 | Tailwind v4 CSS syntax attempt | Broke card styling — v4 directives incompatible with v3 config |
+| #17-18 | Tailwind v3 restoration | Removed @tailwindcss/postcss v4, restored @tailwind directives |
+| #19 | Hotfix: @tailwind v3 directives | Final fix for CSS processing chain |
+| #20 | Restore original visual design | Reverted ZodiacCard, HoroscopeDisplay, globals.css to pre-squad versions |
+| #21-22 | Video autoplay restoration | Direct src attribute, IntersectionObserver play, no poster images |
+| #23 | Best match font size | Reduced from text-lg to text-sm |
 
-**Wave 2 (6 agents):** Design director, CPO, UX researcher, Content strategist, CRO specialist, Brand strategist
+**Total: 23 PRs merged across 3 sprints in one session.**
+
+### Agent Summary (23 agents total)
+
+**Wave 1 — Technical Review (10 agents):** Architect, Engineer, PM, QA, Design/UX, 5 user personas (wellness seeker, skeptic tech worker, astrology creator, older reader, philosophy student)
+
+**Wave 2 — Expert Strategy (6 agents):** Design director, CPO, UX researcher, Content strategist, CRO specialist, Brand strategist
+
+**Execution Squads (7 agents across 2 sprints):** 3 squads in Sprint 1 (content, security, frontend) + 4 squads in Sprint 2 (content, infra, design, SEO)
 
 **Key consensus findings:** All P0s and P1s resolved. See `docs/solutions/workflow-issues/multi-agent-production-remediation-20260401.md` for the full pattern.
+
+### Key Lesson: Visual Changes Must Be Tested Against Original
+
+Sprint 3 was entirely caused by Squad C's frontend changes degrading the visual design. The lesson: **always compare screenshots before/after when changing visual components**. The original ZodiacCard + globals.css were restored from git history (commit `51d00b0`) because the squad's changes (removing videos, flattening cards, Tailwind v4 migration) collectively made the site look significantly worse despite each individual change seeming reasonable.
 
 ---
 
