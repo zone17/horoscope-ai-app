@@ -176,13 +176,34 @@ Respond ONLY with valid JSON.`;
 }
 
 /**
- * The 14 allowed philosophers for quote attribution.
+ * All allowed philosophers for quote attribution (50+ thinkers).
+ * Includes original 14 plus Sprint 2 expansion.
+ * Alternate spellings (e.g., 'Allan Watts', 'Joe Dispenza') kept for backward compatibility.
  */
 export const VALID_AUTHORS = [
+  // Original 14 (+ spelling variants)
   'Alan Watts', 'Allan Watts', 'Richard Feynman', 'Albert Einstein',
   'Friedrich Nietzsche', 'Lao Tzu', 'Socrates', 'Plato', 'Aristotle',
   'Epicurus', 'Marcus Aurelius', 'Seneca', 'Jiddu Krishnamurti',
-  'Dr. Joe Dispenza', 'Joe Dispenza', 'Walter Russell'
+  'Dr. Joe Dispenza', 'Joe Dispenza', 'Walter Russell',
+  // Sprint 2 expansion — Stoicism
+  'Epictetus', 'Cato the Younger', 'Musonius Rufus', 'Cleanthes',
+  'Zeno of Citium', 'Chrysippus',
+  // Sprint 2 expansion — Eastern Wisdom
+  'Thich Nhat Hanh', 'Rumi', 'Confucius', 'Zhuangzi',
+  'D.T. Suzuki', 'Pema Chodron',
+  // Sprint 2 expansion — Science & Wonder
+  'Carl Sagan', 'Marie Curie', 'Nikola Tesla', 'Rachel Carson',
+  'Neil deGrasse Tyson', 'Ada Lovelace', 'Werner Heisenberg',
+  // Sprint 2 expansion — Poetry & Soul
+  'Ralph Waldo Emerson', 'Kahlil Gibran', 'Mary Oliver', 'Oscar Wilde',
+  'Henry David Thoreau', 'Maya Angelou', 'Walt Whitman', 'Hermann Hesse',
+  // Sprint 2 expansion — Spiritual Leaders
+  'Eckhart Tolle', 'Ram Dass', 'Deepak Chopra', 'Paramahansa Yogananda',
+  'Mooji', 'Sadhguru', 'Wayne Dyer',
+  // Sprint 2 expansion — Modern Thinkers
+  'Simone de Beauvoir', 'Albert Camus', 'Viktor Frankl',
+  'Hannah Arendt', 'Nassim Nicholas Taleb', 'Naval Ravikant',
 ];
 
 /**
