@@ -16,6 +16,7 @@ import {
   buildUnsubscribeUrl,
   buildShareUrl,
   formatEmailDate,
+  _resetResendClient,
   type Subscriber,
   type ReadingContent,
 } from '@/utils/email';
@@ -24,6 +25,7 @@ import {
   buildSubjectLine,
   buildPreviewText,
   buildEmailHtml,
+  escapeHtml,
 } from '@/utils/email-template';
 
 // ----- Email Template Tests -----
@@ -122,13 +124,54 @@ describe('buildEmailHtml', () => {
 
   it('includes preview text for email clients', () => {
     const html = buildEmailHtml(templateData);
-    expect(html).toContain('Guided by Marcus Aurelius & Lao Tzu');
+    expect(html).toContain('Guided by Marcus Aurelius &amp; Lao Tzu');
   });
 
   it('uses fallback when no philosophers selected', () => {
     const data = { ...templateData, philosophers: [] };
     const html = buildEmailHtml(data);
     expect(html).toContain('our rotating philosophers');
+  });
+
+  it('escapes HTML in reading text to prevent XSS', () => {
+    const data = { ...templateData, readingText: '<script>alert(1)</script>' };
+    const html = buildEmailHtml(data);
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('escapes HTML in quote text and attribution', () => {
+    const data = {
+      ...templateData,
+      quote: {
+        text: '<img onerror=alert(1)>',
+        author: 'Test<br>Author',
+        source: 'Book<script>',
+      },
+    };
+    const html = buildEmailHtml(data);
+    expect(html).not.toContain('<img onerror');
+    expect(html).not.toContain('<br>Author');
+    expect(html).not.toContain('<script>');
+  });
+
+  it('escapes HTML in philosopher names', () => {
+    const data = { ...templateData, philosophers: ['<b>Evil</b>'] };
+    const html = buildEmailHtml(data);
+    expect(html).not.toContain('<b>Evil</b>');
+    expect(html).toContain('&lt;b&gt;Evil&lt;/b&gt;');
+  });
+});
+
+describe('escapeHtml', () => {
+  it('escapes all HTML special characters', () => {
+    expect(escapeHtml('<script>"alert(\'xss\')&</script>')).toBe(
+      '&lt;script&gt;&quot;alert(&#39;xss&#39;)&amp;&lt;/script&gt;'
+    );
+  });
+
+  it('passes through safe strings unchanged', () => {
+    expect(escapeHtml('Hello world 123')).toBe('Hello world 123');
   });
 });
 
@@ -233,6 +276,7 @@ describe('sendDailyEmail', () => {
     process.env.RESEND_API_KEY = 'test-api-key';
     process.env.UNSUBSCRIBE_SECRET = 'test-secret';
     mockSend.mockReset();
+    _resetResendClient();
   });
 
   afterAll(() => {

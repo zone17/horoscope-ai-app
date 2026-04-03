@@ -88,16 +88,26 @@ export function formatEmailDate(date?: Date): string {
 }
 
 /**
- * Create a Resend client instance.
- * Returns null if RESEND_API_KEY is not set.
+ * Cached Resend client singleton.
+ * Avoids creating a new instance per send call in cron loops.
  */
+let _resendClient: Resend | null | undefined;
+
+/** Reset cached client — used by tests when env vars change between runs. */
+export function _resetResendClient(): void {
+  _resendClient = undefined;
+}
+
 function getResendClient(): Resend | null {
+  if (_resendClient !== undefined) return _resendClient;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn('[email] RESEND_API_KEY not set — email sends will be skipped');
+    _resendClient = null;
     return null;
   }
-  return new Resend(apiKey);
+  _resendClient = new Resend(apiKey);
+  return _resendClient;
 }
 
 /**

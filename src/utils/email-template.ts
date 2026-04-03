@@ -6,6 +6,18 @@
 
 import { SIGN_META, type ValidSign } from '@/constants/zodiac';
 
+/**
+ * Escape HTML special characters to prevent XSS in email templates.
+ */
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface EmailTemplateData {
   sign: ValidSign;
   philosophers: string[];
@@ -66,9 +78,9 @@ export function buildEmailHtml(data: EmailTemplateData): string {
 
   const meta = SIGN_META[sign];
   const signName = sign.charAt(0).toUpperCase() + sign.slice(1);
-  const previewText = buildPreviewText(philosophers);
+  const previewText = escapeHtml(buildPreviewText(philosophers));
   const philosopherList = philosophers.length > 0
-    ? philosophers.join(', ')
+    ? escapeHtml(philosophers.join(', '))
     : 'our rotating philosophers';
 
   return `<!DOCTYPE html>
@@ -131,7 +143,7 @@ export function buildEmailHtml(data: EmailTemplateData): string {
           <tr>
             <td style="padding:0 0 32px;">
               <p style="margin:0;font-size:17px;line-height:1.7;color:#d4d0e8;">
-                ${readingText}
+                ${escapeHtml(readingText)}
               </p>
             </td>
           </tr>
@@ -143,10 +155,10 @@ export function buildEmailHtml(data: EmailTemplateData): string {
                 <tr>
                   <td style="border-left:3px solid #7c6aef;padding:16px 20px;background-color:#1a1a35;border-radius:0 8px 8px 0;">
                     <p style="margin:0 0 8px;font-size:16px;line-height:1.6;color:#c8c0e8;font-style:italic;">
-                      &ldquo;${quote.text}&rdquo;
+                      &ldquo;${escapeHtml(quote.text)}&rdquo;
                     </p>
                     <p style="margin:0;font-size:13px;color:#8a7eb8;">
-                      &mdash; ${quote.author}, <em>${quote.source}</em>
+                      &mdash; ${escapeHtml(quote.author)}, <em>${escapeHtml(quote.source)}</em>
                     </p>
                   </td>
                 </tr>
