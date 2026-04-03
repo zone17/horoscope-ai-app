@@ -8,6 +8,7 @@ import OpenAI from 'openai';
 import { buildHoroscopePrompt, getPhilosopherAssignment, VALID_AUTHORS } from './horoscope-prompts';
 import { VERIFIED_QUOTES } from './verified-quotes';
 import { buildMonthlyPromptAddition, getMonthMeta, isValidMonthSlug } from './monthly-content';
+import { PHILOSOPHERS } from '../constants/philosophers';
 
 // Valid zodiac signs
 export const VALID_SIGNS = [
@@ -39,6 +40,8 @@ export interface HoroscopeData {
 export interface GenerateHoroscopeOptions {
   /** For monthly type: the month-year slug, e.g. "april-2026" */
   month?: string;
+  /** User-selected philosophers for personalized readings. When provided and non-empty, overrides the default rotation. */
+  philosophers?: string[];
 }
 
 /**
@@ -65,7 +68,18 @@ export async function generateHoroscope(sign: string, type: string = 'daily', op
 
   const openai = new OpenAI({ apiKey });
   const today = getTodayDate();
-  const philosopher = getPhilosopherAssignment(normalizedSign, today);
+
+  // Determine philosopher: user-selected override or default rotation
+  let philosopher: string;
+  const validPhilosophers = getValidPhilosopherOverride(options.philosophers);
+  if (validPhilosophers && validPhilosophers.length > 0) {
+    // Pick one from user's list using date seed for daily consistency
+    const dayNum = Math.floor(new Date(today).getTime() / (1000 * 60 * 60 * 24));
+    philosopher = validPhilosophers[dayNum % validPhilosophers.length];
+  } else {
+    philosopher = getPhilosopherAssignment(normalizedSign, today);
+  }
+
   let prompt = buildHoroscopePrompt(normalizedSign, philosopher);
 
   // For monthly type, inject the monthly prompt additions
@@ -155,4 +169,17 @@ export async function generateHoroscope(sign: string, type: string = 'daily', op
     date: today,
     ...horoscopeData,
   } as HoroscopeData;
+}
+
+/**
+ * Validate and filter philosopher names against the known roster.
+ * Returns valid philosopher names, or null if input is empty/undefined or all names are invalid.
+ */
+export function getValidPhilosopherOverride(philosophers?: string[]): string[] | null {
+  if (!philosophers || philosophers.length === 0) return null;
+
+  const knownNames = new Set(PHILOSOPHERS.map(p => p.name.toLowerCase()));
+  const valid = philosophers.filter(name => knownNames.has(name.toLowerCase()));
+
+  return valid.length > 0 ? valid : null;
 }

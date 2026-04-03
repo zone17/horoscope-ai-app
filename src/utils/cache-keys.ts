@@ -55,19 +55,34 @@ export function generateCacheKey(prefix: string, params: Record<string, CachePar
  * Utility for creating horoscope-related cache keys
  */
 export const horoscopeKeys = {
-  daily: (sign: string, date: string) => 
+  daily: (sign: string, date: string) =>
     generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, { sign, date, type: 'daily' }),
-  weekly: (sign: string) => 
+  weekly: (sign: string) =>
     generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, { sign, type: 'weekly' }),
-  monthly: (sign: string) => 
+  monthly: (sign: string) =>
     generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, { sign, type: 'monthly' }),
   /**
    * Creates a timezone-aware daily horoscope key
    * Used when the USE_TIMEZONE_CONTENT feature flag is enabled
    * @param sign - Zodiac sign
-   * @param localDate - User's local date in YYYY-MM-DD format 
+   * @param localDate - User's local date in YYYY-MM-DD format
    * @returns Cache key string
    */
   timezoneDaily: (sign: string, localDate: string) =>
     generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, { sign, localDate, type: 'timezone-daily' }),
+  /**
+   * Creates a personalized daily horoscope key that includes philosopher selections.
+   * Philosopher names are sorted and lowercased for consistency (order doesn't matter).
+   * @param sign - Zodiac sign
+   * @param date - Date in YYYY-MM-DD format
+   * @param philosophers - User-selected philosopher names
+   * @returns Cache key string
+   */
+  personalizedDaily: (sign: string, date: string, philosophers: string[]) =>
+    generateCacheKey(CACHE_KEY_PREFIXES.HOROSCOPE, {
+      sign,
+      date,
+      type: 'daily',
+      philosophers: [...philosophers].map(p => p.toLowerCase()).sort().join(','),
+    }),
 }; 
