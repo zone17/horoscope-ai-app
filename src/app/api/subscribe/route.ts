@@ -15,7 +15,11 @@ const VALID_SIGNS = [
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, sign } = body as { email?: string; sign?: string };
+    const { email, sign, philosophers } = body as {
+      email?: string;
+      sign?: string;
+      philosophers?: string[];
+    };
 
     if (!email || !sign) {
       return NextResponse.json(
@@ -46,11 +50,18 @@ export async function POST(request: NextRequest) {
       const { Redis } = await import('@upstash/redis');
       const redis = Redis.fromEnv();
 
-      // Store as a hash: subscriber:{email} -> { sign, subscribedAt }
-      await redis.hset(`subscriber:${email}`, {
+      // Store as a hash: subscriber:{email} -> { sign, subscribedAt, philosophers }
+      const subscriberData: Record<string, string> = {
         sign: lowerSign,
         subscribedAt: new Date().toISOString(),
-      });
+      };
+
+      // Store philosopher selections as JSON string (Redis hset values are strings)
+      if (philosophers && Array.isArray(philosophers) && philosophers.length > 0) {
+        subscriberData.philosophers = JSON.stringify(philosophers);
+      }
+
+      await redis.hset(`subscriber:${email}`, subscriberData);
 
       // Also add to a sign-specific set for batch sending later
       await redis.sadd(`subscribers:${lowerSign}`, email);
