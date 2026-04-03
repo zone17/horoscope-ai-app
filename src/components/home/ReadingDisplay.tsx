@@ -6,6 +6,7 @@ import { useMode } from '@/hooks/useMode';
 import { getPhilosopher } from '@/constants/philosophers';
 import { capitalize } from '@/lib/utils';
 import Link from 'next/link';
+import ShareButton from './ShareButton';
 
 interface HoroscopeData {
   sign: string;
@@ -207,8 +208,18 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
           </div>
         )}
 
+        {/* Share button */}
+        <div className="flex justify-center mt-6">
+          <ShareButton
+            sign={userSign}
+            date={formattedDate}
+            quote={data.inspirational_quote}
+            quoteAuthor={data.quote_author}
+          />
+        </div>
+
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 pt-6 border-t border-white/5">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4 pt-6 border-t border-white/5">
           <button
             onClick={onEditCouncil}
             className="text-sm text-indigo-200/60 hover:text-indigo-200 transition-colors underline underline-offset-2"
