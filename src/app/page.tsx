@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
-import HoroscopeDisplay from '@/components/zodiac/HoroscopeDisplay';
 import { Header } from '@/components/layout/Header';
 import HeroIntro from '@/components/seo/HeroIntro';
 import FAQSection from '@/components/seo/FAQSection';
+import HomeFlow from '@/components/home/HomeFlow';
 
 // ISR: revalidate every hour (content changes once daily)
 export const revalidate = 3600;
@@ -25,7 +25,7 @@ export default function Home() {
             </div>
           </div>
         }>
-          <HoroscopeDisplay />
+          <HomeFlow />
         </Suspense>
       </div>
 
