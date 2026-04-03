@@ -5,9 +5,10 @@ import { AnimatePresence } from 'framer-motion';
 import { useMode } from '@/hooks/useMode';
 import SignStep from './SignStep';
 import PhilosopherStep from './PhilosopherStep';
+import EmailGate from './EmailGate';
 import ReadingDisplay from './ReadingDisplay';
 
-type FlowState = 'pickSign' | 'pickPhilosophers' | 'reading';
+type FlowState = 'pickSign' | 'pickPhilosophers' | 'emailGate' | 'reading';
 
 export default function HomeFlow() {
   const { userSign, selectedPhilosophers, email } = useMode();
@@ -23,9 +24,12 @@ export default function HomeFlow() {
   useEffect(() => {
     if (!hydrated) return;
 
-    // Return visitors with sign + selections: go straight to reading
-    if (userSign && selectedPhilosophers.length > 0) {
+    // Return visitors with sign + selections + email: go straight to reading
+    if (userSign && selectedPhilosophers.length > 0 && email) {
       setStep('reading');
+    } else if (userSign && selectedPhilosophers.length > 0) {
+      // Have sign + philosophers but no email: show gate
+      setStep('emailGate');
     } else if (userSign) {
       // Have sign but no philosophers: go to philosopher selection
       setStep('pickPhilosophers');
@@ -68,8 +72,22 @@ export default function HomeFlow() {
         {step === 'pickPhilosophers' && (
           <PhilosopherStep
             key="philosophers"
-            onContinue={() => setStep('reading')}
+            onContinue={() => {
+              // Skip gate for return visitors who already gave email
+              if (email) {
+                setStep('reading');
+              } else {
+                setStep('emailGate');
+              }
+            }}
             onBack={() => setStep('pickSign')}
+          />
+        )}
+
+        {step === 'emailGate' && (
+          <EmailGate
+            key="emailGate"
+            onUnlocked={() => setStep('reading')}
           />
         )}
 
