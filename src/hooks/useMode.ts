@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 
 type Mode = 'day' | 'night';
 
+const MAX_PHILOSOPHERS = 5;
+
 interface ModeState {
   mode: Mode;
   toggleMode: () => void;
@@ -13,6 +15,13 @@ interface ModeState {
   lastReadDate: string | null;
   streakCount: number;
   recordReading: () => void;
+  // Philosophy Engine selections
+  selectedPhilosophers: string[];
+  email: string | null;
+  setPhilosophers: (philosophers: string[]) => void;
+  togglePhilosopher: (name: string) => void;
+  setEmail: (email: string) => void;
+  clearSelections: () => void;
 }
 
 /**
@@ -61,6 +70,24 @@ export const useMode = create<ModeState>()(
       // Streak state
       lastReadDate: null,
       streakCount: 0,
+
+      // Philosophy Engine state
+      selectedPhilosophers: [],
+      email: null,
+      setPhilosophers: (philosophers: string[]) =>
+        set({ selectedPhilosophers: philosophers.slice(0, MAX_PHILOSOPHERS) }),
+      togglePhilosopher: (name: string) => {
+        const current = get().selectedPhilosophers;
+        const idx = current.indexOf(name);
+        if (idx >= 0) {
+          set({ selectedPhilosophers: current.filter((p) => p !== name) });
+        } else if (current.length < MAX_PHILOSOPHERS) {
+          set({ selectedPhilosophers: [...current, name] });
+        }
+        // If at max capacity and name not present, do nothing
+      },
+      setEmail: (email: string) => set({ email }),
+      clearSelections: () => set({ selectedPhilosophers: [], email: null }),
 
       recordReading: () => {
         const today = todayStr();
