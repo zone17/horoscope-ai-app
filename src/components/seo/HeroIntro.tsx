@@ -11,20 +11,19 @@ export default function HeroIntro() {
       aria-label="Site introduction"
     >
       <h1 className="text-3xl sm:text-4xl font-normal text-white tracking-tight mb-4">
-        Today&apos;s Philosophical Horoscope
+        Your Personal Philosophy Engine
       </h1>
       <p className="text-indigo-100/80 font-light text-base sm:text-lg leading-relaxed mb-6">
-        Start your day with a philosopher in your corner. Today&apos;s horoscope for your zodiac
-        sign draws on Stoic wisdom, Eastern philosophy, and scientific thinking — not predictions,
-        but genuine guidance for how to live well. Each daily reading is tailored to your
-        sign&apos;s temperament and the real questions you face each morning. Read your sign below
-        and meet the day with clarity.
+        We trained an AI on 50+ of the world&apos;s greatest philosophers — from Marcus Aurelius
+        to Alan Watts, Marie Curie to Rumi. Pick your sign, choose your council of thinkers,
+        and receive daily guidance that blends their wisdom with your zodiac temperament.
+        Not predictions. Philosophy that meets you where you are.
       </p>
       <Link
         href="#horoscope"
         className="inline-block px-6 py-2.5 rounded-full bg-indigo-500/40 border border-indigo-400/30 text-sm text-white hover:bg-indigo-500/60 transition-all duration-300 font-medium shadow-sm"
       >
-        Read your sign
+        Build your council
       </Link>
     </section>
   );
