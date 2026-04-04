@@ -6,8 +6,8 @@ import ShareButton from '@/components/home/ShareButton';
 import { VALID_SIGNS, SIGN_META, isValidSign } from '@/constants/zodiac';
 import { AUTHOR } from '@/constants/author';
 import { capitalize } from '@/lib/utils';
-import { horoscopeKeys } from '@/utils/cache-keys';
-import { safelyRetrieveForUI } from '@/utils/redis-helpers';
+// Dynamic imports to avoid Redis client initialization at build time
+// (frontend Vercel project doesn't have Redis env vars)
 import { getArchiveDateRange, isValidArchiveDate, formatArchiveDate } from '@/utils/daily-archive';
 import { HoroscopeData } from '@/utils/horoscope-generator';
 
@@ -87,10 +87,12 @@ export default async function DailyArchivePage({ params }: PageProps) {
   const baseUrl = 'https://www.gettodayshoroscope.com';
   const pageUrl = `${baseUrl}/horoscope/${lower}/daily/${date}`;
 
-  // Fetch from Redis cache — archive pages only show cached content
-  // Wrapped in try-catch because the frontend Vercel project may not have Redis env vars
+  // Dynamic import to avoid Redis client initialization at build time
+  // (frontend Vercel project doesn't have Redis env vars)
   let horoscope: HoroscopeData | null = null;
   try {
+    const { horoscopeKeys } = await import('@/utils/cache-keys');
+    const { safelyRetrieveForUI } = await import('@/utils/redis-helpers');
     const cacheKey = horoscopeKeys.daily(lower, date);
     horoscope = await safelyRetrieveForUI<HoroscopeData>(cacheKey);
   } catch {
