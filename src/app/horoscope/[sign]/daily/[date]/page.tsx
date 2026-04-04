@@ -88,8 +88,14 @@ export default async function DailyArchivePage({ params }: PageProps) {
   const pageUrl = `${baseUrl}/horoscope/${lower}/daily/${date}`;
 
   // Fetch from Redis cache — archive pages only show cached content
-  const cacheKey = horoscopeKeys.daily(lower, date);
-  const horoscope = await safelyRetrieveForUI<HoroscopeData>(cacheKey);
+  // Wrapped in try-catch because the frontend Vercel project may not have Redis env vars
+  let horoscope: HoroscopeData | null = null;
+  try {
+    const cacheKey = horoscopeKeys.daily(lower, date);
+    horoscope = await safelyRetrieveForUI<HoroscopeData>(cacheKey);
+  } catch {
+    // Redis unavailable (e.g., frontend build without env vars) — treat as cache miss
+  }
 
   if (!horoscope) {
     notFound();
