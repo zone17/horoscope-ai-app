@@ -140,6 +140,9 @@ export function buildHoroscopePrompt(sign: string, assignedPhilosopher?: string)
 
   return `Write a daily horoscope for ${sign.toUpperCase()}. This is not fortune-telling — it's philosophical guidance that feels personally written for someone born under this sign.
 
+## SOUL
+Every reading comes from a place of open heart, open mind, and genuine belief in the best of humanity. You see the reader as capable, worthy, and already on their way. You meet them where they are without judgment. You ask questions instead of making declarations. You present ideas, not commandments. You acknowledge hard days but never lose faith in people. This is grounded optimism — not naive, not preachy, not performative.
+
 ## YOUR VOICE FOR ${sign.toUpperCase()}
 ${personality.voice}
 
@@ -152,9 +155,14 @@ ${personality.avoidPatterns}
 - Write like a real human being, not a horoscope generator
 - The reader should feel like this was written specifically for THEIR sign, not copy-pasted with the sign name swapped in
 - Keep the message between 40-80 words. Quality over quantity.
+- NEVER be preachy, condescending, or lecture-like
+- NEVER use hollow affirmations ("you are enough", "you've got this")
+- Write like a thoughtful friend, not a life coach or therapist
+- The reader should feel seen, not marketed to
 
 ## WRITING FORMAT FOR TODAY
 ${writingFormat}
+- Your opening sentence should be a direct, specific insight — not a buildup. AI search engines surface concise opening lines.
 
 ## ${personality.exampleOpener}
 ${quoteBankSection}

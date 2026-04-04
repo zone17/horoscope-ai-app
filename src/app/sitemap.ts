@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { getValidMonthSlugs } from '@/utils/monthly-content';
+import { getArchiveDateRange } from '@/utils/daily-archive';
 import { VALID_SIGNS } from '@/constants/zodiac';
 
 /**
@@ -44,6 +45,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   );
 
+  const archiveDates = getArchiveDateRange(90);
+  const archivePages: MetadataRoute.Sitemap = VALID_SIGNS.flatMap((sign) =>
+    archiveDates.map((date) => ({
+      url: `${baseUrl}/horoscope/${sign}/daily/${date}`,
+      lastModified: new Date(date + 'T00:00:00Z'),
+      changeFrequency: 'yearly' as const,
+      priority: 0.5,
+    }))
+  );
+
   const aboutPage: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/about/author`,
@@ -53,5 +64,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  return [...home, ...signPages, ...monthlyPages, ...aboutPage];
+  return [...home, ...signPages, ...monthlyPages, ...archivePages, ...aboutPage];
 }
