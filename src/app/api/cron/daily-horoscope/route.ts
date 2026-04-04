@@ -21,8 +21,9 @@ async function generateAllHoroscopes() {
       const horoscope = await generateHoroscope(sign, 'daily');
 
       const cacheKey = horoscopeKeys.daily(sign, date);
+      // 30-day TTL so archive pages can serve cached content for the last 30 days
       const storeSuccess = await safelyStoreInRedis(cacheKey, horoscope, {
-        ttl: CACHE_DURATIONS.ONE_DAY
+        ttl: 2592000
       });
 
       results.push({ sign, success: storeSuccess });
