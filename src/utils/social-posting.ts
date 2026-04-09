@@ -109,7 +109,7 @@ export async function postVideoToSocial(options: PostOptions): Promise<PostResul
       return { success: false, errors: [errorMsg] };
     }
 
-    console.log('[social-posting] Posted successfully:', JSON.stringify(data).substring(0, 200));
+    console.log('[social-posting] Posted successfully — status:', data?.status || 'OK');
     return { success: true, platformResults: data };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
