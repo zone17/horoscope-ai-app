@@ -44,9 +44,14 @@ const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const NO_POST = args.includes('--no-post');
 const signIndex = args.indexOf('--sign');
-const SINGLE_SIGN = signIndex >= 0 ? args[signIndex + 1] : null;
+const rawSign = signIndex >= 0 ? args[signIndex + 1]?.toLowerCase() : null;
+const SINGLE_SIGN = rawSign && ENGAGEMENT_ORDER.includes(rawSign) ? rawSign : null;
+if (rawSign && !SINGLE_SIGN) {
+  console.error(`[error] Invalid sign: "${rawSign}". Must be one of: ${ENGAGEMENT_ORDER.join(', ')}`);
+  process.exit(1);
+}
 const rampIndex = args.indexOf('--ramp');
-const RAMP_COUNT = rampIndex >= 0 ? parseInt(args[rampIndex + 1], 10) : 4;
+const RAMP_COUNT = Math.min(Math.max(rampIndex >= 0 ? parseInt(args[rampIndex + 1], 10) || 4 : 4, 1), 12);
 
 function getTodayDate(): string {
   const d = new Date();
