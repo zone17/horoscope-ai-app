@@ -32,7 +32,8 @@ export function buildNarrationScript(
   quoteAuthor: string,
   peacefulThought: string
 ): string {
-  const signName = sign.charAt(0).toUpperCase() + sign.slice(1);
+  const s = sign.trim().toLowerCase();
+  const signName = s.charAt(0).toUpperCase() + s.slice(1);
   const parts: string[] = [];
 
   // Hook (scene 1)
