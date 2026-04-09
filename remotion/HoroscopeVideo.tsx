@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import {
   AbsoluteFill,
-  Audio,
   useCurrentFrame,
   interpolate,
   staticFile,
   OffthreadVideo,
+  Audio,
 } from "remotion";
 import { loadFont as loadPlayfair } from "@remotion/google-fonts/PlayfairDisplay";
 
@@ -27,31 +27,150 @@ interface HoroscopeVideoProps {
   symbol: string;
   voiceoverSrc?: string;
   ambientSrc?: string;
+  voiceoverDurationMs?: number;
+  subtitleCues?: Array<{ startMs: number; endMs: number; text: string }>;
 }
 
-// Scene timing (frames at 30fps) — no overlaps between scenes
-const SCENES = {
-  hook:        { start: 0,    end: 120 },   // 0-4s: symbol + sign + "stop scrolling"
-  reading:     { start: 120,  end: 1020 },  // 4-34s: reading text word-by-word
-  quote:       { start: 1020, end: 1350 },  // 34-45s: philosopher quote
-  peaceful:    { start: 1350, end: 1650 },  // 45-55s: peaceful thought
-  cta:         { start: 1650, end: 1800 },  // 55-60s: CTA + watermark
+// Default scene timing (frames at 30fps) — used when no subtitle cues
+const DEFAULT_SCENES = {
+  hook:     { start: 0,    end: 120 },
+  reading:  { start: 120,  end: 1020 },
+  quote:    { start: 1020, end: 1350 },
+  peaceful: { start: 1350, end: 1650 },
+  cta:      { start: 1650, end: 1800 },
 };
 
-// Fade a scene in and out based on its window
+/**
+ * Build scene timing from subtitle cues.
+ * Scenes are positioned to match when Ava actually says each section,
+ * with padding for visual breathing room.
+ */
+function buildScenesFromCues(
+  cues: Array<{ startMs: number; endMs: number; text: string }>,
+  fps: number = 30
+) {
+  if (!cues || cues.length === 0) return DEFAULT_SCENES;
+
+  const totalFrames = 1800; // 60s
+  const msToFrame = (ms: number) => Math.round((ms / 1000) * fps);
+
+  // Find scene boundaries from cue content
+  // Hook: "Scorpio" + "Stop scrolling" + "Guided by..."
+  // Reading: the main message sentences
+  // Quote: "Knowing others..." + author
+  // Peaceful: "As you close your eyes..."
+  // CTA: "Comment your sign"
+
+  const lastCue = cues[cues.length - 1];
+  const voiceEndFrame = msToFrame(lastCue.endMs);
+
+  // Find the cue that starts with "Knowing" or contains the quote
+  const quoteIdx = cues.findIndex((c) =>
+    c.text.match(/^(Knowing|"|\u201c)/i) ||
+    c.text.match(/intelligence|wisdom/i)
+  );
+
+  // Find peaceful thought cue
+  const peacefulIdx = cues.findIndex((c) =>
+    c.text.match(/^(As you|Tonight|Before sleep|When you close)/i)
+  );
+
+  // Find CTA cue
+  const ctaIdx = cues.findIndex((c) =>
+    c.text.match(/^(Comment|Follow|Share)/i)
+  );
+
+  // Build timing from detected positions
+  const hookEnd = quoteIdx > 0 ? msToFrame(cues[3]?.startMs ?? 4000) : 120;
+  const readingEnd = quoteIdx > 0 ? msToFrame(cues[quoteIdx].startMs) : 1020;
+  const quoteEnd = peacefulIdx > 0 ? msToFrame(cues[peacefulIdx].startMs) : readingEnd + 330;
+  const peacefulEnd = ctaIdx > 0 ? msToFrame(cues[ctaIdx].startMs) : quoteEnd + 300;
+
+  // Pad scenes so visuals linger after voice finishes
+  const padFrames = 30; // 1 second pad
+
+  return {
+    hook:     { start: 0, end: hookEnd },
+    reading:  { start: hookEnd, end: readingEnd + padFrames },
+    quote:    { start: readingEnd, end: quoteEnd + padFrames },
+    peaceful: { start: quoteEnd, end: Math.min(peacefulEnd + padFrames, totalFrames - 150) },
+    cta:      { start: Math.min(peacefulEnd, totalFrames - 150), end: totalFrames },
+  };
+}
+
 function sceneOpacity(frame: number, start: number, end: number): number {
-  const fadeIn = interpolate(frame, [start, start + 20], [0, 1], {
+  const fadeIn = interpolate(frame, [start, start + 15], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const fadeOut = interpolate(frame, [end - 20, end], [1, 0], {
+  const fadeOut = interpolate(frame, [end - 15, end], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   return fadeIn * fadeOut;
 }
 
-// Word-by-word fade reveal
+// Subtitle-synced text reveal — lines appear as voice speaks them
+const SubtitleReveal: React.FC<{
+  cues: Array<{ startMs: number; endMs: number; text: string }>;
+  frame: number;
+  offsetMs?: number; // ms offset to align with scene start
+  fontSize?: number;
+  color?: string;
+  lineHeight?: number;
+  italic?: boolean;
+}> = ({
+  cues,
+  frame,
+  offsetMs = 0,
+  fontSize = 60,
+  color = "#E0D8F0",
+  lineHeight = 1.8,
+  italic = false,
+}) => {
+  const fps = 30;
+
+  return (
+    <div
+      style={{
+        fontSize,
+        fontFamily: BODY_FONT,
+        color,
+        lineHeight,
+        fontWeight: 300,
+        fontStyle: italic ? "italic" : "normal",
+        textAlign: "center",
+        maxWidth: 920,
+      }}
+    >
+      {cues.map((cue, i) => {
+        const cueFrame = ((cue.startMs - offsetMs) / 1000) * fps;
+        const opacity = interpolate(frame, [cueFrame, cueFrame + 10], [0, 1], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        });
+        const translateY = interpolate(frame, [cueFrame, cueFrame + 12], [10, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        });
+        return (
+          <div
+            key={i}
+            style={{
+              opacity,
+              transform: `translateY(${translateY}px)`,
+              marginBottom: 6,
+            }}
+          >
+            {cue.text}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Fallback word-by-word reveal (no timing data)
 const WordReveal: React.FC<{
   text: string;
   frame: number;
@@ -59,7 +178,6 @@ const WordReveal: React.FC<{
   wordsPerSecond?: number;
   fontSize?: number;
   color?: string;
-  fontFamily?: string;
   lineHeight?: number;
   italic?: boolean;
 }> = ({
@@ -67,10 +185,9 @@ const WordReveal: React.FC<{
   frame,
   sceneStart,
   wordsPerSecond = 2.5,
-  fontSize = 48,
-  color = "#D4D0E8",
-  fontFamily = BODY_FONT,
-  lineHeight = 1.7,
+  fontSize = 60,
+  color = "#E0D8F0",
+  lineHeight = 1.8,
   italic = false,
 }) => {
   const fps = 30;
@@ -80,13 +197,13 @@ const WordReveal: React.FC<{
     <div
       style={{
         fontSize,
-        fontFamily,
+        fontFamily: BODY_FONT,
         color,
         lineHeight,
         fontStyle: italic ? "italic" : "normal",
         fontWeight: 300,
         textAlign: "center",
-        maxWidth: 900,
+        maxWidth: 920,
       }}
     >
       {words.map((word, i) => {
@@ -152,6 +269,23 @@ const Particles: React.FC<{ color: string; frame: number }> = ({
   );
 };
 
+/**
+ * Split subtitle cues by scene based on timing.
+ * Each scene gets the cues that fall within its time window.
+ */
+function getCuesForScene(
+  allCues: Array<{ startMs: number; endMs: number; text: string }>,
+  sceneStartFrame: number,
+  sceneEndFrame: number,
+  fps: number = 30
+) {
+  const sceneStartMs = (sceneStartFrame / fps) * 1000;
+  const sceneEndMs = (sceneEndFrame / fps) * 1000;
+  return allCues.filter(
+    (c) => c.startMs >= sceneStartMs - 500 && c.startMs < sceneEndMs
+  );
+}
+
 export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
   sign,
   date,
@@ -163,9 +297,22 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
   symbol,
   voiceoverSrc,
   ambientSrc,
+  voiceoverDurationMs,
+  subtitleCues,
 }) => {
   const frame = useCurrentFrame();
   const signName = sign.charAt(0).toUpperCase() + sign.slice(1);
+
+  // Build scene timing from subtitle cues (or use defaults)
+  const SCENES = useMemo(
+    () => buildScenesFromCues(subtitleCues ?? []),
+    [subtitleCues]
+  );
+
+  // Split cues by scene
+  const readingCues = subtitleCues ? getCuesForScene(subtitleCues, SCENES.reading.start, SCENES.quote.start) : [];
+  const quoteCues = subtitleCues ? getCuesForScene(subtitleCues, SCENES.quote.start, SCENES.peaceful.start) : [];
+  const peacefulCues = subtitleCues ? getCuesForScene(subtitleCues, SCENES.peaceful.start, SCENES.cta.start) : [];
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#030208" }}>
@@ -182,39 +329,6 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         muted
       />
 
-      {/* Voiceover audio — starts when reading scene begins */}
-      {voiceoverSrc && (
-        <Audio
-          src={staticFile(voiceoverSrc)}
-          from={SCENES.reading.start}
-          placeholder={null}
-          volume={0.9}
-        />
-      )}
-
-      {/* Ambient music — full duration, low volume, fade in/out */}
-      {ambientSrc && (
-        <Audio
-          src={staticFile(ambientSrc)}
-          loop
-          placeholder={null}
-          volume={(f) => {
-            const totalFrames = 60 * 30; // 1800
-            const fadeIn = interpolate(f, [0, 30], [0, 0.15], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            });
-            const fadeOut = interpolate(
-              f,
-              [totalFrames - 30, totalFrames],
-              [0.15, 0],
-              { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-            );
-            return Math.min(fadeIn, fadeOut);
-          }}
-        />
-      )}
-
       {/* Dark overlay */}
       <AbsoluteFill
         style={{
@@ -228,7 +342,40 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         <Particles color={elementColor} frame={frame} />
       </AbsoluteFill>
 
-      {/* ====== SCENE 1: Hook — sign symbol + name ====== */}
+      {/* ====== VOICEOVER — starts at frame 0, covers entire video ====== */}
+      {voiceoverSrc && (
+        <Audio
+          src={staticFile(voiceoverSrc)}
+          from={0}
+          placeholder={null}
+          volume={0.9}
+        />
+      )}
+
+      {/* ====== AMBIENT MUSIC — full duration, low volume ====== */}
+      {ambientSrc && (
+        <Audio
+          src={staticFile(ambientSrc)}
+          loop
+          placeholder={null}
+          volume={(f) => {
+            const totalFrames = 1800;
+            const fadeIn = interpolate(f, [0, 30], [0, 0.12], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+            });
+            const fadeOut = interpolate(
+              f,
+              [totalFrames - 30, totalFrames],
+              [0.12, 0],
+              { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+            );
+            return Math.min(fadeIn, fadeOut);
+          }}
+        />
+      )}
+
+      {/* ====== SCENE 1: Hook ====== */}
       <AbsoluteFill
         style={{
           opacity: sceneOpacity(frame, SCENES.hook.start, SCENES.hook.end),
@@ -251,7 +398,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
           <div
             style={{
               fontFamily: playfairFamily,
-              fontSize: 80,
+              fontSize: 90,
               fontWeight: 700,
               color: "#F0EEFF",
               letterSpacing: 3,
@@ -262,14 +409,14 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: 36,
               color: elementColor,
               marginTop: 16,
               fontFamily: BODY_FONT,
-              fontWeight: 300,
+              fontWeight: 400,
               letterSpacing: 6,
               textTransform: "uppercase",
-              opacity: interpolate(frame, [30, 50], [0, 1], {
+              opacity: interpolate(frame, [20, 40], [0, 1], {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",
               }),
@@ -279,13 +426,13 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
           </div>
           <div
             style={{
-              fontSize: 22,
+              fontSize: 28,
               color: "#9B8EC4",
               marginTop: 24,
               fontFamily: BODY_FONT,
               fontStyle: "italic",
               fontWeight: 300,
-              opacity: interpolate(frame, [50, 70], [0, 1], {
+              opacity: interpolate(frame, [40, 60], [0, 1], {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",
               }),
@@ -296,28 +443,36 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         </div>
       </AbsoluteFill>
 
-      {/* ====== SCENE 2: Reading text ====== */}
+      {/* ====== SCENE 2: Reading text (synced to voice) ====== */}
       <AbsoluteFill
         style={{
           opacity: sceneOpacity(frame, SCENES.reading.start, SCENES.reading.end),
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "120px 80px",
+          padding: "120px 70px",
         }}
       >
-        <WordReveal
-          text={message}
-          frame={frame}
-          sceneStart={SCENES.reading.start + 20}
-          wordsPerSecond={2.5}
-          fontSize={50}
-          color="#E0D8F0"
-          lineHeight={1.8}
-        />
+        {readingCues.length > 0 ? (
+          <SubtitleReveal
+            cues={readingCues}
+            frame={frame}
+            fontSize={60}
+            color="#E0D8F0"
+          />
+        ) : (
+          <WordReveal
+            text={message}
+            frame={frame}
+            sceneStart={SCENES.reading.start}
+            wordsPerSecond={2.5}
+            fontSize={60}
+            color="#E0D8F0"
+          />
+        )}
       </AbsoluteFill>
 
-      {/* ====== SCENE 3: Philosopher quote ====== */}
+      {/* ====== SCENE 3: Quote (synced to voice) ====== */}
       <AbsoluteFill
         style={{
           opacity: sceneOpacity(frame, SCENES.quote.start, SCENES.quote.end),
@@ -336,50 +491,58 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
             maxWidth: 920,
           }}
         >
-          <div
-            style={{
-              fontSize: 46,
-              color: "#D4CCF0",
-              fontStyle: "italic",
-              fontFamily: playfairFamily,
-              lineHeight: 1.6,
-              textAlign: "center",
-              marginBottom: 24,
-            }}
-          >
-            &ldquo;{quote}&rdquo;
-          </div>
-          <div
-            style={{
-              fontSize: 26,
-              color: "#8A7EB8",
-              textAlign: "center",
-              fontFamily: BODY_FONT,
-            }}
-          >
-            &mdash; {quoteAuthor}
-          </div>
+          {quoteCues.length > 0 ? (
+            <SubtitleReveal
+              cues={quoteCues}
+              frame={frame}
+              fontSize={48}
+              color="#D4CCF0"
+              italic
+            />
+          ) : (
+            <>
+              <div
+                style={{
+                  fontSize: 48,
+                  color: "#D4CCF0",
+                  fontStyle: "italic",
+                  fontFamily: playfairFamily,
+                  lineHeight: 1.6,
+                  textAlign: "center",
+                  marginBottom: 24,
+                }}
+              >
+                &ldquo;{quote}&rdquo;
+              </div>
+              <div
+                style={{
+                  fontSize: 28,
+                  color: "#8A7EB8",
+                  textAlign: "center",
+                  fontFamily: BODY_FONT,
+                }}
+              >
+                &mdash; {quoteAuthor}
+              </div>
+            </>
+          )}
         </div>
       </AbsoluteFill>
 
-      {/* ====== SCENE 4: Peaceful thought ====== */}
+      {/* ====== SCENE 4: Peaceful thought (synced to voice) ====== */}
       <AbsoluteFill
         style={{
-          opacity: sceneOpacity(
-            frame,
-            SCENES.peaceful.start,
-            SCENES.peaceful.end
-          ),
+          opacity: sceneOpacity(frame, SCENES.peaceful.start, SCENES.peaceful.end),
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "120px 80px",
+          padding: "120px 70px",
           flexDirection: "column",
         }}
       >
         <div
           style={{
-            fontSize: 22,
+            fontSize: 24,
             color: elementColor,
             textTransform: "uppercase",
             letterSpacing: 5,
@@ -389,19 +552,28 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         >
           Tonight
         </div>
-        <WordReveal
-          text={peacefulThought}
-          frame={frame}
-          sceneStart={SCENES.peaceful.start + 20}
-          wordsPerSecond={2.5}
-          fontSize={42}
-          color="#9B8EC4"
-          italic
-          lineHeight={1.8}
-        />
+        {peacefulCues.length > 0 ? (
+          <SubtitleReveal
+            cues={peacefulCues}
+            frame={frame}
+            fontSize={44}
+            color="#9B8EC4"
+            italic
+          />
+        ) : (
+          <WordReveal
+            text={peacefulThought}
+            frame={frame}
+            sceneStart={SCENES.peaceful.start}
+            wordsPerSecond={2.5}
+            fontSize={44}
+            color="#9B8EC4"
+            italic
+          />
+        )}
       </AbsoluteFill>
 
-      {/* ====== SCENE 5: CTA + Watermark ====== */}
+      {/* ====== SCENE 5: CTA ====== */}
       <AbsoluteFill
         style={{
           opacity: sceneOpacity(frame, SCENES.cta.start, SCENES.cta.end),
@@ -423,7 +595,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         </div>
         <div
           style={{
-            fontSize: 36,
+            fontSize: 40,
             color: "#F0EEFF",
             fontFamily: BODY_FONT,
             fontWeight: 500,
@@ -431,7 +603,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
             marginBottom: 20,
           }}
         >
-          Follow for your sign&apos;s daily reading
+          Comment your sign below
         </div>
         <div
           style={{
@@ -450,16 +622,6 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
           }}
         >
           gettodayshoroscope.com
-        </div>
-        <div
-          style={{
-            fontSize: 20,
-            color: elementColor,
-            marginTop: 10,
-            fontFamily: BODY_FONT,
-          }}
-        >
-          Tomorrow at 6am
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

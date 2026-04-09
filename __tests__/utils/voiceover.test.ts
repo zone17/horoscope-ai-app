@@ -1,99 +1,57 @@
 import { buildNarrationScript } from '@/utils/voiceover';
 
-// Mock OpenAI and fs for generateVoiceover tests
-jest.mock('openai', () => {
-  const mockCreate = jest.fn().mockResolvedValue({
-    arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
-  });
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      audio: { speech: { create: mockCreate } },
-    })),
-    _mockCreate: mockCreate,
-  };
-});
-
-jest.mock('fs', () => ({
-  existsSync: jest.fn().mockReturnValue(true),
-  mkdirSync: jest.fn(),
-  writeFileSync: jest.fn(),
-}));
-
 describe('buildNarrationScript', () => {
-  it('concatenates message and quote with pause', () => {
+  it('includes all scenes: hook, philosopher, reading, quote, peaceful, CTA', () => {
     const result = buildNarrationScript(
+      'scorpio',
       'Today is your day.',
       'Know thyself.',
-      'Socrates'
+      'Socrates',
+      'Rest well tonight.'
     );
-    expect(result).toBe('Today is your day. ... Know thyself. ... by Socrates');
+    expect(result).toContain('Scorpio');
+    expect(result).toContain('Stop scrolling');
+    expect(result).toContain('Guided by Socrates');
+    expect(result).toContain('Today is your day.');
+    expect(result).toContain('Know thyself.');
+    expect(result).toContain('Rest well tonight.');
+    expect(result).toContain('Comment your sign below');
   });
 
-  it('returns only message when quote is empty', () => {
-    const result = buildNarrationScript('Today is your day.', '', '');
-    expect(result).toBe('Today is your day.');
+  it('capitalizes sign name', () => {
+    const result = buildNarrationScript('aries', 'Message.', 'Quote.', 'Author', 'Thought.');
+    expect(result).toContain('Aries');
+    expect(result).not.toContain('aries');
+  });
+
+  it('handles empty quote gracefully', () => {
+    const result = buildNarrationScript('leo', 'Message.', '', '', 'Thought.');
+    expect(result).toContain('Leo');
+    expect(result).toContain('Message.');
+    expect(result).toContain('Thought.');
+    expect(result).not.toContain('Guided by');
+  });
+
+  it('handles empty peaceful thought gracefully', () => {
+    const result = buildNarrationScript('virgo', 'Message.', 'Quote.', 'Author', '');
+    expect(result).toContain('Message.');
+    expect(result).toContain('Quote.');
+    expect(result).not.toContain('undefined');
   });
 
   it('trims whitespace from all parts', () => {
     const result = buildNarrationScript(
+      '  gemini  ',
       '  Hello world.  ',
       '  A quote.  ',
-      '  Author  '
+      '  Author  ',
+      '  A thought.  '
     );
-    expect(result).toBe('Hello world. ... A quote. ... by Author');
+    expect(result).toContain('Gemini');
+    expect(result).toContain('Hello world.');
+    expect(result).toContain('A quote.');
   });
 });
 
-describe('generateVoiceover', () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...originalEnv };
-  });
-
-  afterAll(() => {
-    process.env = originalEnv;
-  });
-
-  it('returns null when OPENAI_API_KEY is missing', async () => {
-    delete process.env.OPENAI_API_KEY;
-    const { generateVoiceover } = await import('@/utils/voiceover');
-    const result = await generateVoiceover('Test text', '/tmp/test.mp3');
-    expect(result).toBeNull();
-  });
-
-  it('calls OpenAI TTS and writes file on success', async () => {
-    process.env.OPENAI_API_KEY = 'test-key';
-    // Clear module cache to pick up the env var
-    jest.resetModules();
-    const { generateVoiceover } = await import('@/utils/voiceover');
-    const fs = require('fs');
-
-    const result = await generateVoiceover('Hello world', '/tmp/test.mp3');
-    expect(result).toBe('/tmp/test.mp3');
-    expect(fs.writeFileSync).toHaveBeenCalled();
-  });
-
-  it('returns null on API error without throwing', async () => {
-    process.env.OPENAI_API_KEY = 'test-key';
-    jest.resetModules();
-
-    // Override OpenAI to throw
-    jest.doMock('openai', () => ({
-      __esModule: true,
-      default: jest.fn().mockImplementation(() => ({
-        audio: {
-          speech: {
-            create: jest.fn().mockRejectedValue(new Error('API error')),
-          },
-        },
-      })),
-    }));
-
-    const { generateVoiceover } = await import('@/utils/voiceover');
-    const result = await generateVoiceover('Test', '/tmp/fail.mp3');
-    expect(result).toBeNull();
-  });
-});
+// generateVoiceover uses edge-tts CLI — tested via integration (render-and-post.ts)
+// Not unit-tested here because it requires the edge-tts binary installed

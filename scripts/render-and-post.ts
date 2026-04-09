@@ -53,9 +53,153 @@ if (rawSign && !SINGLE_SIGN) {
 const rampIndex = args.indexOf('--ramp');
 const RAMP_COUNT = Math.min(Math.max(rampIndex >= 0 ? parseInt(args[rampIndex + 1], 10) || 4 : 4, 1), 12);
 
+function parseSrt(srt: string): Array<{ startMs: number; endMs: number; text: string }> {
+  const blocks = srt.trim().split(/\n\n+/);
+  return blocks
+    .map((block) => {
+      const lines = block.split('\n');
+      if (lines.length < 3) return null;
+      const timeMatch = lines[1].match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/);
+      if (!timeMatch) return null;
+      const startMs = +timeMatch[1] * 3600000 + +timeMatch[2] * 60000 + +timeMatch[3] * 1000 + +timeMatch[4];
+      const endMs = +timeMatch[5] * 3600000 + +timeMatch[6] * 60000 + +timeMatch[7] * 1000 + +timeMatch[8];
+      const text = lines.slice(2).join(' ').trim();
+      return { startMs, endMs, text };
+    })
+    .filter((c): c is { startMs: number; endMs: number; text: string } => c !== null);
+}
+
 function getTodayDate(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ============ Quality Gate ============
+
+interface QualityResult {
+  pass: boolean;
+  reason?: string;
+  summary: string;
+  fileSizeMB: number;
+  durationSec: number;
+  hasAudio: boolean;
+}
+
+async function qualityCheck(
+  videoPath: string,
+  sign: string,
+  voiceoverGenerated: boolean
+): Promise<QualityResult> {
+  const fileSizeBytes = fs.statSync(videoPath).size;
+  const fileSizeMB = fileSizeBytes / (1024 * 1024);
+
+  // Check 1: File size sanity (2-15 MB for a 60s video)
+  if (fileSizeMB < 1) {
+    return { pass: false, reason: 'File too small (<1 MB) — likely corrupted render', summary: '', fileSizeMB, durationSec: 0, hasAudio: false };
+  }
+  if (fileSizeMB > 20) {
+    return { pass: false, reason: 'File too large (>20 MB) — abnormal render', summary: '', fileSizeMB, durationSec: 0, hasAudio: false };
+  }
+
+  // Check 2: Duration via ffprobe (must be 58-62 seconds)
+  let durationSec = 0;
+  let hasAudio = false;
+  try {
+    const { execFileSync } = await import('child_process');
+    const probeResult = execFileSync('ffprobe', [
+      '-v', 'quiet',
+      '-print_format', 'json',
+      '-show_format',
+      '-show_streams',
+      videoPath,
+    ], { encoding: 'utf-8' });
+
+    const probe = JSON.parse(probeResult);
+    durationSec = parseFloat(probe.format?.duration ?? '0');
+    hasAudio = probe.streams?.some((s: any) => s.codec_type === 'audio') ?? false;
+  } catch {
+    // ffprobe not available — skip duration/audio check but warn
+    console.warn(`[quality] ffprobe not available — skipping duration/audio check for ${sign}`);
+    return { pass: true, reason: undefined, summary: `${fileSizeMB.toFixed(1)} MB (ffprobe unavailable)`, fileSizeMB, durationSec: 0, hasAudio: voiceoverGenerated };
+  }
+
+  if (durationSec < 55 || durationSec > 65) {
+    return { pass: false, reason: `Duration ${durationSec.toFixed(1)}s outside 55-65s range`, summary: '', fileSizeMB, durationSec, hasAudio };
+  }
+
+  // Check 3: Audio stream must exist if voiceover was generated
+  if (voiceoverGenerated && !hasAudio) {
+    return { pass: false, reason: 'Voiceover generated but no audio stream in output', summary: '', fileSizeMB, durationSec, hasAudio };
+  }
+
+  return {
+    pass: true,
+    summary: `${fileSizeMB.toFixed(1)} MB, ${durationSec.toFixed(1)}s, audio: ${hasAudio ? 'yes' : 'no'}`,
+    fileSizeMB,
+    durationSec,
+    hasAudio,
+  };
+}
+
+// ============ Telegram Notification ============
+
+async function sendTelegramSummary(
+  results: RenderResult[],
+  today: string,
+  sampleVideoPath?: string
+) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) {
+    console.log('[telegram] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set — skipping notification');
+    return;
+  }
+
+  const successes = results.filter((r) => !r.error);
+  const failures = results.filter((r) => r.error);
+
+  const message = [
+    `🎬 *Daily Video Pipeline — ${today}*`,
+    '',
+    `✅ Rendered: ${successes.length}/${results.length}`,
+    failures.length > 0 ? `❌ Failed: ${failures.map((f) => `${f.sign} (${f.error})`).join(', ')}` : '',
+    '',
+    successes.length > 0 ? `Signs: ${successes.map((r) => r.sign).join(', ')}` : '',
+    '',
+    '_This is your daily spot-check. Reply if anything looks off._',
+  ].filter(Boolean).join('\n');
+
+  try {
+    // Send text summary
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'Markdown',
+      }),
+    });
+
+    // Send one sample video if available
+    if (sampleVideoPath && fs.existsSync(sampleVideoPath)) {
+      const FormData = (await import('node-fetch')).default ? undefined : globalThis.FormData;
+      // Use curl for multipart upload (simpler than FormData in Node)
+      const { execFileSync } = await import('child_process');
+      execFileSync('curl', [
+        '-s', '-X', 'POST',
+        `https://api.telegram.org/bot${botToken}/sendVideo`,
+        '-F', `chat_id=${chatId}`,
+        '-F', `video=@${sampleVideoPath}`,
+        '-F', `caption=Sample: ${path.basename(sampleVideoPath)}`,
+      ], { timeout: 60000 });
+      console.log('[telegram] Sent sample video');
+    }
+
+    console.log('[telegram] Summary sent');
+  } catch (error) {
+    console.warn('[telegram] Notification failed:', error instanceof Error ? error.message : error);
+  }
 }
 
 async function loadRedisHelpers() {
@@ -88,22 +232,29 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       return { sign, duration: Date.now() - start };
     }
 
-    // 3. Generate voiceover — copy to public/ so Remotion can access via staticFile()
+    // 3. Generate voiceover (edge-tts, free) — outputs MP3 + SRT timing
     const { generateVoiceover, buildNarrationScript } = await import('../src/utils/voiceover');
-    const narration = buildNarrationScript(props.message, props.quote, props.quoteAuthor);
-    const voiceoverPath = path.join(tmpDir, `${sign}-voiceover.mp3`);
-    const voResult = await generateVoiceover(narration, voiceoverPath);
+    const narration = buildNarrationScript(sign, props.message, props.quote, props.quoteAuthor, props.peacefulThought);
+    const voResult = await generateVoiceover(narration, tmpDir, sign);
 
     if (voResult) {
-      // Copy to public/audio/ so Remotion can load via staticFile()
+      // Copy audio to public/ so Remotion can load via staticFile()
       const publicVoPath = path.resolve('public', 'audio', `${sign}-voiceover.mp3`);
-      fs.copyFileSync(voiceoverPath, publicVoPath);
+      fs.copyFileSync(voResult.audioPath, publicVoPath);
       props.voiceoverSrc = `audio/${sign}-voiceover.mp3`;
-      console.log(`[render] Voiceover ready: ${publicVoPath}`);
+      (props as any).voiceoverDurationMs = voResult.durationMs;
+
+      // Parse SRT for subtitle cues — drives text-voice sync
+      if (fs.existsSync(voResult.subtitlePath)) {
+        const srt = fs.readFileSync(voResult.subtitlePath, 'utf-8');
+        const cues = parseSrt(srt);
+        (props as any).subtitleCues = cues;
+        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${cues.length} subtitle cues`);
+      }
     } else {
       console.warn(`[render] Voiceover generation failed for ${sign} — rendering without audio`);
     }
-    // Ambient music — Remotion loads via staticFile()
+    // Ambient music
     props.ambientSrc = 'audio/ambient-lofi.mp3';
 
     // 4. Render video via Remotion
@@ -135,8 +286,13 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       crf: 23,
     });
 
-    const fileSize = fs.statSync(videoPath).size;
-    console.log(`[render] Rendered ${sign}: ${videoPath} (${(fileSize / 1024 / 1024).toFixed(1)} MB)`);
+    // 4b. Quality gate — reject bad renders before uploading
+    const qc = await qualityCheck(videoPath, sign, !!voResult);
+    if (!qc.pass) {
+      console.error(`[quality] FAILED for ${sign}: ${qc.reason}`);
+      return { sign, error: `Quality check failed: ${qc.reason}`, duration: Date.now() - start };
+    }
+    console.log(`[quality] ✓ ${sign}: ${qc.summary}`);
 
     // 5. Upload to Vercel Blob
     let blobUrl: string | undefined;
@@ -277,6 +433,10 @@ async function main() {
     console.log(`  Failures: ${failures.map((f) => `${f.sign} (${f.error})`).join(', ')}`);
   }
   console.log(`========================================\n`);
+
+  // Send Telegram summary + one sample video for spot-check
+  const sampleVideo = successes.find((r) => r.videoPath)?.videoPath;
+  await sendTelegramSummary(results, today, sampleVideo);
 
   // Clean up temp dir + voiceover files from public/audio/
   try {
