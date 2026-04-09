@@ -1,0 +1,66 @@
+name: Daily Video Pipeline
+
+on:
+  schedule:
+    # Run at 1am UTC daily (after horoscope generation cron at midnight)
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      sign:
+        description: 'Render a single sign (leave empty for all 12)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run (no rendering or posting)'
+        required: false
+        type: boolean
+        default: false
+      no_post:
+        description: 'Skip social posting'
+        required: false
+        type: boolean
+        default: false
+      ramp:
+        description: 'Number of signs to post (default 4)'
+        required: false
+        default: '4'
+
+jobs:
+  render-and-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chrome for Remotion
+        run: npx remotion ensure-chrome
+
+      - name: Build CLI args
+        id: args
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ inputs.no_post }}" = "true" ]; then ARGS="$ARGS --no-post"; fi
+          if [ -n "${{ inputs.sign }}" ]; then ARGS="$ARGS --sign ${{ inputs.sign }}"; fi
+          ARGS="$ARGS --ramp ${{ inputs.ramp || '4' }}"
+          echo "args=$ARGS" >> $GITHUB_OUTPUT
+
+      - name: Render and post videos
+        run: npx tsx scripts/render-and-post.ts ${{ steps.args.outputs.args }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          AYRSHARE_API_KEY: ${{ secrets.AYRSHARE_API_KEY }}
