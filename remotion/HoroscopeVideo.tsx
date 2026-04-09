@@ -29,12 +29,12 @@ interface HoroscopeVideoProps {
   ambientSrc?: string;
 }
 
-// Scene timing (frames at 30fps)
+// Scene timing (frames at 30fps) — no overlaps between scenes
 const SCENES = {
-  hook:        { start: 0,    end: 150 },   // 0-5s: symbol + sign + "stop scrolling"
-  reading:     { start: 120,  end: 1050 },  // 4-35s: reading text word-by-word
-  quote:       { start: 1020, end: 1380 },  // 34-46s: philosopher quote
-  peaceful:    { start: 1350, end: 1680 },  // 45-56s: peaceful thought
+  hook:        { start: 0,    end: 120 },   // 0-4s: symbol + sign + "stop scrolling"
+  reading:     { start: 120,  end: 1020 },  // 4-34s: reading text word-by-word
+  quote:       { start: 1020, end: 1350 },  // 34-45s: philosopher quote
+  peaceful:    { start: 1350, end: 1650 },  // 45-55s: peaceful thought
   cta:         { start: 1650, end: 1800 },  // 55-60s: CTA + watermark
 };
 
@@ -182,20 +182,20 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         muted
       />
 
-      {/* Voiceover audio — starts at reading scene */}
+      {/* Voiceover audio — starts when reading scene begins */}
       {voiceoverSrc && (
         <Audio
-          src={voiceoverSrc}
-          startFrom={0}
+          src={staticFile(voiceoverSrc)}
+          from={SCENES.reading.start}
           placeholder={null}
-          volume={1}
+          volume={0.9}
         />
       )}
 
       {/* Ambient music — full duration, low volume, fade in/out */}
       {ambientSrc && (
         <Audio
-          src={ambientSrc}
+          src={staticFile(ambientSrc)}
           loop
           placeholder={null}
           volume={(f) => {
