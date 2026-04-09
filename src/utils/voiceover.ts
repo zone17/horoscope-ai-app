@@ -18,8 +18,10 @@ export function buildNarrationScript(
   quoteAuthor: string
 ): string {
   const parts = [message.trim()];
-  if (quote && quoteAuthor) {
-    parts.push(`... ${quote.trim()} ... by ${quoteAuthor.trim()}`);
+  const q = quote?.trim();
+  const a = quoteAuthor?.trim();
+  if (q && a) {
+    parts.push(`... ${q} ... by ${a}`);
   }
   return parts.join(' ');
 }

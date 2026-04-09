@@ -88,17 +88,22 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       return { sign, duration: Date.now() - start };
     }
 
-    // 3. Generate voiceover
+    // 3. Generate voiceover — copy to public/ so Remotion can access via staticFile()
     const { generateVoiceover, buildNarrationScript } = await import('../src/utils/voiceover');
     const narration = buildNarrationScript(props.message, props.quote, props.quoteAuthor);
     const voiceoverPath = path.join(tmpDir, `${sign}-voiceover.mp3`);
     const voResult = await generateVoiceover(narration, voiceoverPath);
 
-    // Update props with audio paths if available
     if (voResult) {
-      props.voiceoverSrc = voiceoverPath;
+      // Copy to public/audio/ so Remotion can load via staticFile()
+      const publicVoPath = path.resolve('public', 'audio', `${sign}-voiceover.mp3`);
+      fs.copyFileSync(voiceoverPath, publicVoPath);
+      props.voiceoverSrc = `audio/${sign}-voiceover.mp3`;
+      console.log(`[render] Voiceover ready: ${publicVoPath}`);
+    } else {
+      console.warn(`[render] Voiceover generation failed for ${sign} — rendering without audio`);
     }
-    // Ambient music — use static file path for Remotion
+    // Ambient music — Remotion loads via staticFile()
     props.ambientSrc = 'audio/ambient-lofi.mp3';
 
     // 4. Render video via Remotion
@@ -232,7 +237,8 @@ async function cleanupOldBlobs() {
 
 async function main() {
   const today = getTodayDate();
-  const tmpDir = path.join(os.tmpdir(), `horoscope-videos-${today}`);
+  const runId = Math.random().toString(36).substring(2, 8);
+  const tmpDir = path.join(os.tmpdir(), `horoscope-videos-${today}-${runId}`);
   if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
   console.log(`\n========================================`);
@@ -272,9 +278,14 @@ async function main() {
   }
   console.log(`========================================\n`);
 
-  // Clean up temp dir
+  // Clean up temp dir + voiceover files from public/audio/
   try {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+    // Remove voiceover MP3s copied to public/audio/ during rendering
+    for (const sign of signs) {
+      const voPath = path.resolve('public', 'audio', `${sign}-voiceover.mp3`);
+      if (fs.existsSync(voPath)) fs.unlinkSync(voPath);
+    }
   } catch {
     // Best effort cleanup
   }
