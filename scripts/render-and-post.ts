@@ -405,6 +405,36 @@ async function main() {
   console.log(`========================================\n`);
 
   const signs = SINGLE_SIGN ? [SINGLE_SIGN] : ENGAGEMENT_ORDER;
+
+  // Pre-render: ensure all signs have cached readings for today
+  // The Vercel cron times out on batch generation, so we generate missing ones here
+  if (!DRY_RUN) {
+    console.log('[pre-render] Checking cached readings for all signs...');
+    const { horoscopeKeys, safelyRetrieveForUI } = await loadRedisHelpers();
+    for (const sign of signs) {
+      const cached = await safelyRetrieveForUI(horoscopeKeys.daily(sign, today));
+      if (!cached) {
+        console.log(`[pre-render] Generating missing reading for ${sign}...`);
+        try {
+          // Hit the API to trigger on-demand generation + caching
+          const resp = await fetch(`https://api.gettodayshoroscope.com/api/horoscope?sign=${sign}`);
+          if (resp.ok) {
+            console.log(`[pre-render] ✓ ${sign} generated`);
+          } else {
+            console.warn(`[pre-render] ✗ ${sign} API returned ${resp.status}`);
+          }
+          // Small delay to avoid hammering the API
+          await new Promise((r) => setTimeout(r, 2000));
+        } catch (err) {
+          console.warn(`[pre-render] ✗ ${sign} generation failed:`, err instanceof Error ? err.message : err);
+        }
+      } else {
+        console.log(`[pre-render] ✓ ${sign} already cached`);
+      }
+    }
+    console.log('[pre-render] All signs checked\n');
+  }
+
   const results: RenderResult[] = [];
 
   // Render serially to manage memory

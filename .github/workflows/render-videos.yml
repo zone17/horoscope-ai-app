@@ -1,9 +1,9 @@
 name: Daily Video Pipeline
 
 on:
-  schedule:
-    # Run at 1am UTC daily (after horoscope generation cron at midnight)
-    - cron: '0 1 * * *'
+  # Schedule disabled until social accounts + secrets are configured
+  # Uncomment to enable: schedule:
+  #   - cron: '0 1 * * *'
   workflow_dispatch:
     inputs:
       sign:
