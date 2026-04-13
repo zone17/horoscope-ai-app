@@ -1,13 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    // Pre-existing type error in dead generateSchemasOld function
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    // Pre-existing lint warnings in legacy code — addressed in eslint.config.mjs rules
-    ignoreDuringBuilds: true,
-  },
+  // Type and lint errors must fail the build — no silent deploys.
+  // If pre-existing errors block build, fix them or delete the dead code.
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'horoscope-ai-app.vercel.app', 'www.gettodayshoroscope.com', 'api.gettodayshoroscope.com'],

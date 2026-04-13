@@ -31,7 +31,8 @@ interface RedisRetrieveOptions {
  */
 export function normalizeHoroscopeData<T extends Record<string, any>>(data: T): T {
   // Create a copy of the data to avoid mutating the original
-  const normalizedData = { ...data };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const normalizedData: any = { ...data };
   
   // Extract simple values from complex objects for lucky number
   if (typeof normalizedData.lucky_number === 'object' && normalizedData.lucky_number !== null) {

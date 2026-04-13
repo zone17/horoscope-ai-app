@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useMode } from '@/hooks/useMode';
 import { VALID_SIGNS, SIGN_META, type ValidSign } from '@/constants/zodiac';
 import { capitalize } from '@/lib/utils';
+import { ConstellationIcon, USE_CONSTELLATION_ICONS } from '@/components/icons/ConstellationIcon';
 
 /** Element to accent color mapping */
 const ELEMENT_COLORS: Record<string, string> = {
@@ -79,7 +80,11 @@ export default function SignStep({ onSignSelected }: SignStepProps) {
                 }
               `}
             >
-              <span className="text-3xl leading-none">{meta.symbol}</span>
+              {USE_CONSTELLATION_ICONS ? (
+                <ConstellationIcon sign={sign} size={32} className="text-amber-400" />
+              ) : (
+                <span className="text-3xl leading-none">{meta.symbol}</span>
+              )}
               <span className="font-display text-sm tracking-wide">
                 {capitalize(sign)}
               </span>

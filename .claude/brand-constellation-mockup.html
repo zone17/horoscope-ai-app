@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constellation Icons Mockup — Today's Horoscope</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: linear-gradient(180deg, #0c0921 0%, #0f0b30 50%, #0c0921 100%);
+    min-height: 100vh;
+    font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #c7d2fe;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: rgba(199, 210, 254, 0.5);
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 500;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 40px;
+  }
+
+  .section-label {
+    text-align: center;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(199, 210, 254, 0.35);
+    margin-bottom: 16px;
+    margin-top: 50px;
+  }
+
+  .comparison {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 60px;
+  }
+
+  .comparison-panel {
+    text-align: center;
+  }
+
+  .comparison-panel h3 {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(199, 210, 254, 0.4);
+    margin-bottom: 20px;
+  }
+
+  /* Sign picker row */
+  .sign-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 900px;
+    margin: 0 auto  20px;
+  }
+
+  .sign-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 72px;
+  }
+
+  .sign-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  .sign-btn.selected {
+    background: rgba(99, 102, 241, 0.35);
+    border-color: rgba(129, 140, 248, 0.6);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+  }
+
+  .sign-btn .emoji {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .sign-btn .label {
+    font-size: 9px;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    color: rgba(199, 210, 254, 0.6);
+    white-space: nowrap;
+  }
+
+  .sign-btn.selected .label {
+    color: rgba(255,255,255,0.9);
+  }
+
+  /* Constellation SVG icons */
+  .constellation-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .constellation-icon .star {
+    fill: #fbbf24;
+    filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.5));
+  }
+
+  .constellation-icon .star-bright {
+    fill: #fcd34d;
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.7));
+  }
+
+  .constellation-icon .line {
+    stroke: rgba(251, 191, 36, 0.35);
+    stroke-width: 0.8;
+    stroke-linecap: round;
+  }
+
+  .sign-btn.selected .constellation-icon .star {
+    fill: #fde68a;
+    filter: drop-shadow(0 0 4px rgba(253, 230, 138, 0.6));
+  }
+
+  .sign-btn.selected .constellation-icon .line {
+    stroke: rgba(253, 230, 138, 0.5);
+  }
+
+  /* Large showcase */
+  .showcase {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 30px auto;
+    max-width: 800px;
+  }
+
+  .showcase-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(12px);
+    min-width: 120px;
+  }
+
+  .showcase-card .constellation-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .showcase-card .sign-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+    color: rgba(199, 210, 254, 0.8);
+    letter-spacing: 0.03em;
+  }
+
+  .showcase-card .date-range {
+    font-size: 0.6rem;
+    color: rgba(199, 210, 254, 0.35);
+    letter-spacing: 0.05em;
+  }
+
+  /* Notes */
+  .notes {
+    max-width: 600px;
+    margin: 60px auto 0;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(251, 191, 36, 0.15);
+    background: rgba(251, 191, 36, 0.03);
+  }
+
+  .notes h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9rem;
+    color: #fbbf24;
+    margin-bottom: 12px;
+  }
+
+  .notes ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .notes li {
+    font-size: 0.75rem;
+    color: rgba(199, 210, 254, 0.6);
+    padding: 4px 0;
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .notes li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(251, 191, 36, 0.4);
+    transform: translateY(-50%);
+  }
+</style>
+</head>
+<body>
+
+<h1>Today's Horoscope</h1>
+<h2>Constellation Icon Mockup</h2>
+
+<!-- BEFORE: Current emoji-based sign picker -->
+<p class="section-label">Before — Stock Unicode Emoji</p>
+<div class="sign-row">
+  <div class="sign-btn"><span class="emoji">&#9810;</span><span class="label">Aquarius</span></div>
+  <div class="sign-btn"><span class="emoji">&#9811;</span><span class="label">Pisces</span></div>
+  <div class="sign-btn selected"><span class="emoji">&#9800;</span><span class="label">Aries</span></div>
+  <div class="sign-btn"><span class="emoji">&#9801;</span><span class="label">Taurus</span></div>
+  <div class="sign-btn"><span class="emoji">&#9802;</span><span class="label">Gemini</span></div>
+  <div class="sign-btn"><span class="emoji">&#9803;</span><span class="label">Cancer</span></div>
+  <div class="sign-btn"><span class="emoji">&#9804;</span><span class="label">Leo</span></div>
+  <div class="sign-btn"><span class="emoji">&#9805;</span><span class="label">Virgo</span></div>
+  <div class="sign-btn"><span class="emoji">&#9806;</span><span class="label">Libra</span></div>
+  <div class="sign-btn"><span class="emoji">&#9807;</span><span class="label">Scorpio</span></div>
+  <div class="sign-btn"><span class="emoji">&#9808;</span><span class="label">Sagittarius</span></div>
+  <div class="sign-btn"><span class="emoji">&#9809;</span><span class="label">Capricorn</span></div>
+</div>
+
+<!-- AFTER: Constellation dot icons -->
+<p class="section-label">After — Constellation Dot Icons (amber/gold on dark)</p>
+<div class="sign-row">
+
+  <!-- Aquarius -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="3" y1="10" x2="8" y2="7"/>
+      <line class="line" x1="8" y1="7" x2="13" y2="12"/>
+      <line class="line" x1="13" y1="12" x2="18" y2="8"/>
+      <line class="line" x1="18" y1="8" x2="25" y2="11"/>
+      <line class="line" x1="3" y1="18" x2="8" y2="15"/>
+      <line class="line" x1="8" y1="15" x2="13" y2="20"/>
+      <line class="line" x1="13" y1="20" x2="18" y2="16"/>
+      <line class="line" x1="18" y1="16" x2="25" y2="19"/>
+      <circle class="star" cx="3" cy="10" r="1.5"/>
+      <circle class="star" cx="8" cy="7" r="1.3"/>
+      <circle class="star-bright" cx="13" cy="12" r="1.8"/>
+      <circle class="star" cx="18" cy="8" r="1.3"/>
+      <circle class="star" cx="25" cy="11" r="1.5"/>
+      <circle class="star" cx="3" cy="18" r="1.3"/>
+      <circle class="star" cx="8" cy="15" r="1.3"/>
+      <circle class="star" cx="13" cy="20" r="1.5"/>
+      <circle class="star" cx="18" cy="16" r="1.3"/>
+      <circle class="star" cx="25" cy="19" r="1.3"/>
+    </svg>
+    <span class="label">Aquarius</span>
+  </div>
+
+  <!-- Pisces -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="6" y1="4" x2="6" y2="10"/>
+      <line class="line" x1="6" y1="10" x2="8" y2="14"/>
+      <line class="line" x1="8" y1="14" x2="14" y2="14"/>
+      <line class="line" x1="14" y1="14" x2="20" y2="14"/>
+      <line class="line" x1="20" y1="14" x2="22" y2="10"/>
+      <line class="line" x1="22" y1="10" x2="22" y2="4"/>
+      <line class="line" x1="6" y1="10" x2="4" y2="16"/>
+      <line class="line" x1="22" y1="10" x2="24" y2="16"/>
+      <line class="line" x1="4" y1="16" x2="4" y2="24"/>
+      <line class="line" x1="24" y1="16" x2="24" y2="24"/>
+      <circle class="star" cx="6" cy="4" r="1.3"/>
+      <circle class="star" cx="6" cy="10" r="1.5"/>
+      <circle class="star-bright" cx="8" cy="14" r="1.6"/>
+      <circle class="star" cx="14" cy="14" r="1.3"/>
+      <circle class="star-bright" cx="20" cy="14" r="1.6"/>
+      <circle class="star" cx="22" cy="10" r="1.5"/>
+      <circle class="star" cx="22" cy="4" r="1.3"/>
+      <circle class="star" cx="4" cy="16" r="1.3"/>
+      <circle class="star" cx="24" cy="16" r="1.3"/>
+      <circle class="star" cx="4" cy="24" r="1.5"/>
+      <circle class="star" cx="24" cy="24" r="1.5"/>
+    </svg>
+    <span class="label">Pisces</span>
+  </div>
+
+  <!-- Aries (selected) -->
+  <div class="sign-btn selected">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="5" y1="24" x2="8" y2="18"/>
+      <line class="line" x1="8" y1="18" x2="12" y2="12"/>
+      <line class="line" x1="12" y1="12" x2="18" y2="8"/>
+      <line class="line" x1="18" y1="8" x2="23" y2="5"/>
+      <circle class="star" cx="5" cy="24" r="1.5"/>
+      <circle class="star" cx="8" cy="18" r="1.3"/>
+      <circle class="star-bright" cx="12" cy="12" r="1.8"/>
+      <circle class="star" cx="18" cy="8" r="1.5"/>
+      <circle class="star-bright" cx="23" cy="5" r="2"/>
+    </svg>
+    <span class="label">Aries</span>
+  </div>
+
+  <!-- Taurus -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="4" y1="6" x2="9" y2="4"/>
+      <line class="line" x1="9" y1="4" x2="14" y2="8"/>
+      <line class="line" x1="14" y1="8" x2="14" y2="14"/>
+      <line class="line" x1="14" y1="14" x2="10" y2="18"/>
+      <line class="line" x1="10" y1="18" x2="14" y2="22"/>
+      <line class="line" x1="14" y1="22" x2="20" y2="20"/>
+      <line class="line" x1="14" y1="8" x2="20" y2="6"/>
+      <line class="line" x1="20" y1="6" x2="24" y2="8"/>
+      <circle class="star-bright" cx="4" cy="6" r="1.8"/>
+      <circle class="star" cx="9" cy="4" r="1.3"/>
+      <circle class="star" cx="14" cy="8" r="1.5"/>
+      <circle class="star" cx="14" cy="14" r="1.3"/>
+      <circle class="star" cx="10" cy="18" r="1.3"/>
+      <circle class="star" cx="14" cy="22" r="1.5"/>
+      <circle class="star" cx="20" cy="20" r="1.3"/>
+      <circle class="star" cx="20" cy="6" r="1.3"/>
+      <circle class="star-bright" cx="24" cy="8" r="1.6"/>
+    </svg>
+    <span class="label">Taurus</span>
+  </div>
+
+  <!-- Gemini -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="8" y1="4" x2="8" y2="10"/>
+      <line class="line" x1="8" y1="10" x2="10" y2="14"/>
+      <line class="line" x1="10" y1="14" x2="8" y2="20"/>
+      <line class="line" x1="8" y1="20" x2="8" y2="24"/>
+      <line class="line" x1="20" y1="4" x2="20" y2="10"/>
+      <line class="line" x1="20" y1="10" x2="18" y2="14"/>
+      <line class="line" x1="18" y1="14" x2="20" y2="20"/>
+      <line class="line" x1="20" y1="20" x2="20" y2="24"/>
+      <line class="line" x1="10" y1="14" x2="18" y2="14"/>
+      <circle class="star-bright" cx="8" cy="4" r="1.8"/>
+      <circle class="star" cx="8" cy="10" r="1.3"/>
+      <circle class="star" cx="10" cy="14" r="1.5"/>
+      <circle class="star" cx="8" cy="20" r="1.3"/>
+      <circle class="star" cx="8" cy="24" r="1.5"/>
+      <circle class="star-bright" cx="20" cy="4" r="1.8"/>
+      <circle class="star" cx="20" cy="10" r="1.3"/>
+      <circle class="star" cx="18" cy="14" r="1.5"/>
+      <circle class="star" cx="20" cy="20" r="1.3"/>
+      <circle class="star" cx="20" cy="24" r="1.5"/>
+    </svg>
+    <span class="label">Gemini</span>
+  </div>
+
+  <!-- Cancer -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="6" y1="10" x2="10" y2="8"/>
+      <line class="line" x1="10" y1="8" x2="16" y2="10"/>
+      <line class="line" x1="16" y1="10" x2="20" y2="14"/>
+      <line class="line" x1="20" y1="14" x2="18" y2="18"/>
+      <line class="line" x1="10" y1="8" x2="8" y2="14"/>
+      <circle class="star" cx="6" cy="10" r="1.5"/>
+      <circle class="star-bright" cx="10" cy="8" r="1.8"/>
+      <circle class="star" cx="16" cy="10" r="1.3"/>
+      <circle class="star" cx="20" cy="14" r="1.5"/>
+      <circle class="star" cx="18" cy="18" r="1.3"/>
+      <circle class="star" cx="8" cy="14" r="1.3"/>
+    </svg>
+    <span class="label">Cancer</span>
+  </div>
+
+  <!-- Leo -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="6" y1="18" x2="10" y2="14"/>
+      <line class="line" x1="10" y1="14" x2="14" y2="10"/>
+      <line class="line" x1="14" y1="10" x2="18" y2="6"/>
+      <line class="line" x1="18" y1="6" x2="22" y2="8"/>
+      <line class="line" x1="22" y1="8" x2="22" y2="14"/>
+      <line class="line" x1="22" y1="14" x2="18" y2="18"/>
+      <line class="line" x1="18" y1="18" x2="14" y2="16"/>
+      <line class="line" x1="14" y1="16" x2="14" y2="22"/>
+      <circle class="star" cx="6" cy="18" r="1.5"/>
+      <circle class="star" cx="10" cy="14" r="1.3"/>
+      <circle class="star" cx="14" cy="10" r="1.5"/>
+      <circle class="star-bright" cx="18" cy="6" r="2"/>
+      <circle class="star" cx="22" cy="8" r="1.3"/>
+      <circle class="star" cx="22" cy="14" r="1.3"/>
+      <circle class="star" cx="18" cy="18" r="1.5"/>
+      <circle class="star" cx="14" cy="16" r="1.3"/>
+      <circle class="star" cx="14" cy="22" r="1.5"/>
+    </svg>
+    <span class="label">Leo</span>
+  </div>
+
+  <!-- Virgo -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="4" y1="6" x2="6" y2="12"/>
+      <line class="line" x1="6" y1="12" x2="4" y2="20"/>
+      <line class="line" x1="10" y1="4" x2="12" y2="12"/>
+      <line class="line" x1="12" y1="12" x2="10" y2="20"/>
+      <line class="line" x1="16" y1="6" x2="18" y2="12"/>
+      <line class="line" x1="18" y1="12" x2="22" y2="18"/>
+      <line class="line" x1="22" y1="18" x2="24" y2="24"/>
+      <line class="line" x1="6" y1="12" x2="12" y2="12"/>
+      <line class="line" x1="12" y1="12" x2="18" y2="12"/>
+      <circle class="star" cx="4" cy="6" r="1.3"/>
+      <circle class="star" cx="6" cy="12" r="1.5"/>
+      <circle class="star" cx="4" cy="20" r="1.3"/>
+      <circle class="star-bright" cx="10" cy="4" r="1.6"/>
+      <circle class="star" cx="12" cy="12" r="1.5"/>
+      <circle class="star" cx="10" cy="20" r="1.3"/>
+      <circle class="star" cx="16" cy="6" r="1.3"/>
+      <circle class="star" cx="18" cy="12" r="1.5"/>
+      <circle class="star" cx="22" cy="18" r="1.3"/>
+      <circle class="star" cx="24" cy="24" r="1.5"/>
+    </svg>
+    <span class="label">Virgo</span>
+  </div>
+
+  <!-- Libra -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="4" y1="14" x2="10" y2="10"/>
+      <line class="line" x1="10" y1="10" x2="14" y2="6"/>
+      <line class="line" x1="14" y1="6" x2="18" y2="10"/>
+      <line class="line" x1="18" y1="10" x2="24" y2="14"/>
+      <line class="line" x1="4" y1="22" x2="24" y2="22"/>
+      <circle class="star" cx="4" cy="14" r="1.5"/>
+      <circle class="star" cx="10" cy="10" r="1.3"/>
+      <circle class="star-bright" cx="14" cy="6" r="1.8"/>
+      <circle class="star" cx="18" cy="10" r="1.3"/>
+      <circle class="star" cx="24" cy="14" r="1.5"/>
+      <circle class="star" cx="4" cy="22" r="1.5"/>
+      <circle class="star" cx="24" cy="22" r="1.5"/>
+    </svg>
+    <span class="label">Libra</span>
+  </div>
+
+  <!-- Scorpio -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="3" y1="12" x2="7" y2="14"/>
+      <line class="line" x1="7" y1="14" x2="11" y2="12"/>
+      <line class="line" x1="11" y1="12" x2="15" y2="14"/>
+      <line class="line" x1="15" y1="14" x2="19" y2="12"/>
+      <line class="line" x1="19" y1="12" x2="21" y2="16"/>
+      <line class="line" x1="21" y1="16" x2="21" y2="22"/>
+      <line class="line" x1="21" y1="22" x2="25" y2="18"/>
+      <circle class="star-bright" cx="3" cy="12" r="1.8"/>
+      <circle class="star" cx="7" cy="14" r="1.3"/>
+      <circle class="star" cx="11" cy="12" r="1.5"/>
+      <circle class="star" cx="15" cy="14" r="1.3"/>
+      <circle class="star" cx="19" cy="12" r="1.5"/>
+      <circle class="star" cx="21" cy="16" r="1.3"/>
+      <circle class="star" cx="21" cy="22" r="1.5"/>
+      <circle class="star" cx="25" cy="18" r="1.3"/>
+    </svg>
+    <span class="label">Scorpio</span>
+  </div>
+
+  <!-- Sagittarius -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="4" y1="22" x2="10" y2="16"/>
+      <line class="line" x1="10" y1="16" x2="14" y2="14"/>
+      <line class="line" x1="14" y1="14" x2="20" y2="8"/>
+      <line class="line" x1="20" y1="8" x2="24" y2="4"/>
+      <line class="line" x1="14" y1="14" x2="10" y2="10"/>
+      <line class="line" x1="14" y1="14" x2="18" y2="18"/>
+      <line class="line" x1="24" y1="4" x2="18" y2="4"/>
+      <line class="line" x1="24" y1="4" x2="24" y2="10"/>
+      <circle class="star" cx="4" cy="22" r="1.5"/>
+      <circle class="star" cx="10" cy="16" r="1.3"/>
+      <circle class="star-bright" cx="14" cy="14" r="1.8"/>
+      <circle class="star" cx="20" cy="8" r="1.3"/>
+      <circle class="star-bright" cx="24" cy="4" r="2"/>
+      <circle class="star" cx="10" cy="10" r="1.3"/>
+      <circle class="star" cx="18" cy="18" r="1.3"/>
+      <circle class="star" cx="18" cy="4" r="1.3"/>
+      <circle class="star" cx="24" cy="10" r="1.3"/>
+    </svg>
+    <span class="label">Sagittarius</span>
+  </div>
+
+  <!-- Capricorn -->
+  <div class="sign-btn">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="4" y1="10" x2="8" y2="6"/>
+      <line class="line" x1="8" y1="6" x2="14" y2="8"/>
+      <line class="line" x1="14" y1="8" x2="18" y2="12"/>
+      <line class="line" x1="18" y1="12" x2="22" y2="10"/>
+      <line class="line" x1="22" y1="10" x2="24" y2="14"/>
+      <line class="line" x1="24" y1="14" x2="22" y2="20"/>
+      <line class="line" x1="22" y1="20" x2="18" y2="22"/>
+      <line class="line" x1="18" y1="12" x2="16" y2="18"/>
+      <circle class="star" cx="4" cy="10" r="1.5"/>
+      <circle class="star-bright" cx="8" cy="6" r="1.8"/>
+      <circle class="star" cx="14" cy="8" r="1.3"/>
+      <circle class="star" cx="18" cy="12" r="1.5"/>
+      <circle class="star" cx="22" cy="10" r="1.3"/>
+      <circle class="star" cx="24" cy="14" r="1.3"/>
+      <circle class="star" cx="22" cy="20" r="1.5"/>
+      <circle class="star" cx="18" cy="22" r="1.3"/>
+      <circle class="star" cx="16" cy="18" r="1.3"/>
+    </svg>
+    <span class="label">Capricorn</span>
+  </div>
+
+</div>
+
+<!-- Large showcase cards -->
+<p class="section-label">Detail View — Glassmorphism Cards</p>
+<div class="showcase">
+  <!-- Aries large -->
+  <div class="showcase-card">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="5" y1="24" x2="8" y2="18"/>
+      <line class="line" x1="8" y1="18" x2="12" y2="12"/>
+      <line class="line" x1="12" y1="12" x2="18" y2="8"/>
+      <line class="line" x1="18" y1="8" x2="23" y2="5"/>
+      <circle class="star" cx="5" cy="24" r="1.5"/>
+      <circle class="star" cx="8" cy="18" r="1.3"/>
+      <circle class="star-bright" cx="12" cy="12" r="1.8"/>
+      <circle class="star" cx="18" cy="8" r="1.5"/>
+      <circle class="star-bright" cx="23" cy="5" r="2"/>
+    </svg>
+    <span class="sign-name">Aries</span>
+    <span class="date-range">Mar 21 - Apr 19</span>
+  </div>
+
+  <!-- Leo large -->
+  <div class="showcase-card">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="6" y1="18" x2="10" y2="14"/>
+      <line class="line" x1="10" y1="14" x2="14" y2="10"/>
+      <line class="line" x1="14" y1="10" x2="18" y2="6"/>
+      <line class="line" x1="18" y1="6" x2="22" y2="8"/>
+      <line class="line" x1="22" y1="8" x2="22" y2="14"/>
+      <line class="line" x1="22" y1="14" x2="18" y2="18"/>
+      <line class="line" x1="18" y1="18" x2="14" y2="16"/>
+      <line class="line" x1="14" y1="16" x2="14" y2="22"/>
+      <circle class="star" cx="6" cy="18" r="1.5"/>
+      <circle class="star" cx="10" cy="14" r="1.3"/>
+      <circle class="star" cx="14" cy="10" r="1.5"/>
+      <circle class="star-bright" cx="18" cy="6" r="2"/>
+      <circle class="star" cx="22" cy="8" r="1.3"/>
+      <circle class="star" cx="22" cy="14" r="1.3"/>
+      <circle class="star" cx="18" cy="18" r="1.5"/>
+      <circle class="star" cx="14" cy="16" r="1.3"/>
+      <circle class="star" cx="14" cy="22" r="1.5"/>
+    </svg>
+    <span class="sign-name">Leo</span>
+    <span class="date-range">Jul 23 - Aug 22</span>
+  </div>
+
+  <!-- Scorpio large -->
+  <div class="showcase-card">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="3" y1="12" x2="7" y2="14"/>
+      <line class="line" x1="7" y1="14" x2="11" y2="12"/>
+      <line class="line" x1="11" y1="12" x2="15" y2="14"/>
+      <line class="line" x1="15" y1="14" x2="19" y2="12"/>
+      <line class="line" x1="19" y1="12" x2="21" y2="16"/>
+      <line class="line" x1="21" y1="16" x2="21" y2="22"/>
+      <line class="line" x1="21" y1="22" x2="25" y2="18"/>
+      <circle class="star-bright" cx="3" cy="12" r="1.8"/>
+      <circle class="star" cx="7" cy="14" r="1.3"/>
+      <circle class="star" cx="11" cy="12" r="1.5"/>
+      <circle class="star" cx="15" cy="14" r="1.3"/>
+      <circle class="star" cx="19" cy="12" r="1.5"/>
+      <circle class="star" cx="21" cy="16" r="1.3"/>
+      <circle class="star" cx="21" cy="22" r="1.5"/>
+      <circle class="star" cx="25" cy="18" r="1.3"/>
+    </svg>
+    <span class="sign-name">Scorpio</span>
+    <span class="date-range">Oct 23 - Nov 21</span>
+  </div>
+
+  <!-- Pisces large -->
+  <div class="showcase-card">
+    <svg class="constellation-icon" viewBox="0 0 28 28">
+      <line class="line" x1="6" y1="4" x2="6" y2="10"/>
+      <line class="line" x1="6" y1="10" x2="8" y2="14"/>
+      <line class="line" x1="8" y1="14" x2="14" y2="14"/>
+      <line class="line" x1="14" y1="14" x2="20" y2="14"/>
+      <line class="line" x1="20" y1="14" x2="22" y2="10"/>
+      <line class="line" x1="22" y1="10" x2="22" y2="4"/>
+      <line class="line" x1="6" y1="10" x2="4" y2="16"/>
+      <line class="line" x1="22" y1="10" x2="24" y2="16"/>
+      <line class="line" x1="4" y1="16" x2="4" y2="24"/>
+      <line class="line" x1="24" y1="16" x2="24" y2="24"/>
+      <circle class="star" cx="6" cy="4" r="1.3"/>
+      <circle class="star" cx="6" cy="10" r="1.5"/>
+      <circle class="star-bright" cx="8" cy="14" r="1.6"/>
+      <circle class="star" cx="14" cy="14" r="1.3"/>
+      <circle class="star-bright" cx="20" cy="14" r="1.6"/>
+      <circle class="star" cx="22" cy="10" r="1.5"/>
+      <circle class="star" cx="22" cy="4" r="1.3"/>
+      <circle class="star" cx="4" cy="16" r="1.3"/>
+      <circle class="star" cx="24" cy="16" r="1.3"/>
+      <circle class="star" cx="4" cy="24" r="1.5"/>
+      <circle class="star" cx="24" cy="24" r="1.5"/>
+    </svg>
+    <span class="sign-name">Pisces</span>
+    <span class="date-range">Feb 19 - Mar 20</span>
+  </div>
+</div>
+
+<!-- Notes -->
+<div class="notes">
+  <h3>Design Notes</h3>
+  <ul>
+    <li>Stars use amber/gold (#fbbf24) with glow — matches existing app accent color</li>
+    <li>Connecting lines at 35% opacity — subtle, not heavy</li>
+    <li>"Bright" stars (larger dots with stronger glow) mark key stars in each constellation</li>
+    <li>Selected state intensifies the glow (lighter gold #fde68a, stronger shadow)</li>
+    <li>Each icon is a simple SVG — 5-15 dots + lines, trivial to maintain</li>
+    <li>Renders identically across all platforms (no emoji variance)</li>
+    <li>Social captions still use Unicode emoji (platform-native in text)</li>
+    <li>Glassmorphism cards show how icons scale up for detail views</li>
+  </ul>
+</div>
+
+</body>
+</html>

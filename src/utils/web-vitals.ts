@@ -4,7 +4,7 @@
  * This module provides functions for measuring and reporting Core Web Vitals metrics,
  * as well as optimizations to improve them.
  */
-import { getCLS, getFID, getLCP, getFCP, getTTFB, Metric } from 'web-vitals';
+import { onCLS, onFCP, onLCP, onTTFB, type Metric } from 'web-vitals';
 import { isFeatureEnabled, FEATURE_FLAGS } from './feature-flags';
 
 // Define metric names for type safety
@@ -45,12 +45,12 @@ export function reportWebVitals(analyticsEndpoint?: string): void {
     }
   }
 
-  // Get and report each Core Web Vital metric
-  getCLS(sendToAnalytics);
-  getFID(sendToAnalytics);
-  getLCP(sendToAnalytics);
-  getFCP(sendToAnalytics);
-  getTTFB(sendToAnalytics);
+  // Get and report each Core Web Vital metric (web-vitals v4+ API)
+  // Note: FID was removed in web-vitals v4 — replaced by INP (Interaction to Next Paint)
+  onCLS(sendToAnalytics);
+  onLCP(sendToAnalytics);
+  onFCP(sendToAnalytics);
+  onTTFB(sendToAnalytics);
 }
 
 /**

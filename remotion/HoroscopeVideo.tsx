@@ -346,8 +346,6 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
       {voiceoverSrc && (
         <Audio
           src={staticFile(voiceoverSrc)}
-          from={0}
-          placeholder={null}
           volume={0.9}
         />
       )}
@@ -357,7 +355,6 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         <Audio
           src={staticFile(ambientSrc)}
           loop
-          placeholder={null}
           volume={(f) => {
             const totalFrames = 1800;
             const fadeIn = interpolate(f, [0, 30], [0, 0.12], {

@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMode } from '@/hooks/useMode';
+import { ConstellationIcon, USE_CONSTELLATION_ICONS } from '@/components/icons/ConstellationIcon';
 
 const ZODIAC_SYMBOLS: { sign: string; symbol: string; label: string }[] = [
   { sign: 'aquarius',    symbol: '♒', label: 'Aquarius' },
@@ -70,7 +71,11 @@ export function SignPicker() {
                 }
               `}
             >
-              <span className="text-xl leading-none">{symbol}</span>
+              {USE_CONSTELLATION_ICONS ? (
+                <ConstellationIcon sign={sign} size={24} className="text-amber-400" />
+              ) : (
+                <span className="text-xl leading-none">{symbol}</span>
+              )}
               <span className="text-[10px] font-light tracking-wide whitespace-nowrap">{label}</span>
             </motion.button>
           );

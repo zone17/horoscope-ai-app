@@ -6,6 +6,7 @@ import PushPrompt from '@/components/zodiac/PushPrompt';
 import EmailCapture from '@/components/zodiac/EmailCapture';
 import { VALID_SIGNS, SIGN_META, isValidSign } from '@/constants/zodiac';
 import { capitalize } from '@/lib/utils';
+import { ConstellationIcon, USE_CONSTELLATION_ICONS } from '@/components/icons/ConstellationIcon';
 
 export const revalidate = 3600; // ISR: revalidate every hour
 
@@ -107,7 +108,11 @@ export default async function SignPage({ params }: PageProps) {
 
         {/* Sign header */}
         <div className="flex items-center gap-4 mb-8">
-          <span className="text-5xl">{meta.symbol}</span>
+          {USE_CONSTELLATION_ICONS ? (
+            <ConstellationIcon sign={lower} size={48} className="text-amber-400" />
+          ) : (
+            <span className="text-5xl">{meta.symbol}</span>
+          )}
           <div>
             <h1 className="text-3xl sm:text-4xl font-normal text-white capitalize tracking-tight">
               {capitalize(lower)}

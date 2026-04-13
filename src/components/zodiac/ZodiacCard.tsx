@@ -10,6 +10,7 @@ import { ArrowRightIcon, X, ChevronDown, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { VideoBanner } from '@/components/VideoBanner';
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
+import { ConstellationIcon, USE_CONSTELLATION_ICONS } from '@/components/icons/ConstellationIcon';
 
 // Define the horoscope data interface
 interface HoroscopeData {
@@ -158,7 +159,11 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
           
           <CardHeader className="pt-3 pb-1 bg-transparent">
             <div className="flex items-center gap-3">
-              <div className="text-2xl text-indigo-200">{symbol}</div>
+              <div className="text-2xl text-indigo-200">
+                    {USE_CONSTELLATION_ICONS ? (
+                      <ConstellationIcon sign={sign} size={28} className="text-amber-400" />
+                    ) : symbol}
+                  </div>
               <div>
                 <h2 className="text-xl font-light text-white capitalize tracking-tight">{capitalize(sign)}</h2>
                 <p className="text-indigo-200/70 text-xs font-light tracking-wider">{dateRange} • {element}</p>
@@ -271,12 +276,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
               {/* Header - consistent padding */}
               <CardHeader className="p-4 pb-2 bg-transparent shrink-0">
                 <div className="flex items-center gap-3">
-                  <motion.div 
+                  <motion.div
                     whileHover={{ rotate: [0, -5, 5, -5, 0] }}
                     transition={{ duration: 0.5 }}
                     className="text-2xl text-indigo-100"
                   >
-                    {symbol}
+                    {USE_CONSTELLATION_ICONS ? (
+                      <ConstellationIcon sign={sign} size={28} className="text-amber-400" />
+                    ) : symbol}
                   </motion.div>
                   <div>
                     <h2 className="text-xl font-normal text-white capitalize tracking-tight leading-tight">{capitalize(sign)}</h2>
@@ -393,12 +400,14 @@ export function ZodiacCard({ sign, symbol, dateRange, element = 'Fire', horoscop
                 
                 <CardHeader className="pt-6 pb-2 bg-transparent">
                   <div className="flex items-center gap-4">
-                    <motion.div 
+                    <motion.div
                       animate={{ rotate: [0, -2, 2, -2, 0] }}
                       transition={{ duration: 5, repeat: Infinity }}
                       className="text-3xl text-indigo-100"
                     >
-                      {symbol}
+                      {USE_CONSTELLATION_ICONS ? (
+                        <ConstellationIcon sign={sign} size={36} className="text-amber-400" />
+                      ) : symbol}
                     </motion.div>
                     <div>
                       <h2 className="text-2xl sm:text-3xl font-normal text-white capitalize tracking-tight leading-tight">{capitalize(sign)}</h2>

@@ -177,7 +177,7 @@ export default function EmailGate({ onUnlocked }: EmailGateProps) {
         {/* Skip link for those who prefer not to share email */}
         <button
           onClick={onUnlocked}
-          className="block mx-auto mt-4 text-xs text-indigo-200/30 hover:text-indigo-200/50 transition-colors underline underline-offset-2"
+          className="block mx-auto mt-4 text-xs text-indigo-200/60 hover:text-indigo-200/80 transition-colors underline underline-offset-2"
         >
           Skip for now
         </button>

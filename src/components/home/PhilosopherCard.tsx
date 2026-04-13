@@ -1,27 +1,33 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import type { Philosopher } from '@/constants/philosophers';
-import { Tradition } from '@/constants/philosophers';
+import type { Philosopher } from '@/tools/philosopher/registry';
+import { Tradition } from '@/tools/philosopher/registry';
 
 /** Map tradition enum to human-readable labels */
-const TRADITION_LABELS: Record<Tradition, string> = {
+const TRADITION_LABELS: Partial<Record<Tradition, string>> = {
   [Tradition.Stoicism]: 'Stoicism',
+  [Tradition.Epicureanism]: 'Epicureanism',
+  [Tradition.Classical]: 'Classical',
   [Tradition.EasternWisdom]: 'Eastern Wisdom',
   [Tradition.ScienceWonder]: 'Science & Wonder',
   [Tradition.PoetrySoul]: 'Poetry & Soul',
   [Tradition.SpiritualLeaders]: 'Spiritual Leaders',
-  [Tradition.ModernThinkers]: 'Modern Thinkers',
+  [Tradition.Existentialism]: 'Existentialism',
+  [Tradition.Contemporary]: 'Contemporary',
 };
 
 /** Map tradition to accent color for the tag */
-const TRADITION_COLORS: Record<Tradition, string> = {
+const TRADITION_COLORS: Partial<Record<Tradition, string>> = {
   [Tradition.Stoicism]: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  [Tradition.Epicureanism]: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  [Tradition.Classical]: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
   [Tradition.EasternWisdom]: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   [Tradition.ScienceWonder]: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
   [Tradition.PoetrySoul]: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   [Tradition.SpiritualLeaders]: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-  [Tradition.ModernThinkers]: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+  [Tradition.Existentialism]: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  [Tradition.Contemporary]: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
 };
 
 interface PhilosopherCardProps {

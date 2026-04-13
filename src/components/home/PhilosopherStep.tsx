@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useMode } from '@/hooks/useMode';
 import {
-  PHILOSOPHERS,
-  TRADITIONS,
   Tradition,
-  getPhilosophersByTradition,
-} from '@/constants/philosophers';
+  TRADITIONS,
+  listPhilosophers,
+  getAllPhilosophers,
+} from '@/tools/philosopher/registry';
+import { recommendPhilosophers } from '@/tools/philosopher/recommend';
 import PhilosopherCard from './PhilosopherCard';
 import ReadingPreview from './ReadingPreview';
 
@@ -17,12 +18,20 @@ const MAX_PHILOSOPHERS = 5;
 /** Human-readable tradition labels */
 const TRADITION_LABELS: Record<Tradition, string> = {
   [Tradition.Stoicism]: 'Stoicism',
+  [Tradition.Epicureanism]: 'Epicureanism',
+  [Tradition.Classical]: 'Classical',
   [Tradition.EasternWisdom]: 'Eastern Wisdom',
   [Tradition.ScienceWonder]: 'Science & Wonder',
   [Tradition.PoetrySoul]: 'Poetry & Soul',
   [Tradition.SpiritualLeaders]: 'Spiritual Leaders',
-  [Tradition.ModernThinkers]: 'Modern Thinkers',
+  [Tradition.Existentialism]: 'Existentialism',
+  [Tradition.Contemporary]: 'Contemporary',
 };
+
+/** Capitalize first letter of a string */
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 interface PhilosopherStepProps {
   onContinue: () => void;
@@ -33,16 +42,25 @@ export default function PhilosopherStep({
   onContinue,
   onBack,
 }: PhilosopherStepProps) {
-  const { selectedPhilosophers, togglePhilosopher } = useMode();
+  const { selectedPhilosophers, togglePhilosopher, userSign } = useMode();
   const [activeFilter, setActiveFilter] = useState<Tradition | 'all'>('all');
+
+  const recommended = useMemo(() => {
+    if (!userSign) return [];
+    try {
+      return recommendPhilosophers({ sign: userSign, count: 5 }).recommended;
+    } catch {
+      return [];
+    }
+  }, [userSign]);
 
   const isAtMax = selectedPhilosophers.length >= MAX_PHILOSOPHERS;
   const canContinue = selectedPhilosophers.length >= 1;
 
   const filteredPhilosophers =
     activeFilter === 'all'
-      ? PHILOSOPHERS
-      : getPhilosophersByTradition(activeFilter);
+      ? getAllPhilosophers()
+      : listPhilosophers({ tradition: activeFilter });
 
   return (
     <motion.div
@@ -59,6 +77,51 @@ export default function PhilosopherStep({
         Choose 3-5 philosophers whose wisdom will shape your daily reading
       </p>
 
+      {/* Recommended for your sign */}
+      {recommended.length > 0 && userSign && (
+        <div className="mb-8">
+          <p className="text-center text-indigo-200/60 text-xs uppercase tracking-wider mb-3">
+            Recommended for {capitalize(userSign)}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 mb-2">
+            {recommended.map((rec) => {
+              const isSelected = selectedPhilosophers.includes(rec.name);
+              const isDisabled = isAtMax && !isSelected;
+              return (
+                <button
+                  key={rec.name}
+                  onClick={() => {
+                    if (!isDisabled) togglePhilosopher(rec.name);
+                  }}
+                  disabled={isDisabled}
+                  className={`
+                    group relative px-4 py-2.5 rounded-xl border backdrop-blur-md
+                    transition-all duration-200 text-left max-w-[220px]
+                    ${
+                      isSelected
+                        ? 'bg-amber-400/10 border-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.1)]'
+                        : 'bg-white/5 border-white/10 hover:bg-white/[0.08] hover:border-white/20'
+                    }
+                    ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+                  `}
+                >
+                  <span
+                    className={`block text-sm font-medium ${
+                      isSelected ? 'text-amber-200' : 'text-[#F0EEFF]'
+                    }`}
+                  >
+                    {rec.name}
+                  </span>
+                  <span className="block text-[10px] leading-tight text-indigo-200/50 mt-0.5">
+                    {rec.reason}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Tradition filter tabs */}
       <div className="flex flex-wrap justify-center gap-2 mb-6">
         <button
@@ -69,7 +132,7 @@ export default function PhilosopherStep({
               : 'bg-white/[0.02] border-white/10 text-indigo-200/60 hover:bg-white/5 hover:text-indigo-200'
           }`}
         >
-          All ({PHILOSOPHERS.length})
+          All ({getAllPhilosophers().length})
         </button>
         {TRADITIONS.map((t) => (
           <button
@@ -81,7 +144,7 @@ export default function PhilosopherStep({
                 : 'bg-white/[0.02] border-white/10 text-indigo-200/60 hover:bg-white/5 hover:text-indigo-200'
             }`}
           >
-            {TRADITION_LABELS[t]} ({getPhilosophersByTradition(t).length})
+            {TRADITION_LABELS[t]} ({listPhilosophers({ tradition: t }).length})
           </button>
         ))}
       </div>
