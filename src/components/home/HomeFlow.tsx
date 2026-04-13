@@ -11,7 +11,7 @@ import ReadingDisplay from './ReadingDisplay';
 type FlowState = 'pickSign' | 'pickPhilosophers' | 'emailGate' | 'reading';
 
 export default function HomeFlow() {
-  const { userSign, selectedPhilosophers, email } = useMode();
+  const { userSign, selectedPhilosophers, email, setPhilosophers } = useMode();
   const [step, setStep] = useState<FlowState>('pickSign');
   const [hydrated, setHydrated] = useState(false);
 
@@ -94,7 +94,10 @@ export default function HomeFlow() {
         {step === 'reading' && (
           <ReadingDisplay
             key="reading"
-            onEditCouncil={() => setStep('pickPhilosophers')}
+            onEditCouncil={() => {
+              setPhilosophers([]);
+              setStep('pickPhilosophers');
+            }}
           />
         )}
       </AnimatePresence>

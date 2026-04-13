@@ -119,12 +119,20 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
       >
         <div className="bg-white/5 backdrop-blur-md border border-red-500/20 rounded-xl p-6 sm:p-8 text-center">
           <p className="text-red-300 text-sm mb-4">{error}</p>
-          <button
-            onClick={fetchReading}
-            className="px-4 py-2 rounded-full bg-indigo-500/40 border border-indigo-400/30 text-sm text-white hover:bg-indigo-500/60 transition-all duration-300"
-          >
-            Try again
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={fetchReading}
+              className="px-4 py-2 rounded-full bg-indigo-500/40 border border-indigo-400/30 text-sm text-white hover:bg-indigo-500/60 transition-all duration-300"
+            >
+              Try again
+            </button>
+            <button
+              onClick={onEditCouncil}
+              className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-indigo-200/70 hover:bg-white/10 hover:text-indigo-200 transition-all duration-300"
+            >
+              Edit your council
+            </button>
+          </div>
         </div>
       </motion.div>
     );
