@@ -49,7 +49,22 @@ export async function retrieve<T = unknown>(
   const key = buildCacheKey(keyParams);
 
   try {
-    const raw = await redis.get(key);
+    let raw = await redis.get(key);
+
+    // Fallback: if council was provided (personalized key) and missed,
+    // try the daily key (no council). This finds cron-generated readings
+    // when the user's council assignment matches the default rotation.
+    if ((raw === null || raw === undefined) && input.council && input.council.length > 0) {
+      const dailyKey = buildCacheKey({
+        sign: input.sign,
+        philosopher: input.philosopher,
+        date: input.date,
+        // no council → daily key format
+      });
+      if (dailyKey !== key) {
+        raw = await redis.get(dailyKey);
+      }
+    }
 
     if (raw === null || raw === undefined) {
       return null;

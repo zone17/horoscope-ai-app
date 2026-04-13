@@ -7,6 +7,23 @@ import { generateReading } from '@/tools/reading/generate';
 
 export const dynamic = 'force-dynamic';
 
+/** Map camelCase ReadingOutput → snake_case for frontend compatibility */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toSnakeCase(reading: any): Record<string, unknown> {
+  // If already snake_case (from old cache), pass through
+  if ('best_match' in reading) return reading;
+  return {
+    sign: reading.sign,
+    date: reading.date,
+    philosopher: reading.philosopher,
+    message: reading.message,
+    best_match: reading.bestMatch,
+    inspirational_quote: reading.inspirationalQuote,
+    quote_author: reading.quoteAuthor,
+    peaceful_thought: reading.peacefulThought,
+  };
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204 });
 }
@@ -46,7 +63,7 @@ export async function GET(request: NextRequest) {
     // 2. Check cache
     const cached = await retrieve({ sign, philosopher, date, council });
     if (cached) {
-      return NextResponse.json({ success: true, cached: true, data: cached });
+      return NextResponse.json({ success: true, cached: true, data: toSnakeCase(cached as Record<string, unknown>) });
     }
 
     // 3. Generate reading
@@ -55,7 +72,8 @@ export async function GET(request: NextRequest) {
     // 4. Store in cache (fire-and-forget is fine)
     await store({ sign, philosopher, date, council, reading });
 
-    return NextResponse.json({ success: true, cached: false, data: reading });
+    // Map camelCase tool output → snake_case for frontend compatibility
+    return NextResponse.json({ success: true, cached: false, data: toSnakeCase(reading) });
   } catch (error) {
     console.error('Horoscope API error:', error);
     return NextResponse.json(

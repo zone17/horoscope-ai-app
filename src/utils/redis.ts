@@ -14,8 +14,25 @@ const getRedisClient = () => {
   });
 };
 
-// Create a single Redis client instance
-export const redis = getRedisClient();
+// Lazy singleton — only initialized when first accessed, not at module load.
+// This prevents crashes in preview deploys, local dev, and CI where
+// UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are not set.
+let _redis: Redis | null = null;
+
+export function getRedis(): Redis {
+  if (!_redis) {
+    _redis = getRedisClient();
+  }
+  return _redis;
+}
+
+// Proxy preserves the `redis` export so all existing consumers
+// (`import { redis } from '@/utils/redis'`) continue to work unchanged.
+export const redis = new Proxy({} as Redis, {
+  get(_, prop) {
+    return (getRedis() as any)[prop];
+  },
+});
 
 // Cache duration constants
 export const CACHE_DURATIONS = {

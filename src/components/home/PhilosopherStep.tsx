@@ -4,11 +4,11 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useMode } from '@/hooks/useMode';
 import {
-  PHILOSOPHERS,
-  TRADITIONS,
   Tradition,
-  getPhilosophersByTradition,
-} from '@/constants/philosophers';
+  TRADITIONS,
+  listPhilosophers,
+  getAllPhilosophers,
+} from '@/tools/philosopher/registry';
 import { recommendPhilosophers } from '@/tools/philosopher/recommend';
 import PhilosopherCard from './PhilosopherCard';
 import ReadingPreview from './ReadingPreview';
@@ -18,11 +18,14 @@ const MAX_PHILOSOPHERS = 5;
 /** Human-readable tradition labels */
 const TRADITION_LABELS: Record<Tradition, string> = {
   [Tradition.Stoicism]: 'Stoicism',
+  [Tradition.Epicureanism]: 'Epicureanism',
+  [Tradition.Classical]: 'Classical',
   [Tradition.EasternWisdom]: 'Eastern Wisdom',
   [Tradition.ScienceWonder]: 'Science & Wonder',
   [Tradition.PoetrySoul]: 'Poetry & Soul',
   [Tradition.SpiritualLeaders]: 'Spiritual Leaders',
-  [Tradition.ModernThinkers]: 'Modern Thinkers',
+  [Tradition.Existentialism]: 'Existentialism',
+  [Tradition.Contemporary]: 'Contemporary',
 };
 
 /** Capitalize first letter of a string */
@@ -56,8 +59,8 @@ export default function PhilosopherStep({
 
   const filteredPhilosophers =
     activeFilter === 'all'
-      ? PHILOSOPHERS
-      : getPhilosophersByTradition(activeFilter);
+      ? getAllPhilosophers()
+      : listPhilosophers({ tradition: activeFilter });
 
   return (
     <motion.div
@@ -129,7 +132,7 @@ export default function PhilosopherStep({
               : 'bg-white/[0.02] border-white/10 text-indigo-200/60 hover:bg-white/5 hover:text-indigo-200'
           }`}
         >
-          All ({PHILOSOPHERS.length})
+          All ({getAllPhilosophers().length})
         </button>
         {TRADITIONS.map((t) => (
           <button
@@ -141,7 +144,7 @@ export default function PhilosopherStep({
                 : 'bg-white/[0.02] border-white/10 text-indigo-200/60 hover:bg-white/5 hover:text-indigo-200'
             }`}
           >
-            {TRADITION_LABELS[t]} ({getPhilosophersByTradition(t).length})
+            {TRADITION_LABELS[t]} ({listPhilosophers({ tradition: t }).length})
           </button>
         ))}
       </div>

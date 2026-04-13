@@ -45,60 +45,30 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Max subscribe attempts per IP within the window */
 const RATE_LIMIT_MAX = 5;
-/** Rate limit window in milliseconds (15 minutes) */
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-
-interface RateLimitEntry {
-  count: number;
-  windowStart: number;
-}
+/** Rate limit window TTL in seconds (15 minutes) */
+const RATE_LIMIT_WINDOW_SEC = 15 * 60;
 
 /**
- * In-memory rate limiter keyed by IP address.
- * Resets per-IP after the 15-minute window expires.
- */
-const rateLimitMap = new Map<string, RateLimitEntry>();
-
-/**
- * Check and increment rate limit for an IP.
+ * Check and increment rate limit for an IP using Redis INCR + EXPIRE.
  * Returns true if the request is allowed, false if rate-limited.
+ * If Redis is unavailable, allows the request through (fail-open).
  */
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
+async function checkRateLimit(ip: string): Promise<boolean> {
+  try {
+    const key = `ratelimit:subscribe:${ip}`;
+    const count = await redis.incr(key);
 
-  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    // New window
-    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    // Set TTL only on first request in the window (count === 1)
+    if (count === 1) {
+      await redis.expire(key, RATE_LIMIT_WINDOW_SEC);
+    }
+
+    return count <= RATE_LIMIT_MAX;
+  } catch (err) {
+    // Redis unavailable — fail open so subscribers aren't blocked
+    console.warn('[audience:subscribe] Rate limit check failed, allowing request:', err);
     return true;
   }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-
-  entry.count += 1;
-  return true;
-}
-
-/**
- * Periodically clean up stale rate limit entries to prevent memory leaks.
- * Runs every 15 minutes, removing entries older than the window.
- */
-let cleanupScheduled = false;
-function scheduleCleanup(): void {
-  if (cleanupScheduled) return;
-  cleanupScheduled = true;
-
-  setInterval(() => {
-    const now = Date.now();
-    const entries = Array.from(rateLimitMap.entries());
-    for (const [key, entry] of entries) {
-      if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-        rateLimitMap.delete(key);
-      }
-    }
-  }, RATE_LIMIT_WINDOW_MS).unref();
 }
 
 // ─── Core Logic ─────────────────────────────────────────────────────────
@@ -130,8 +100,7 @@ export async function subscribe(input: SubscribeInput): Promise<SubscribeOutput>
 
   // Rate limiting (P0 #5)
   if (ip) {
-    scheduleCleanup();
-    if (!checkRateLimit(ip)) {
+    if (!(await checkRateLimit(ip))) {
       console.warn(`[audience:subscribe] Rate limited IP: ${ip}`);
       return {
         success: false,
