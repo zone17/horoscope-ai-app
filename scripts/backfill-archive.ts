@@ -146,9 +146,7 @@ async function main() {
           }
         };
         // Preserve static methods
-        // @ts-expect-error
         global.Date.UTC = OrigDate.UTC;
-        // @ts-expect-error
         global.Date.parse = OrigDate.parse;
 
         try {

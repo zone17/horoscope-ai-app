@@ -183,7 +183,6 @@ async function sendTelegramSummary(
 
     // Send one sample video if available
     if (sampleVideoPath && fs.existsSync(sampleVideoPath)) {
-      const FormData = (await import('node-fetch')).default ? undefined : globalThis.FormData;
       // Use curl for multipart upload (simpler than FormData in Node)
       const { execFileSync } = await import('child_process');
       execFileSync('curl', [
@@ -262,12 +261,15 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     const { bundle } = await import('@remotion/bundler');
     const { renderMedia, selectComposition } = await import('@remotion/renderer');
 
-    const bundleLocation = await bundle({
-      entryPoint: path.resolve('remotion/index.ts'),
-      onBundleProgress: (progress: number) => {
-        if (progress === 100) console.log(`[render] Bundle complete for ${sign}`);
-      },
-    });
+    const bundleLocation = await bundle(
+      // @ts-expect-error Remotion v4 bundle() accepts an options object, types may lag
+      {
+        entryPoint: path.resolve('remotion/index.ts'),
+        onBundleProgress: (progress: number) => {
+          if (progress === 100) console.log(`[render] Bundle complete for ${sign}`);
+        },
+      }
+    );
 
     const composition = await selectComposition({
       serveUrl: bundleLocation,

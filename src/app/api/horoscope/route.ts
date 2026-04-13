@@ -49,9 +49,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const sign = searchParams.get('sign')?.toLowerCase() || '';
     const type = searchParams.get('type')?.toLowerCase() || 'daily';
+    const philosophersParam = searchParams.get('philosophers') || '';
 
     // New parameter: timezone for timezone-aware content
     const timezone = searchParams.get('timezone') || 'UTC';
+
+    // Parse user's philosopher council (if provided)
+    const philosophers = philosophersParam
+      ? philosophersParam.split(',').map(p => p.trim()).filter(Boolean)
+      : undefined;
 
     // Validate sign
     if (!sign || !VALID_SIGNS.includes(sign as typeof VALID_SIGNS[number])) {
@@ -133,7 +139,7 @@ export async function GET(request: NextRequest) {
           }
         } else {
           // Regular non-timezone approach: generate just the requested sign
-          horoscope = await generateHoroscope(sign, type);
+          horoscope = await generateHoroscope(sign, type, { philosophers });
 
           // Cache the result with the appropriate key and TTL
           const cacheTTL = type === 'daily'
@@ -147,7 +153,7 @@ export async function GET(request: NextRequest) {
       }
     } else {
       // Caching disabled, always generate fresh content
-      horoscope = await generateHoroscope(sign, type);
+      horoscope = await generateHoroscope(sign, type, { philosophers });
     }
 
     // Create the success response with detailed information

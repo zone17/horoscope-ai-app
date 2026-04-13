@@ -7,6 +7,7 @@ import { VALID_MONTH_SLUGS, getMonthMeta, getValidMonthSlugs, isValidMonthSlug }
 import { AUTHOR } from '@/constants/author';
 import { VALID_SIGNS, SIGN_META, isValidSign } from '@/constants/zodiac';
 import { capitalize } from '@/lib/utils';
+import { ConstellationIcon, USE_CONSTELLATION_ICONS } from '@/components/icons/ConstellationIcon';
 
 export const revalidate = 86400; // ISR: revalidate daily
 
@@ -180,7 +181,11 @@ export default async function MonthlyHoroscopePage({ params }: PageProps) {
 
         {/* Sign header */}
         <div className="flex items-center gap-4 mb-2">
-          <span className="text-5xl">{meta.symbol}</span>
+          {USE_CONSTELLATION_ICONS ? (
+            <ConstellationIcon sign={capitalizedSign.toLowerCase()} size={48} className="text-amber-400" />
+          ) : (
+            <span className="text-5xl">{meta.symbol}</span>
+          )}
           <div>
             <h1 className="text-3xl sm:text-4xl font-normal text-white tracking-tight">
               {capitalizedSign} Horoscope {monthMeta.display}

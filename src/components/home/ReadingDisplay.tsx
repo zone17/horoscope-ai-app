@@ -191,6 +191,14 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
             {data.quote_author && (
               <cite className="block text-indigo-200/50 text-xs mt-2 not-italic">
                 &mdash; {data.quote_author}
+                {selectedPhilosophers.length > 0 &&
+                  !selectedPhilosophers.some(
+                    (p) => p.toLowerCase() === data.quote_author!.toLowerCase()
+                  ) && (
+                    <span className="ml-2 text-amber-400/60">
+                      &middot; A new voice for today
+                    </span>
+                  )}
               </cite>
             )}
           </blockquote>

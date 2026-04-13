@@ -26,9 +26,9 @@ function isRateLimited(ip: string): boolean {
 // Periodic cleanup to prevent memory leak (every 5 min)
 setInterval(() => {
   const now = Date.now();
-  for (const [ip, entry] of rateLimit) {
+  rateLimit.forEach((entry, ip) => {
     if (now > entry.resetAt) rateLimit.delete(ip);
-  }
+  });
 }, 5 * 60_000);
 
 // CORS preflight

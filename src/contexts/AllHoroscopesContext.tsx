@@ -19,7 +19,7 @@ interface HoroscopeData {
 }
 
 interface AllHoroscopesContextType {
-  data: Record<string, HoroscopeData> | null;
+  data: Record<string, HoroscopeData | null> | null;
   isLoading: boolean;
   isError: boolean;
   refetch: () => Promise<void>;
@@ -39,7 +39,7 @@ export function useAllHoroscopes() {
 
 // Provider component
 export function AllHoroscopesProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<Record<string, HoroscopeData> | null>(null);
+  const [data, setData] = useState<Record<string, HoroscopeData | null> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   
@@ -48,7 +48,7 @@ export function AllHoroscopesProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const horoscopeData = await getHoroscopesForAllSigns();
-      setData(horoscopeData);
+      setData(horoscopeData as Record<string, HoroscopeData | null>);
       setIsError(false);
     } catch (error) {
       console.error('Error fetching horoscopes:', error);

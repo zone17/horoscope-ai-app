@@ -5,10 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ZodiacCard } from './ZodiacCard';
 import { getHoroscopesForAllSigns } from '@/utils/horoscope-service';
 import { Button } from '@/components/ui/button';
-import { RefreshCwIcon } from 'lucide-react';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
 import { useMode } from '@/hooks/useMode';
-import { isFeatureEnabled, FEATURE_FLAGS } from '@/utils/feature-flags';
 import SchemaMarkup from '@/components/seo/SchemaMarkup';
 
 // Traditional zodiac sign order (solar calendar)
@@ -49,25 +47,8 @@ export default function HoroscopeDisplay() {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
-  const [useLunarOrder, setUseLunarOrder] = useState(true); // Force lunar order
-  
-  // Check feature flag on component mount
-  useEffect(() => {
-    // Log for debugging purposes but override the result
-    const globalFlagValue = typeof window !== 'undefined' && window.ENV_LUNAR_ORDER;
-    const envFlagValue = process.env.NEXT_PUBLIC_FEATURE_FLAG_USE_LUNAR_ZODIAC_ORDER === 'true';
-    const utilsFlagValue = isFeatureEnabled(FEATURE_FLAGS.USE_LUNAR_ZODIAC_ORDER);
-    
-    console.log('Lunar calendar ordering check:', { 
-      envFlag: envFlagValue, 
-      globalFlag: globalFlagValue, 
-      utilsFlag: utilsFlagValue,
-      finalDecision: true // Always true for now
-    });
-    
-    // Always use lunar ordering for now
-    setUseLunarOrder(true);
-  }, []);
+  // Lunar ordering is the standard — no feature flag needed
+  const useLunarOrder = true;
 
   // Format today's date
   const today = new Date();
