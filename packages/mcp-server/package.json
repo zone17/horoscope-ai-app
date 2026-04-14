@@ -1,6 +1,7 @@
 {
   "name": "horoscope-philosophy-mcp",
-  "version": "1.0.0",
+  "version": "2.1.0",
+  "type": "module",
   "description": "MCP server for daily philosophical horoscope guidance via gettodayshoroscope.com",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,13 +13,20 @@
     "dev": "tsc --watch",
     "start": "node dist/index.js"
   },
-  "keywords": ["mcp", "horoscope", "philosophy", "zodiac", "ai"],
+  "keywords": [
+    "mcp",
+    "horoscope",
+    "philosophy",
+    "zodiac",
+    "ai"
+  ],
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.6.0",
     "@modelcontextprotocol/sdk": "^1.12.1"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   }
 }

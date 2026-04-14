@@ -26,9 +26,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { generateShareCard } from './tools/share-card.js';
+import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const API_BASE = process.env.HOROSCOPE_API_URL || 'https://api.gettodayshoroscope.com';
+const SHARE_CARD_RESOURCE_URI = 'ui://horoscope/share-card.html';
 
 const VALID_SIGNS = [
   'aries', 'taurus', 'gemini', 'cancer',
@@ -314,15 +322,19 @@ server.registerTool(
   }
 );
 
-server.registerTool(
+registerAppTool(
+  server,
   'content_share_card',
   {
     title: 'Share Card',
-    description: 'Generate a shareable SVG card (1080x1080) with a reading quote on a dark cosmic background with constellation art.',
+    description: 'Generate a shareable SVG card (1080x1080) with a reading quote on a dark cosmic background with constellation art. Renders as an interactive card in MCP Apps-supporting clients.',
     inputSchema: {
       sign: signEnum.describe('Zodiac sign'),
       quote: z.string().describe('The quote text'),
       quote_author: z.string().describe('Quote author name'),
+    },
+    _meta: {
+      ui: { resourceUri: SHARE_CARD_RESOURCE_URI },
     },
   },
   async ({ sign, quote, quote_author }) => {
@@ -331,7 +343,36 @@ server.registerTool(
       quote,
       quoteAuthor: quote_author,
     });
-    return jsonResult({ svg: result.svg, width: result.width, height: result.height, format: 'svg' });
+    return jsonResult({ svg: result.svg, width: result.width, height: result.height, format: 'svg', sign, quote, quoteAuthor: quote_author });
+  }
+);
+
+// ═══ MCP APP RESOURCES ══════════════════════════════════════════════
+
+registerAppResource(
+  server,
+  'Share Card View',
+  SHARE_CARD_RESOURCE_URI,
+  { description: 'Interactive share card with sign picker and live preview' },
+  async () => {
+    const htmlPath = join(__dirname, '..', 'dist', 'share-card-app.html');
+    if (!existsSync(htmlPath)) {
+      return {
+        contents: [{
+          uri: SHARE_CARD_RESOURCE_URI,
+          mimeType: RESOURCE_MIME_TYPE,
+          text: '<html><body><p>Share card app not built. Run: npm run build:app</p></body></html>',
+        }],
+      };
+    }
+    const html = readFileSync(htmlPath, 'utf-8');
+    return {
+      contents: [{
+        uri: SHARE_CARD_RESOURCE_URI,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: html,
+      }],
+    };
   }
 );
 
