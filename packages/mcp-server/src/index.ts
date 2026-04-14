@@ -3,7 +3,7 @@
 /**
  * MCP Server: Today's Horoscope — Philosophy Engine
  *
- * Exposes 16 atomic tools via MCP protocol. Any agent with access to this
+ * Exposes 12 MCP tools via MCP protocol. Any agent with access to this
  * server can compose readings, format content, manage audience, and more.
  *
  * Architecture: Tools that need no I/O (zodiac, philosopher data) call the
