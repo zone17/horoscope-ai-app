@@ -6,8 +6,8 @@
  * Exposes 12 MCP tools via MCP protocol. Any agent with access to this
  * server can compose readings, format content, manage audience, and more.
  *
- * Architecture: Tools that need no I/O (zodiac, philosopher data) call the
- * API for generation/cache. Pure data tools run locally.
+ * Architecture: Tools that need no I/O (zodiac, philosopher data) run locally.
+ * API-backed tools call the horoscope API for generation/cache.
  *
  * Usage with Claude Desktop:
  *   {
@@ -26,6 +26,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { generateShareCard } from './tools/share-card.js';
 
 const API_BASE = process.env.HOROSCOPE_API_URL || 'https://api.gettodayshoroscope.com';
 
@@ -86,7 +87,6 @@ const PHILOSOPHERS = [
   { name: 'Viktor Frankl', tradition: 'Existentialism', era: 'modern' },
   { name: 'Nassim Nicholas Taleb', tradition: 'Contemporary', era: 'contemporary' },
   { name: 'Naval Ravikant', tradition: 'Contemporary', era: 'contemporary' },
-  // ... subset for MCP — full list in tools/philosopher/registry.ts
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -110,22 +110,25 @@ function jsonResult(data: unknown) {
 }
 
 function errorResult(msg: string) {
-  return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true };
+  return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true as const };
 }
 
 // ─── Server ─────────────────────────────────────────────────────────
 
 const server = new McpServer({
   name: 'horoscope-philosophy-mcp',
-  version: '2.0.0',
+  version: '2.1.0',
 });
 
 // ═══ ZODIAC TOOLS ═══════════════════════════════════════════════════
 
-server.tool(
+server.registerTool(
   'zodiac_sign_profile',
-  'Get the full profile for a zodiac sign — element, date range, symbol, and personality voice.',
-  { sign: signEnum.describe('Zodiac sign (lowercase)') },
+  {
+    title: 'Sign Profile',
+    description: 'Get the full profile for a zodiac sign — element, date range, symbol, and personality voice.',
+    inputSchema: { sign: signEnum.describe('Zodiac sign (lowercase)') },
+  },
   async ({ sign }) => {
     const data = SIGN_DATA[sign];
     if (!data) return errorResult(`Unknown sign: ${sign}`);
@@ -133,12 +136,15 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'zodiac_sign_compatibility',
-  'Get compatible signs for a zodiac sign based on elemental affinity.',
   {
-    sign: signEnum.describe('Zodiac sign'),
-    count: z.number().min(1).max(11).default(3).describe('How many compatible signs to return'),
+    title: 'Sign Compatibility',
+    description: 'Get compatible signs for a zodiac sign based on elemental affinity.',
+    inputSchema: {
+      sign: signEnum.describe('Zodiac sign'),
+      count: z.number().min(1).max(11).default(3).describe('How many compatible signs to return'),
+    },
   },
   async ({ sign, count }) => {
     const data = SIGN_DATA[sign];
@@ -154,10 +160,13 @@ server.tool(
 
 // ═══ PHILOSOPHER TOOLS ══════════════════════════════════════════════
 
-server.tool(
+server.registerTool(
   'philosopher_lookup',
-  'Look up a philosopher by name — returns tradition, era, and metadata.',
-  { name: z.string().describe('Philosopher name (case-insensitive)') },
+  {
+    title: 'Philosopher Lookup',
+    description: 'Look up a philosopher by name — returns tradition, era, and metadata.',
+    inputSchema: { name: z.string().describe('Philosopher name (case-insensitive)') },
+  },
   async ({ name }) => {
     const p = PHILOSOPHERS.find(p => p.name.toLowerCase() === name.toLowerCase());
     if (!p) return errorResult(`Philosopher not found: ${name}`);
@@ -165,12 +174,15 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'philosopher_list',
-  'List philosophers, optionally filtered by tradition or era.',
   {
-    tradition: z.string().optional().describe('Filter by tradition (e.g. "Stoicism", "Eastern Wisdom")'),
-    era: z.string().optional().describe('Filter by era: ancient, medieval, modern, contemporary'),
+    title: 'List Philosophers',
+    description: 'List philosophers, optionally filtered by tradition or era.',
+    inputSchema: {
+      tradition: z.string().optional().describe('Filter by tradition (e.g. "Stoicism", "Eastern Wisdom")'),
+      era: z.string().optional().describe('Filter by era: ancient, medieval, modern, contemporary'),
+    },
   },
   async ({ tradition, era }) => {
     let result = [...PHILOSOPHERS];
@@ -180,18 +192,20 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'philosopher_recommend',
-  'Get philosopher recommendations for a zodiac sign based on elemental affinity.',
   {
-    sign: signEnum.describe('Zodiac sign'),
-    count: z.number().min(1).max(10).default(5).describe('How many to recommend'),
+    title: 'Recommend Philosophers',
+    description: 'Get philosopher recommendations for a zodiac sign based on elemental affinity.',
+    inputSchema: {
+      sign: signEnum.describe('Zodiac sign'),
+      count: z.number().min(1).max(10).default(5).describe('How many to recommend'),
+    },
   },
   async ({ sign, count }) => {
     const data = SIGN_DATA[sign];
     if (!data) return errorResult(`Unknown sign: ${sign}`);
 
-    // Element → tradition affinity
     const affinityMap: Record<string, string[]> = {
       Fire: ['Stoicism', 'Poetry & Soul'],
       Earth: ['Stoicism', 'Science & Wonder'],
@@ -211,12 +225,15 @@ server.tool(
 
 // ═══ READING TOOLS (via API) ════════════════════════════════════════
 
-server.tool(
+server.registerTool(
   'reading_generate',
-  'Generate a personalized philosophical horoscope reading for a sign with an optional philosopher council.',
   {
-    sign: signEnum.describe('Zodiac sign'),
-    philosophers: z.string().optional().describe('Comma-separated philosopher names for the council'),
+    title: 'Generate Reading',
+    description: 'Generate a personalized philosophical horoscope reading for a sign with an optional philosopher council.',
+    inputSchema: {
+      sign: signEnum.describe('Zodiac sign'),
+      philosophers: z.string().optional().describe('Comma-separated philosopher names for the council'),
+    },
   },
   async ({ sign, philosophers }) => {
     try {
@@ -245,15 +262,18 @@ server.tool(
 
 // ═══ CONTENT TOOLS ══════════════════════════════════════════════════
 
-server.tool(
+server.registerTool(
   'content_format',
-  'Format a reading for a specific platform (tiktok, instagram, x, facebook, email, push).',
   {
-    sign: signEnum.describe('Zodiac sign'),
-    message: z.string().describe('The reading message text'),
-    quote: z.string().optional().describe('Inspirational quote'),
-    quote_author: z.string().optional().describe('Quote author name'),
-    platform: z.enum(['tiktok', 'instagram', 'x', 'facebook', 'email', 'push']).describe('Target platform'),
+    title: 'Format for Platform',
+    description: 'Format a reading for a specific platform (tiktok, instagram, x, facebook, email, push).',
+    inputSchema: {
+      sign: signEnum.describe('Zodiac sign'),
+      message: z.string().describe('The reading message text'),
+      quote: z.string().optional().describe('Inspirational quote'),
+      quote_author: z.string().optional().describe('Quote author name'),
+      platform: z.enum(['tiktok', 'instagram', 'x', 'facebook', 'email', 'push']).describe('Target platform'),
+    },
   },
   async ({ sign, message, quote, quote_author, platform }) => {
     const signData = SIGN_DATA[sign];
@@ -294,47 +314,38 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'content_share_card',
-  'Generate a shareable SVG card (1080x1080) with a reading quote on a dark cosmic background.',
   {
-    sign: signEnum.describe('Zodiac sign'),
-    quote: z.string().describe('The quote text'),
-    quote_author: z.string().describe('Quote author name'),
+    title: 'Share Card',
+    description: 'Generate a shareable SVG card (1080x1080) with a reading quote on a dark cosmic background with constellation art.',
+    inputSchema: {
+      sign: signEnum.describe('Zodiac sign'),
+      quote: z.string().describe('The quote text'),
+      quote_author: z.string().describe('Quote author name'),
+    },
   },
   async ({ sign, quote, quote_author }) => {
-    const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const signUpper = sign.toUpperCase();
-
-    // Simple SVG share card
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0c0921"/>
-      <stop offset="100%" stop-color="#0f0b30"/>
-    </linearGradient>
-  </defs>
-  <rect width="1080" height="1080" fill="url(#bg)"/>
-  <text x="540" y="200" text-anchor="middle" font-family="Georgia,serif" font-size="48" fill="#fbbf24" letter-spacing="8">${signUpper}</text>
-  <text x="540" y="500" text-anchor="middle" font-family="Georgia,serif" font-size="28" fill="#e0e7ff" font-style="italic">
-    <tspan x="540" dy="0">"${quote.length > 60 ? quote.substring(0, 57) + '...' : quote}"</tspan>
-  </text>
-  <text x="540" y="580" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#fbbf24">— ${quote_author}</text>
-  <text x="540" y="980" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e0e7ff" opacity="0.4">TODAY'S HOROSCOPE · ${today}</text>
-</svg>`;
-
-    return jsonResult({ svg, width: 1080, height: 1080, format: 'svg' });
+    const result = generateShareCard({
+      sign,
+      quote,
+      quoteAuthor: quote_author,
+    });
+    return jsonResult({ svg: result.svg, width: result.width, height: result.height, format: 'svg' });
   }
 );
 
 // ═══ AUDIENCE TOOLS (via API) ═══════════════════════════════════════
 
-server.tool(
+server.registerTool(
   'audience_subscribe',
-  'Subscribe an email address to daily horoscope readings, optionally for a specific sign.',
   {
-    email: z.string().email().describe('Email address'),
-    sign: signEnum.optional().describe('Associate with a zodiac sign'),
+    title: 'Subscribe',
+    description: 'Subscribe an email address to daily horoscope readings, optionally for a specific sign.',
+    inputSchema: {
+      email: z.string().email().describe('Email address'),
+      sign: signEnum.optional().describe('Associate with a zodiac sign'),
+    },
   },
   async ({ email, sign }) => {
     try {
@@ -351,10 +362,13 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   'audience_unsubscribe',
-  'Unsubscribe an email address from daily horoscope readings.',
-  { email: z.string().email().describe('Email address to unsubscribe') },
+  {
+    title: 'Unsubscribe',
+    description: 'Unsubscribe an email address from daily horoscope readings.',
+    inputSchema: { email: z.string().email().describe('Email address to unsubscribe') },
+  },
   async ({ email }) => {
     try {
       const res = await fetch(`${API_BASE}/api/unsubscribe`, {
@@ -372,25 +386,25 @@ server.tool(
 
 // ═══ COMPOSITE TOOLS ════════════════════════════════════════════════
 
-server.tool(
+server.registerTool(
   'daily_publish',
-  'Generate a reading for a sign, format it for a platform, and return both the reading and the formatted content. This is the core composition: assign → generate → format.',
   {
-    sign: signEnum.describe('Zodiac sign'),
-    platform: z.enum(['tiktok', 'instagram', 'x', 'facebook', 'email', 'push']).describe('Target platform'),
-    philosophers: z.string().optional().describe('Comma-separated philosopher names'),
+    title: 'Daily Publish',
+    description: 'Generate a reading for a sign, format it for a platform, and return both the reading and the formatted content. This is the core composition: assign → generate → format.',
+    inputSchema: {
+      sign: signEnum.describe('Zodiac sign'),
+      platform: z.enum(['tiktok', 'instagram', 'x', 'facebook', 'email', 'push']).describe('Target platform'),
+      philosophers: z.string().optional().describe('Comma-separated philosopher names'),
+    },
   },
   async ({ sign, platform, philosophers }) => {
     try {
-      // Step 1: Generate reading
       const params: Record<string, string> = { sign, type: 'daily' };
       if (philosophers) params.philosophers = philosophers;
       const res = await apiCall('/api/horoscope', params);
       if (!res.success) return errorResult(res.error || 'Generation failed');
 
       const d = res.data;
-
-      // Step 2: Format for platform
       const signData = SIGN_DATA[sign];
       const emoji = signData?.symbol || '';
       let formatted = '';
