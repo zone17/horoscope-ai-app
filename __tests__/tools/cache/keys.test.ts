@@ -115,4 +115,15 @@ describe('cache:keys — buildCacheKey', () => {
     const day2 = buildCacheKey({ ...base, date: '2026-04-15' });
     expect(day1).not.toBe(day2);
   });
+
+  // ─── Personalized vs daily key divergence ─────────────────────────
+
+  it('personalized key differs from daily key even with single-philosopher council', () => {
+    const base = { sign: 'aries', philosopher: 'Seneca', date: '2026-04-14' };
+    const dailyKey = buildCacheKey(base);
+    const personalizedKey = buildCacheKey({ ...base, council: ['Seneca'] });
+    expect(dailyKey).not.toBe(personalizedKey);
+    expect(dailyKey).toContain('daily');
+    expect(personalizedKey).toContain('personalized');
+  });
 });

@@ -54,9 +54,9 @@ describe('content:format — formatReading', () => {
     expect(result.hashtags.length).toBeGreaterThanOrEqual(7);
   });
 
-  it('X has at most 2 hashtags', () => {
+  it('X has exactly 2 hashtags', () => {
     const result = formatReading({ reading: SAMPLE_READING, platform: 'x' });
-    expect(result.hashtags.length).toBeLessThanOrEqual(2);
+    expect(result.hashtags).toHaveLength(2);
   });
 
   it('email has zero hashtags', () => {
@@ -151,6 +151,24 @@ describe('content:format — formatReading', () => {
     };
     const result = formatReading({ reading: longReading, platform: 'push' });
     expect(result.text.length).toBeLessThanOrEqual(100);
+  });
+
+  it('truncates long messages gracefully for X (280 char limit)', () => {
+    const longReading = {
+      ...SAMPLE_READING,
+      message: 'This is a very long philosophical message about the nature of being and existence that explores many deep themes about consciousness and the universe and goes on for quite a long time to exceed the Twitter character limit which is 280 characters and should definitely trigger truncation behavior in the formatter.',
+    };
+    const result = formatReading({ reading: longReading, platform: 'x' });
+    expect(result.text.length).toBeLessThanOrEqual(280);
+  });
+
+  it('truncates long messages gracefully for TikTok (300 char limit)', () => {
+    const longReading = {
+      ...SAMPLE_READING,
+      message: 'This is a very long philosophical message about the nature of being and existence that explores many deep themes about consciousness and the universe and goes on for quite a long time to exceed the TikTok character limit which is 300 characters and should definitely trigger truncation behavior in the content formatter.',
+    };
+    const result = formatReading({ reading: longReading, platform: 'tiktok' });
+    expect(result.text.length).toBeLessThanOrEqual(300);
   });
 });
 

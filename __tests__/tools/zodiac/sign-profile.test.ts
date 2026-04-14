@@ -35,8 +35,8 @@ describe('zodiac:sign-profile', () => {
     }
   });
 
-  it('throws on invalid sign', () => {
-    expect(() => getSignProfile('unicorn')).toThrow();
+  it('throws on invalid sign with descriptive message', () => {
+    expect(() => getSignProfile('unicorn')).toThrow('Unknown sign');
   });
 
   it('maps signs to correct elements', () => {

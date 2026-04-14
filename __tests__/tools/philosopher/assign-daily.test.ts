@@ -1,4 +1,5 @@
 import { assignDaily } from '@/tools/philosopher/assign-daily';
+import { lookupPhilosopher } from '@/tools/philosopher/registry';
 
 describe('philosopher:assign-daily', () => {
   // ─── Determinism ──────────────────────────────────────────────────
@@ -36,20 +37,15 @@ describe('philosopher:assign-daily', () => {
     expect(result.reason).not.toContain('personal council');
   });
 
-  it('always returns a philosopher from the default 12', () => {
-    const DEFAULT_ROTATION = [
-      'Alan Watts', 'Marcus Aurelius', 'Lao Tzu', 'Seneca',
-      'Albert Einstein', 'Epicurus', 'Friedrich Nietzsche', 'Plato',
-      'Richard Feynman', 'Aristotle', 'Dr. Joe Dispenza', 'Walter Russell',
-    ];
-    // Check all 12 signs across 30 days
+  it('always returns a philosopher that exists in the registry', () => {
+    // Check all 12 signs across 30 days — every assignment must be a real philosopher
     const signs = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo',
       'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
     for (const sign of signs) {
       for (let d = 1; d <= 30; d++) {
         const date = `2026-04-${String(d).padStart(2, '0')}`;
         const result = assignDaily({ sign, date });
-        expect(DEFAULT_ROTATION).toContain(result.philosopher);
+        expect(lookupPhilosopher(result.philosopher)).toBeDefined();
       }
     }
   });

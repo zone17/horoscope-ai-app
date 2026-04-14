@@ -60,9 +60,12 @@ describe('zodiac:sign-compatibility', () => {
     expect(result.compatibleSigns).toContain('libra');
   });
 
-  it('forced pairing appears first in list', () => {
-    const result = getSignCompatibility('libra', 5);
-    expect(result.compatibleSigns[0]).toBe('aquarius');
+  it('forced pairing appears first in list (both directions)', () => {
+    const libra = getSignCompatibility('libra', 5);
+    expect(libra.compatibleSigns[0]).toBe('aquarius');
+
+    const aquarius = getSignCompatibility('aquarius', 5);
+    expect(aquarius.compatibleSigns[0]).toBe('libra');
   });
 
   // ─── Count clamping ───────────────────────────────────────────────
