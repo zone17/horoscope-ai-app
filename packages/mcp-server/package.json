@@ -9,7 +9,9 @@
     "horoscope-philosophy-mcp": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:app",
+    "build:server": "tsc",
+    "build:app": "vite build",
     "dev": "tsc --watch",
     "start": "node dist/index.js"
   },

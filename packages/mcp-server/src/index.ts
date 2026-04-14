@@ -355,7 +355,7 @@ registerAppResource(
   SHARE_CARD_RESOURCE_URI,
   { description: 'Interactive share card with sign picker and live preview' },
   async () => {
-    const htmlPath = join(__dirname, '..', 'dist', 'share-card-app.html');
+    const htmlPath = join(__dirname, '..', 'dist', 'share-card.html');
     if (!existsSync(htmlPath)) {
       return {
         contents: [{

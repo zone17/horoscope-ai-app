@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Share Card</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <div id="card-container">
+      <div id="card-preview"></div>
+    </div>
+
+    <div id="controls">
+      <div id="sign-picker">
+        <button class="sign-btn active" data-sign="aries" title="Aries">&#x2648;</button>
+        <button class="sign-btn" data-sign="taurus" title="Taurus">&#x2649;</button>
+        <button class="sign-btn" data-sign="gemini" title="Gemini">&#x264A;</button>
+        <button class="sign-btn" data-sign="cancer" title="Cancer">&#x264B;</button>
+        <button class="sign-btn" data-sign="leo" title="Leo">&#x264C;</button>
+        <button class="sign-btn" data-sign="virgo" title="Virgo">&#x264D;</button>
+        <button class="sign-btn" data-sign="libra" title="Libra">&#x264E;</button>
+        <button class="sign-btn" data-sign="scorpio" title="Scorpio">&#x264F;</button>
+        <button class="sign-btn" data-sign="sagittarius" title="Sagittarius">&#x2650;</button>
+        <button class="sign-btn" data-sign="capricorn" title="Capricorn">&#x2651;</button>
+        <button class="sign-btn" data-sign="aquarius" title="Aquarius">&#x2652;</button>
+        <button class="sign-btn" data-sign="pisces" title="Pisces">&#x2653;</button>
+      </div>
+      <p id="sign-label">Aries</p>
+    </div>
+
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error" class="hidden">
+      <p id="error-message"></p>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
