@@ -181,7 +181,6 @@ export function generateShareCard(input: ShareCardInput): ShareCardOutput {
   const signKey = sign.toLowerCase();
   const signName = capitalize(signKey);
   const formattedDate = formatDate(date);
-  const escapedQuote = escapeXml(quote);
   const escapedAuthor = escapeXml(quoteAuthor);
 
   // Wrap quote text for SVG rendering (~36 chars per line at this font size

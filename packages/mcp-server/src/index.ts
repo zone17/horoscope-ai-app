@@ -121,6 +121,10 @@ function errorResult(msg: string) {
   return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true as const };
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // ─── Server ─────────────────────────────────────────────────────────
 
 const server = new McpServer({
@@ -310,7 +314,7 @@ server.registerTool(
         hashtags = ['#horoscope', '#philosophy', `#${sign}`];
         break;
       case 'email':
-        text = `<h2>${sign.charAt(0).toUpperCase() + sign.slice(1)} — Daily Philosophical Guidance</h2>\n<p>${message}</p>\n${quote ? `<blockquote>"${quote}" — ${quote_author}</blockquote>` : ''}`;
+        text = `<h2>${sign.charAt(0).toUpperCase() + sign.slice(1)} — Daily Philosophical Guidance</h2>\n<p>${escapeHtml(message)}</p>\n${quote ? `<blockquote>"${escapeHtml(quote)}" — ${escapeHtml(quote_author || '')}</blockquote>` : ''}`;
         break;
       case 'push':
         text = message.split('.')[0] + '.';
