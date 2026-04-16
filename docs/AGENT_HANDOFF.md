@@ -1,5 +1,15 @@
 # Agent Handoff: gettodayshoroscope.com — Complete Project Knowledge Base
 
+> **DEPRECATED (2026-04-15):** This document predates the agent-native migration (PR #48, Apr 13 2026).
+> The architecture, file paths, API routes, and sprint status described below are **outdated**.
+>
+> **Use [`docs/HANDOFF.md`](./HANDOFF.md) instead** — it reflects the current `src/tools/` agent-native architecture,
+> the MCP server, and all work through PR #53.
+>
+> This file is retained for historical context only (design system details, competitive positioning,
+> SEO strategy, content quality benchmarks). Do not rely on file paths, architecture diagrams,
+> or sprint statuses in this document.
+
 > **Last updated:** April 2, 2026
 > **Status:** Sprint 1 (SEO P0) shipped. Sprint 2 (Personal Philosophy Engine) planned, ready to execute.
 > **Live:** www.gettodayshoroscope.com | api.gettodayshoroscope.com
