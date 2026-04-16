@@ -1,204 +1,158 @@
-# Horoscope AI Application Architecture
+# Architecture: Today's Horoscope — Agent-Native Philosophy Engine
 
-## Overview
+> **Last updated**: 2026-04-15
+> **Canonical handoff**: [`docs/HANDOFF.md`](./HANDOFF.md)
 
-The Horoscope AI Application is a Next.js-based web application that provides AI-generated horoscopes to users. The application follows a subdomain-based architecture with separate frontend and backend deployments, connected through API calls.
+---
 
-## System Architecture
+## System Overview
 
-The application is divided into two main deployments:
+Today's Horoscope is built on an **agent-native architecture**: 18 atomic tools in `src/tools/` are the source of truth for all business logic. API routes and the cron job are thin composers (under 60 lines each). An MCP server exposes 12 tools to external agents.
 
-### Frontend (www.gettodayshoroscope.com)
-- NextJS application serving the UI components
-- Connects to backend API for data
-- Deployed on Vercel
-
-### Backend API (api.gettodayshoroscope.com)
-- API server handling data requests and AI integration
-- Handles Redis caching and OpenAI interactions
-- Manages authentication and rate limiting
-- Deployed on Vercel
-
-## Key Components
-
-### 1. Frontend Components
-
-#### UI Components
-- Header: Navigation and theme toggle
-- ZodiacCard: Display of horoscope data for each sign
-- HoroscopeDisplay: Main component for displaying horoscopes
-
-#### State Management
-- Client-side caching of API responses
-- Theme state management (light/dark mode)
-- Loading and error states
-
-### 2. Backend Components
-
-#### API Routes
-- `/api/horoscope`: Retrieves horoscope data for specific signs
-- `/api/cron/daily-horoscope`: Generates new horoscopes via scheduled job
-
-#### Middleware
-- CORS handling
-- Rate limiting
-- Request logging
-- Authentication (where applicable)
-
-#### Services
-- OpenAI Integration: Generates horoscope content
-- Redis Caching: Stores generated horoscopes
-
-## Data Flow
-
-1. User visits the frontend website
-2. Frontend requests horoscope data from backend API
-3. API checks Redis cache for existing data
-   - If cached data exists, returns it immediately
-   - If no cached data, generates new horoscopes via OpenAI
-4. Frontend displays the horoscope data to the user
-5. Smart polling mechanism checks for and retrieves missing horoscopes
-
-## Data Normalization
-
-The application employs a data normalization strategy to handle complex object structures from OpenAI responses:
-
-1. **OpenAI Response Structure**: The AI may return complex objects for fields like `lucky_number` and `lucky_color` that include both values and symbolic meanings
-2. **Backend Normalization**: Before storing in Redis, complex objects are normalized to extract simple values while preserving meaning
-3. **Frontend Fallback**: The frontend components have fallback logic to handle unexpected data structures
-
-```typescript
-// Example data normalization in Redis storage logic
-function normalizeHoroscopeData(data) {
-  // Extract simple values from complex objects
-  if (typeof data.lucky_number === 'object' && data.lucky_number !== null) {
-    // Store the full object as _full for future expansion
-    data.lucky_number_full = data.lucky_number;
-    // Extract simple value from complex object
-    data.lucky_number = data.lucky_number.number || data.lucky_number.value || '7';
-  }
-  
-  if (typeof data.lucky_color === 'object' && data.lucky_color !== null) {
-    // Store the full object as _full for future expansion
-    data.lucky_color_full = data.lucky_color;
-    // Extract simple value from complex object
-    data.lucky_color = data.lucky_color.color || data.lucky_color.value || 'Indigo';
-  }
-  
-  return data;
-}
+```
+                    ┌──────────────────────────────────────────┐
+                    │           GitHub Actions CI/CD           │
+                    │  (build → deploy API + frontend → verify)│
+                    └──────────┬──────────────┬────────────────┘
+                               │              │
+                    ┌──────────▼──────┐  ┌────▼───────────────┐
+                    │   Frontend      │  │   API              │
+                    │   Vercel Proj   │  │   Vercel Proj      │
+                    │                 │  │                     │
+  User ──────────>  │ www.gettodaysh  │  │ api.gettodaysh     │
+                    │ oroscope.com    │  │ oroscope.com       │
+                    │                 │  │                     │
+                    │ Pages (ISR)     │  │ /api/horoscope      │
+                    │ Components      │  │ /api/cron/daily-    │
+                    │ Rewrites→API    │  │     horoscope       │
+                    │                 │  │ /api/og/[sign]      │
+                    └─────────────────┘  │ /api/subscribe      │
+                                         │ /api/unsubscribe    │
+  MCP Agent ────────────────────────────>│                     │
+  (packages/mcp-server)                  └──────────┬──────────┘
+                                                    │
+                                         ┌──────────▼──────────┐
+                                         │   Upstash Redis     │
+                                         │  (cache + subs +    │
+                                         │   rate limiting)    │
+                                         └──────────┬──────────┘
+                                                    │
+                                         ┌──────────▼──────────┐
+                                         │   OpenAI API        │
+                                         │  (gpt-4o-mini)      │
+                                         └─────────────────────┘
 ```
 
-This approach ensures consistent data display while preserving rich semantic information from the AI for potential future use.
+---
 
-## Smart Polling Logic
+## Tool Architecture (`src/tools/`)
 
-The frontend implements a sophisticated polling mechanism to handle potential delays in horoscope generation:
+Every tool is independently useful. You can call `getSignProfile('aries')` without generating a reading. API routes compose tools; they never contain business logic.
 
-1. Initial load attempts to fetch all horoscopes
-2. Missing horoscopes trigger backend generation job
-3. Frontend polls for missing data with exponential backoff
-4. Configurable retry attempts and timeout durations
-
-```typescript
-// Polling implementation in src/utils/horoscope-service.ts
-async function pollForMissingHoroscopes(missingSigns: string[]): Promise<Record<string, HoroscopeData | null>> {
-  const result: Record<string, HoroscopeData | null> = {};
-  const MAX_ATTEMPTS = 10;
-  const POLL_INTERVAL = 2000; // 2 seconds between polls
-  
-  // Implementation details...
-  
-  while (missingSigns.length > 0 && attempts < MAX_ATTEMPTS) {
-    // Wait before next poll
-    await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
-    
-    // Try to fetch each missing sign
-    // If successful, remove from missing signs list
-    // Continue until all signs retrieved or max attempts reached
-  }
-  
-  return result;
-}
+```
+src/tools/
+├── zodiac/
+│   ├── sign-profile.ts             ← 12 sign personalities, voices, elements
+│   └── sign-compatibility.ts       ← Element-based sign matching
+├── philosopher/
+│   ├── registry.ts                 ← 54 philosophers, 9 traditions (CANONICAL)
+│   ├── assign-daily.ts             ← Daily philosopher rotation from council
+│   └── recommend.ts                ← Sign-based philosopher suggestions
+├── reading/
+│   ├── generate.ts                 ← Core AI generation (OpenAI)
+│   ├── quote-bank.ts               ← Verified quotes (no hallucinations)
+│   └── format-template.ts          ← 12 writing format rotations
+├── cache/
+│   ├── keys.ts                     ← Cache key derivation (includes philosopher)
+│   ├── store.ts                    ← Redis write
+│   ├── retrieve.ts                 ← Redis read with daily-key fallback
+│   └── invalidate.ts               ← SCAN+DEL pattern
+├── content/
+│   ├── format.ts                   ← Reading → 6 platform formats
+│   ├── share-card.ts               ← 1080x1080 SVG generator
+│   └── distribute.ts               ← Ayrshare multi-platform posting
+└── audience/
+    ├── subscribe.ts                ← Redis-based rate limiting
+    ├── unsubscribe.ts
+    └── segment.ts                  ← Query subscribers by sign
 ```
 
-## Caching Strategy
+---
 
-The application uses Redis for efficient caching:
+## Reading Generation Flow
 
-1. Horoscopes are cached with configurable TTL (Time To Live)
-2. Cache keys are structured by date, sign, and type
-3. Cache invalidation occurs on error or manual trigger
-4. Separate cache namespaces for different environments
-
-```typescript
-// Cache implementation in src/utils/cache.ts
-export async function withCache<T>(
-  key: string,
-  fetchFunction: () => Promise<T>,
-  options: CacheOptions = {}
-): Promise<T> {
-  // Check cache first
-  const cachedData = await getCachedData<T>(key, namespace);
-  
-  if (cachedData) {
-    return cachedData;
-  }
-  
-  // Get fresh data if cache miss
-  const freshData = await fetchFunction();
-  await cacheData(key, freshData, { ttl, namespace });
-  
-  return freshData;
-}
+```
+User picks sign (Aries) + philosophers (Seneca, Alan Watts, Rumi)
+  ↓
+/api/horoscope?sign=aries&philosophers=Seneca,Alan+Watts,Rumi
+  ↓
+1. assignDaily({ sign, council, date })
+   → Selects today's philosopher from the user's council
+  ↓
+2. retrieve({ sign, philosopher, date, council })
+   → Checks personalized cache key, then daily-key fallback
+   → Cache hit? Return immediately
+  ↓
+3. generateReading({ sign, philosopher, date })
+   → Sign profile (voice, avoidPatterns) + writing format (rotates daily)
+   → Verified quotes from quote-bank
+   → OpenAI gpt-4o-mini with JSON response format
+   → Validates output (author check, quote verification, self-match filter)
+  ↓
+4. store({ sign, philosopher, date, council, reading })
+   → Cache key includes ALL inputs
+  ↓
+5. toSnakeCase(reading) → Response
 ```
 
-## Feature Flags
+---
 
-The application implements a feature flag system to enable/disable features without code changes:
+## Two Vercel Projects
 
-```typescript
-// Feature flags in src/utils/feature-flags.ts
-export const FEATURE_FLAGS = {
-  USE_REDIS_CACHE: 'USE_REDIS_CACHE',
-  USE_RATE_LIMITING: 'USE_RATE_LIMITING',
-};
+The codebase deploys to two Vercel projects from one repo:
 
-export function isFeatureEnabled(flagName: string, defaultValue = false): boolean {
-  const envValue = process.env[`FEATURE_FLAG_${flagName}`];
-  
-  if (envValue !== undefined) {
-    return envValue.toLowerCase() === 'true';
-  }
-  
-  return defaultValue;
-}
-```
+| Project | Domain | Serves | Build |
+|---------|--------|--------|-------|
+| `horoscope-ai-api` | api.gettodayshoroscope.com | API routes, cron, OG images | `next build` |
+| `horoscope-ai-frontend` | www.gettodayshoroscope.com | Pages, components, assets | `scripts/frontend-build.sh` |
 
-## UI Design
+The frontend build script moves `src/app/api/` out before building, then restores it. API routes are proxied via Vercel rewrites in `vercel.frontend.json`.
 
-The frontend uses a modern, glassmorphic design with the following characteristics:
+CI/CD (`.github/workflows/deploy.yml`) deploys both in parallel on merge to main, then runs health checks.
 
-1. Borderless, translucent cards with subtle backdrop blur
-2. Light, modern typography with extralight font weights
-3. Smooth animations and transitions
-4. Responsive layout that adapts to all device sizes
-5. Dark/light mode toggle with theme-specific styling
+---
 
-## Security Considerations
+## MCP Server
 
-1. API rate limiting to prevent abuse
-2. CORS configuration to restrict API access
-3. Environment variable management for sensitive keys
-4. Server-side generation of API calls to OpenAI
+`packages/mcp-server/src/index.ts` — 12 tools via MCP protocol.
 
-## Deployment Model
+Pure data tools (zodiac, philosopher) run locally. Generation and audience tools delegate to the API.
 
-The application follows a continuous deployment model using Vercel:
+Tools: `zodiac_sign_profile`, `zodiac_sign_compatibility`, `philosopher_lookup`, `philosopher_list`, `philosopher_recommend`, `reading_generate`, `content_format`, `content_share_card`, `audience_subscribe`, `audience_unsubscribe`, `daily_publish`
 
-1. Code changes trigger automated builds
-2. Separate deployment pipelines for frontend and backend
-3. Environment-specific configuration via environment variables
-4. Custom deployment scripts in the `/scripts` directory
+---
 
-For detailed deployment instructions, see [DEPLOYMENT.md](../DEPLOYMENT.md). 
+## Legacy Utils (Migration Incomplete)
+
+Old files in `src/utils/` still have active consumers. The tools in `src/tools/` are the canonical implementations, but these old files remain until all consumers are migrated:
+
+| Old File | Replaced By |
+|----------|-------------|
+| `horoscope-generator.ts` | `tools/reading/generate.ts` |
+| `horoscope-prompts.ts` | `tools/zodiac/sign-profile.ts` + `tools/reading/format-template.ts` |
+| `horoscope-service.ts` | Direct API fetch |
+| `cache-keys.ts` | `tools/cache/keys.ts` |
+| `redis-helpers.ts` | `tools/cache/store.ts` + `tools/cache/retrieve.ts` |
+| `feature-flags.ts` | No replacement yet (deeply embedded) |
+
+---
+
+## Key Constraints
+
+| Constraint | Detail |
+|-----------|--------|
+| **Tailwind v3 only** | PostCSS uses `tailwindcss` (v3). Never use `@import "tailwindcss"` (v4). |
+| **Function timeout 30s** | Set in `vercel.json`. Hobby plan max. |
+| **No edge runtime on OpenAI routes** | OpenAI SDK crashes on edge. OG routes are edge (fine). |
+| **Redis lazy-init** | App won't crash without Redis — just won't cache. |
+| **Build must pass** | `ignoreBuildErrors` was removed. Build fails on real errors. |

@@ -1,13 +1,13 @@
 # Project Context: gettodayshoroscope.com
 
-> **Last updated**: 2026-04-01
-> **Status**: Production — 23 PRs shipped, CI/CD active, visual design restored
+> **Last updated**: 2026-04-15
+> **Status**: Production — 53 PRs shipped, agent-native architecture (PR #48), 120 tool tests, MCP server + MCP Apps
 
 ---
 
 ## 1. What This Is
 
-A daily AI-generated horoscope web app that delivers **philosophical guidance** (not fortune-telling) personalized by zodiac sign. Each of the 12 signs gets a distinct writing voice, a verified philosopher quote from a curated bank of 140+ sourced quotes, and a rotating structural format that changes daily. Astrological context (Mercury retrograde, moon phases) is injected when relevant.
+A **Philosophy Engine** — users pick their zodiac sign, select up to 5 philosophers from 54 thinkers across 9 traditions, and receive daily personalized readings that blend philosopher wisdom with zodiac personality. It's NOT a generic horoscope app or fortune-telling.
 
 **Live URLs:**
 | Surface | URL | Vercel Project |
@@ -16,7 +16,7 @@ A daily AI-generated horoscope web app that delivers **philosophical guidance** 
 | API | https://api.gettodayshoroscope.com | `horoscope-ai-api` (`prj_rWJqgnyvBJZOIUA2R0BvpY5wzZ5E`) |
 | Repo | https://github.com/zone17/horoscope-ai-app | — |
 
-**Brand positioning:** "A philosopher in your corner. Every morning." — daily philosophy, personalized by the lens you were born with.
+**Brand positioning:** "Not predictions. Philosophy that meets you where you are."
 
 **Team ID:** `team_Rzq7CDbcuKfoNn4pJFUAZztO`
 
@@ -27,7 +27,7 @@ A daily AI-generated horoscope web app that delivers **philosophical guidance** 
 | Layer | Technology | Version/Details |
 |-------|-----------|-----------------|
 | Framework | Next.js | 15.5.14, App Router, ISR (`revalidate: 3600`) |
-| Language | TypeScript | `ignoreBuildErrors: true` in next.config.js (one dead function in schema-generator.ts) |
+| Language | TypeScript | `ignoreBuildErrors` removed (PR #48) — build fails on real errors |
 | Styling | Tailwind CSS | Dark cosmic theme, glassmorphism cards, element-based accent colors |
 | Animation | Framer Motion | Conditional on `prefers-reduced-motion` |
 | State | Zustand | Persisted to localStorage: `userSign`, `mode` (day/night), `streakCount`, `lastReadDate` |
@@ -37,73 +37,45 @@ A daily AI-generated horoscope web app that delivers **philosophical guidance** 
 | Analytics | @vercel/analytics | Custom events: sign_selected, reading_opened, share_tapped, etc. |
 | Fonts | Satoshi (body) + Playfair Display (sign names) | Loaded via next/font, Geist removed |
 | CI/CD | GitHub Actions | Dual Vercel project deploy on merge to main |
-| Hosting | Vercel | Hobby plan, 10s function timeout, 2 projects |
+| Hosting | Vercel | Hobby plan, 30s function timeout (vercel.json), 2 projects |
 | PWA | manifest.json + service worker | Offline-capable, installable |
 
 ---
 
 ## 3. Architecture
 
-### System Diagram
+> **Full details**: [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md)
+
+### Agent-Native Tool Architecture (since PR #48, Apr 2026)
+
+16 atomic tools in `src/tools/` are the source of truth. API routes are thin composers (under 60 lines). An MCP server (`packages/mcp-server/`) exposes 12 tools to external agents.
 
 ```
-                    ┌──────────────────────────────────────────┐
-                    │           GitHub Actions CI/CD           │
-                    │  (build → deploy API + frontend → verify)│
-                    └──────────┬──────────────┬────────────────┘
-                               │              │
-                    ┌──────────▼──────┐  ┌────▼───────────────┐
-                    │   Frontend      │  │   API              │
-                    │   Vercel Proj   │  │   Vercel Proj      │
-                    │                 │  │                     │
-  User ──────────>  │ www.gettodaysh  │  │ api.gettodaysh     │
-                    │ oroscope.com    │  │ oroscope.com       │
-                    │                 │  │                     │
-                    │ Pages:          │  │ Routes:             │
-                    │  /              │  │  /api/horoscope     │
-                    │  /horoscope/*   │  │  /api/cron/daily    │
-                    │  /compatibility │  │  /api/og/[sign]     │
-                    │  /pricing       │  │  /api/subscribe     │
-                    │                 │  │  /api/horoscope/    │
-                    │ Rewrites:       │  │      refresh        │
-                    │  /api/* → API   │  │  /api/debug/ping    │
-                    └─────────────────┘  │  /api/debug/redis   │
-                                         └──────────┬──────────┘
-                                                    │
-                                         ┌──────────▼──────────┐
-                                         │   Upstash Redis     │
-                                         │  (horoscope-prod)   │
-                                         └──────────┬──────────┘
-                                                    │
-                                         ┌──────────▼──────────┐
-                                         │   OpenAI API        │
-                                         │  (gpt-4o-mini)      │
-                                         └─────────────────────┘
+src/tools/
+├── zodiac/        sign-profile, sign-compatibility
+├── philosopher/   registry (54 thinkers, 9 traditions), assign-daily, recommend
+├── reading/       generate (OpenAI), quote-bank, format-template
+├── cache/         keys, store, retrieve, invalidate
+├── content/       format (6 platforms), share-card (SVG), distribute (Ayrshare)
+└── audience/      subscribe, unsubscribe, segment
 ```
 
 ### Data Flow
 
-1. **Daily cron** (`/api/cron/daily-horoscope`) runs at midnight UTC → generates all 12 signs via `horoscope-generator.ts` → caches in Redis with 24h TTL
-2. **On-demand** (`/api/horoscope?sign=aries`) checks Redis first → on cache miss, generates one sign → caches → returns
-3. **Frontend** (`horoscope-service.ts`) fetches from API → renders cards with sign-specific voice
-4. **Sign pages** (`/horoscope/[sign]`) use ISR with 1-hour revalidation, include OG meta tags pointing to `/api/og/[sign]`
-5. **Compatibility pages** (`/compatibility/[pair]`) are statically generated at build time for all 66 combinations
+1. User picks sign + philosophers → `/api/horoscope?sign=X&philosophers=...`
+2. `assignDaily()` selects today's philosopher from the user's council
+3. `retrieve()` checks Redis cache (personalized key, then daily-key fallback)
+4. On cache miss: `generateReading()` → OpenAI gpt-4o-mini → validates quotes → `store()`
+5. `toSnakeCase(reading)` → JSON response
 
-### Two Vercel Projects — Critical Detail
+### Two Vercel Projects
 
-The codebase deploys to TWO Vercel projects from one repo. This is the #1 source of confusion:
+| Project | Domain | Serves | Build |
+|---------|--------|--------|-------|
+| `horoscope-ai-api` | api.gettodayshoroscope.com | API routes, cron, OG images | `next build` |
+| `horoscope-ai-frontend` | www.gettodayshoroscope.com | Pages, components, assets | `scripts/frontend-build.sh` |
 
-| Project | Domain | Serves | Build Command |
-|---------|--------|--------|---------------|
-| `horoscope-ai-api` | api.gettodayshoroscope.com | API routes, cron, OG images | `next build` (standard) |
-| `horoscope-ai-frontend` | www.gettodayshoroscope.com | Pages, components, assets | `frontend-build.sh` (excludes API routes) |
-
-The **GitHub Actions CI/CD pipeline** (`.github/workflows/deploy.yml`) handles both deployments automatically on merge to main. You should not need to deploy manually.
-
-For manual deployment:
-1. Update `.vercel/project.json` with the target project's `projectId`
-2. Run `vercel deploy --prod --yes`
-3. Remember to restore the original `projectId` after
+CI/CD (`.github/workflows/deploy.yml`) deploys both in parallel on merge to main.
 
 ---
 
@@ -111,34 +83,28 @@ For manual deployment:
 
 This is what makes the product unique. Understanding the content pipeline is essential.
 
-### Generation Pipeline
+### Generation Pipeline (Agent-Native)
+
+Generation flows through `src/tools/reading/generate.ts` (canonical since PR #48). Legacy `src/utils/horoscope-generator.ts` still has consumers (video-helpers, monthly pages) being phased out.
 
 ```
-buildHoroscopePrompt(sign, philosopher)     ← horoscope-prompts.ts
+assignDaily({ sign, council, date })        ← tools/philosopher/assign-daily.ts
+    ↓
+retrieve({ sign, philosopher, date })       ← tools/cache/retrieve.ts
+    ↓ (cache miss)
+generateReading({ sign, philosopher, date })← tools/reading/generate.ts
     │
-    ├── Sign personality (12 distinct voices)
-    ├── Writing format (12 rotating structures)
-    ├── Philosopher assignment (daily rotation)
-    ├── Verified quotes from bank (4 options per prompt)
-    ├── Astrological context (retrograde, moon phase)
-    ├── Banned word list
-    └── Bad examples (for weak signs: Taurus, Libra, Sagittarius)
-    │
-    ▼
-generateHoroscope(sign, type)               ← horoscope-generator.ts
-    │
-    ├── OpenAI gpt-4o-mini call
-    ├── JSON response parsing
-    ├── Quote validation against verified bank
-    ├── Post-validation: replace fabricated quotes with verified ones
-    ├── Best match self-exclusion filter
-    └── Data normalization (lucky_number/lucky_color objects → strings)
-    │
-    ▼
-Redis cache (horoscope-prod:horoscope:date=...&sign=...&type=daily)
+    ├── getSignProfile(sign)                ← tools/zodiac/sign-profile.ts
+    ├── getFormatTemplate(sign, date)       ← tools/reading/format-template.ts
+    ├── getQuotes(philosopher)              ← tools/reading/quote-bank.ts
+    ├── Prompt: SOUL section + voice + rules + format + quotes
+    ├── OpenAI gpt-4o-mini with JSON response format
+    └── Validates: author check, quote verification, self-match filter
+    ↓
+store({ sign, philosopher, date, council }) ← tools/cache/store.ts
 ```
 
-### Sign Voice System (`src/utils/horoscope-prompts.ts`)
+### Sign Voice System (`src/tools/zodiac/sign-profile.ts`)
 
 | Sign | Voice Description | Key Anti-patterns |
 |------|------------------|-------------------|
@@ -184,9 +150,7 @@ Rotates daily per sign using `(signIndex + dayNum) % 12`:
 
 140+ real, source-cited quotes from 14 philosophers. Each philosopher has 10+ quotes. The prompt includes 4 quotes from the assigned philosopher; the model selects the most thematically relevant one. Post-validation replaces any fabricated quote with a verified one from the bank.
 
-**Philosopher roster:** Alan Watts, Marcus Aurelius, Lao Tzu, Seneca, Albert Einstein, Epicurus, Friedrich Nietzsche, Plato, Richard Feynman, Aristotle, Dr. Joe Dispenza, Walter Russell, Socrates, Jiddu Krishnamurti
-
-**Rotation:** `getPhilosopherAssignment(sign, date)` uses `(signIndex + dayOffset) % 12` to ensure each sign gets a unique philosopher every day, and the pairing shifts daily.
+**Philosopher roster:** 54 philosophers across 9 traditions. Canonical source: `src/tools/philosopher/registry.ts`. Users select up to 5 as their council; `assignDaily()` rotates through the council daily.
 
 ### Astrological Context (`src/utils/astro-context.ts`)
 
@@ -209,55 +173,86 @@ From a 12-sign audit by a content strategist:
 
 ## 5. File Reference
 
-### Content Pipeline (the core product logic)
+### Agent-Native Tools (`src/tools/`) — Source of Truth
 
-| File | Purpose | Owner |
-|------|---------|-------|
-| `src/utils/horoscope-prompts.ts` | Sign personalities, writing formats, philosopher rotation, banned words, prompt builder | Content |
-| `src/utils/verified-quotes.ts` | 140+ verified quotes with sources, `getQuotesForPrompt()` helper | Content |
-| `src/utils/horoscope-generator.ts` | **Single** generation function — ALL code paths use this. OpenAI call + validation + normalization | Content |
-| `src/utils/astro-context.ts` | Mercury retrograde dates, moon phase calculator, `getAstroContext(date)` | Content |
+| Directory | Tools | Purpose |
+|-----------|-------|---------|
+| `zodiac/` | sign-profile, sign-compatibility | 12 sign personalities, element matching |
+| `philosopher/` | registry, assign-daily, recommend | 54 philosophers, 9 traditions, rotation, suggestions |
+| `reading/` | generate, quote-bank, format-template | AI generation, verified quotes, 12 writing formats |
+| `cache/` | keys, store, retrieve, invalidate | Redis cache with auto-keyed derivation |
+| `content/` | format, share-card, distribute | 6 platform formats, SVG cards, Ayrshare posting |
+| `audience/` | subscribe, unsubscribe, segment | Redis-based rate-limited subscription |
+
+### Legacy Utils (still have active consumers — being phased out)
+
+| File | Replaced By | Still Used By |
+|------|-------------|---------------|
+| `utils/horoscope-generator.ts` | `tools/reading/generate.ts` | video-helpers, monthly/daily pages |
+| `utils/horoscope-prompts.ts` | `tools/zodiac/sign-profile.ts` + `tools/reading/format-template.ts` | reading:generate (VALID_AUTHORS) |
+| `utils/horoscope-service.ts` | Direct API fetch | HoroscopeDisplay |
+| `utils/cache-keys.ts` | `tools/cache/keys.ts` | debug/redis, debug/assets |
+| `utils/redis-helpers.ts` | `tools/cache/store.ts` + `tools/cache/retrieve.ts` | debug routes |
+| `utils/feature-flags.ts` | No replacement yet | 16+ consumers (deeply embedded) |
+
+### MCP Server
+
+`packages/mcp-server/src/index.ts` — 12 tools via MCP protocol. Pure data tools run locally; generation/audience tools delegate to the API.
 
 ### API Routes
 
-| Route | Purpose | Auth | Timeout Risk |
-|-------|---------|------|-------------|
-| `GET /api/horoscope?sign=X&type=daily` | Main endpoint — cache check → generate → return | Public | ~3s per sign on cache miss |
-| `GET /api/cron/daily-horoscope` | Batch generate all 12 signs | `CRON_SECRET` required | YES — 12 sequential calls, may exceed 10s |
-| `GET /api/horoscope/refresh` | Force regenerate individual signs + verify cache | `CRON_SECRET` required | ~3s per sign |
-| `GET /api/og/[sign]` | Dynamic OG image (1200x630, element gradient) | Public | <1s |
-| `POST /api/subscribe` | Email capture → Redis (`subscriber:{email}` hash + `subscribers:{sign}` set) | Public | <1s |
-| `GET /api/debug/ping` | Health check (returns `{ success: true }`) | Public | <1s |
-| `GET /api/debug/redis` | Cache inspection (lists which signs are cached) | Public | <1s |
-| `GET /api/openai-test` | OpenAI connectivity test | Public | ~2s |
-| `GET /api/openai-enhanced` | Enhanced OpenAI test | Public | ~3s |
+| Route | Purpose | Auth |
+|-------|---------|------|
+| `GET /api/horoscope?sign=X&philosophers=...` | Main endpoint — assign → cache → generate → return | Public |
+| `GET /api/cron/daily-horoscope` | Batch generate all 12 signs + send emails | `CRON_SECRET` |
+| `GET /api/og/[sign]` | Dynamic OG image (1200x630, edge runtime) | Public |
+| `POST /api/subscribe` | Email capture → Redis | Public |
+| `GET /api/unsubscribe` | One-click unsubscribe | Public |
+| `GET /api/debug/ping` | Health check | Public |
+| `GET /api/debug/redis` | Cache inspection | Public |
+| `GET /api/horoscopes` | All 12 signs batch read | Public |
 
 ### Frontend Pages
 
 | Page | Route | Rendering | Notes |
 |------|-------|-----------|-------|
-| Home | `/` | ISR (1h) | Hero + sign picker + 12-card grid |
-| Sign page | `/horoscope/[sign]` | ISR (1h) | Full reading, OG tags, share button, push prompt, email capture |
-| Weekly forecast | `/horoscope/[sign]/weekly` | ISR (24h) | Templated weekly content |
-| Compatibility | `/compatibility/[pair]` | ISR (24h) | 66 pages, element-based compatibility ratings |
-| Pricing | `/pricing` | Static | Free vs Premium comparison, "Coming Soon" badge |
-| Sitemap | `/sitemap.xml` | Dynamic | 92 URLs (1 home + 12 sign + 12 weekly + 66 compatibility + 1 pricing) |
+| Home | `/` | ISR (1h) | Sign picker → philosopher grid → reading flow |
+| Sign page | `/horoscope/[sign]` | ISR (1h) | Full reading, OG tags, share button, email capture |
+| About author | `/about/author` | ISR (24h) | Elena Vasquez persona |
+| Sitemap | `/sitemap.xml` | Dynamic | Auto-generated |
 
 ### Frontend Components
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| ZodiacCard | `src/components/zodiac/ZodiacCard.tsx` | Main card — element accent colors, auto-height, 3-sentence preview, inline expand, a11y (focus trap, keyboard, reduced motion) |
-| HoroscopeDisplay | `src/components/zodiac/HoroscopeDisplay.tsx` | Grid layout, hero section ("Your sign is not a prediction"), featured card for user's sign |
-| SignPicker | `src/components/zodiac/SignPicker.tsx` | Horizontal sign selector — navigates to `/horoscope/[sign]` on click, persists via Zustand |
-| SignPageClient | `src/app/horoscope/[sign]/SignPageClient.tsx` | Client component for sign pages — data fetch, share button (Web Share API + clipboard fallback) |
-| EmailCapture | `src/components/zodiac/EmailCapture.tsx` | Email input + sign — posts to `/api/subscribe` |
-| PushPrompt | `src/components/zodiac/PushPrompt.tsx` | Push notification permission request — shows 3s after sign page load |
-| ModeToggle | `src/components/ModeToggle.tsx` | Day/Night mode switch — 44px touch target, syncs to `document.documentElement.dataset.mode` |
-| VideoBanner | `src/components/VideoBanner.tsx` | Lazy video loading — poster image default, intersection observer, video on hover |
-| Header | `src/components/layout/Header.tsx` | Fixed header with logo, date, mode toggle |
-| ServiceWorkerRegistration | `src/components/ServiceWorkerRegistration.tsx` | Registers `public/sw.js` on mount |
-| SchemaMarkup | `src/components/seo/SchemaMarkup.tsx` | JSON-LD structured data (WebSite, Organization, Service, ItemList, FAQ) |
+**Homepage flow (`src/components/home/`):**
+
+| Component | Purpose |
+|-----------|---------|
+| HomeFlow | Orchestrates step flow (sign → philosophers → reading) |
+| SignStep | 12 sign buttons with constellation icons |
+| PhilosopherStep | Categorized grid with live preview, imports from `tools/philosopher/registry` |
+| PhilosopherCard | Individual philosopher card |
+| EmailGate | Soft gate — preview + email input |
+| ReadingDisplay | Personalized reading |
+| ReadingPreview | Preview before gate |
+| ShareButton | Web Share API + clipboard fallback |
+
+**Zodiac components (`src/components/zodiac/`):**
+
+| Component | Purpose |
+|-----------|---------|
+| ZodiacCard | Card with element accent colors, auto-height, a11y |
+| HoroscopeDisplay | 12-card grid layout |
+| SignPicker | Horizontal sign selector |
+| EmailCapture | Email input → `/api/subscribe` |
+
+**Other:**
+
+| Component | Purpose |
+|-----------|---------|
+| ConstellationIcon | Amber/gold constellation dot-line SVG icons |
+| ModeToggle | Day/Night mode switch |
+| Header | Fixed header with logo, date, mode toggle |
+| SchemaMarkupServer | JSON-LD structured data (WebSite, Organization, Service, ItemList, FAQ) |
 
 ### State Management (`src/hooks/useMode.ts`)
 
@@ -277,9 +272,9 @@ Zustand store with `persist` middleware (localStorage key: `horoscope-mode-stora
 
 | File | Purpose |
 |------|---------|
-| `next.config.js` | Main Next.js config (API project build) — `ignoreBuildErrors: true`, `ignoreDuringBuilds: true` |
+| `next.config.js` | Main Next.js config (API project build) — `ignoreBuildErrors` removed |
 | `next.config.frontend.js` | Frontend-specific config — `output: 'standalone'`, API rewrites |
-| `vercel.json` | API project — cron schedule, function config (`maxDuration: 10`, `memory: 1024`) |
+| `vercel.json` | API project — cron schedule, function config (`maxDuration: 30`, `memory: 1024`) |
 | `vercel.frontend.json` | Frontend project — `buildCommand: frontend-build.sh`, API rewrites |
 | `tailwind.config.js` | Tailwind — `fontFamily.sans` (Satoshi), `fontFamily.display` (Playfair Display) |
 | `eslint.config.mjs` | Flat ESLint config — `no-explicit-any: off`, `no-require-imports: off` |
@@ -304,10 +299,12 @@ Zustand store with `persist` middleware (localStorage key: `horoscope-mode-stora
 
 | Variable | Purpose | Where Used |
 |----------|---------|-----------|
-| `OPENAI_API_KEY` | OpenAI API access | `horoscope-generator.ts` |
-| `UPSTASH_REDIS_REST_URL` | Redis connection URL | `redis.ts` |
-| `UPSTASH_REDIS_REST_TOKEN` | Redis auth token | `redis.ts` |
-| `CRON_SECRET` | Auth for cron + refresh endpoints | `cron/daily-horoscope`, `horoscope/refresh` |
+| `OPENAI_API_KEY` | OpenAI API access | `tools/reading/generate.ts` |
+| `UPSTASH_REDIS_REST_URL` | Redis connection URL | `utils/redis.ts` |
+| `UPSTASH_REDIS_REST_TOKEN` | Redis auth token | `utils/redis.ts` |
+| `CRON_SECRET` | Auth for cron endpoint | `cron/daily-horoscope` |
+| `RESEND_API_KEY` | Email delivery | `utils/email.ts` |
+| `AYRSHARE_API_KEY` | Social posting | `tools/content/distribute.ts` |
 
 ### Feature Flags (Optional)
 
@@ -369,7 +366,7 @@ The frontend project uses `scripts/frontend-build.sh`:
 horoscope-prod:horoscope:date=2026-04-01&sign=aries&type=daily
 ```
 
-Generated by `src/utils/cache-keys.ts` via `horoscopeKeys.daily(sign, date)`.
+Cache key derivation is in `src/tools/cache/keys.ts` (canonical). Legacy `src/utils/cache-keys.ts` still used by debug routes.
 
 **CRITICAL**: `safelyStoreInRedis` / `safelyRetrieveForUI` in `redis-helpers.ts` handle the `horoscope-prod:` namespace prefix automatically. **Never manually prepend `horoscope-prod:`** — this causes a double-prefix bug that was the root cause of the refresh route failure (fixed in PR #5).
 
@@ -397,7 +394,7 @@ Or regenerate individual signs by hitting `/api/horoscope?sign=X` (generates on 
 | Pitfall | Details | How to Avoid |
 |---------|---------|-------------|
 | **Double namespace prefix** | `safelyStoreInRedis` already adds `horoscope-prod:`. Manual prefix creates `horoscope-prod:horoscope-prod:...` | Use `safelyStoreInRedis`/`safelyRetrieveForUI` exclusively |
-| **Vercel 10s timeout** | Hobby plan hard limit. Batch generation of 12 signs exceeds it (~36s) | Generate signs individually, not batch. Cron job may timeout — individual fallback exists |
+| **Vercel 30s timeout** | Set in vercel.json (changed from 10s in PR #48). Batch generation of 12 signs can still be tight | Generate signs individually when possible |
 | **Two Vercel projects** | Frontend changes don't appear until the FRONTEND project deploys | CI/CD handles both automatically. For manual: check `.vercel/project.json` projectId |
 | **OpenAI quota exhausted** | All signs return 500 when API key has no credits | Error message: `429 You exceeded your current quota`. Fix at platform.openai.com/billing |
 | **Stale cache after prompt changes** | Old horoscopes persist until TTL expires | Trigger cron endpoint with CRON_SECRET, or wait 24h for natural expiry |
@@ -488,19 +485,51 @@ Activated via `data-mode="night"` on `<html>`. CSS custom properties shift:
 
 **Total: 23 PRs merged across 3 sprints in one session.**
 
-### Agent Summary (23 agents total)
+### Sprint 4 — SEO P0 (2026-04-01)
 
-**Wave 1 — Technical Review (10 agents):** Architect, Engineer, PM, QA, Design/UX, 5 user personas (wellness seeker, skeptic tech worker, astrology creator, older reader, philosophy student)
+| PR | Change | Impact |
+|----|--------|--------|
+| #27 | SEO P0 | AutoResearch-optimized homepage, 24 monthly pages, E-E-A-T author, sitemap 13→38 |
+| #29 | UI polish | Button styling, quote sizing, duplicate hero removed |
 
-**Wave 2 — Expert Strategy (6 agents):** Design director, CPO, UX researcher, Content strategist, CRO specialist, Brand strategist
+### Sprint 5 — Personal Philosophy Engine (2026-04-01 → 2026-04-02)
 
-**Execution Squads (7 agents across 2 sprints):** 3 squads in Sprint 1 (content, security, frontend) + 4 squads in Sprint 2 (content, infra, design, SEO)
+| PR | Change | Impact |
+|----|--------|--------|
+| #29-32 | Philosopher roster + quote bank expansion | 50+ philosophers, 500+ verified quotes |
+| #33 | Resend email integration | Email template, daily cron |
+| #35 | Generation pipeline extension | Philosopher override param |
+| #36 | Homepage redesign | Sign picker → philosopher grid → reading flow |
+| #37 | OG quote cards + share button | Branded sharing |
+| #38 | Email gate + daily email cron | Soft gate, Resend delivery |
+| #39 | Public Guidance API + MCP Server v1 | JSON endpoint + 12 MCP tools |
 
-**Key consensus findings:** All P0s and P1s resolved. See `docs/solutions/workflow-issues/multi-agent-production-remediation-20260401.md` for the full pattern.
+### Sprint 6 — Daily Archive + Video Engine (2026-04-08 → 2026-04-09)
+
+| PR | Change | Impact |
+|----|--------|--------|
+| #40 | Daily archive pages + voice tuning | Backfill script, archive catalog |
+| #41-42 | Redis dynamic import fixes | Frontend build compatibility |
+| #43 | Automated video content engine | edge-tts, Remotion pipeline |
+| #44-46 | Video engine fixes + quality gate | Input validation, Telegram spot-check |
+
+### Sprint 7 — Agent-Native Migration (2026-04-13 → 2026-04-14)
+
+| PR | Change | Impact |
+|----|--------|--------|
+| #47 | Pre-render fix + disable cron | Generation fix |
+| #48 | **Agent-native migration** | 16 atomic tools in `src/tools/`, 13 P0s resolved, dead code deleted |
+| #49 | MCP server v2 | 12 tools exposing Philosophy Engine |
+| #50 | Exhaustive handoff doc | `docs/HANDOFF.md` |
+| #51 | 120 tool tests | 8 pure-function tools tested, 0.8s, zero mocks |
+| #52 | MCP Apps interactive share card | Vite singlefile build, XSS hardening |
+| #53 | Session close-out | Compound doc + handoff update |
+
+**Total: 53 PRs across 7 sprints.**
 
 ### Key Lesson: Visual Changes Must Be Tested Against Original
 
-Sprint 3 was entirely caused by Squad C's frontend changes degrading the visual design. The lesson: **always compare screenshots before/after when changing visual components**. The original ZodiacCard + globals.css were restored from git history (commit `51d00b0`) because the squad's changes (removing videos, flattening cards, Tailwind v4 migration) collectively made the site look significantly worse despite each individual change seeming reasonable.
+Sprint 3 was entirely caused by Squad C's frontend changes degrading the visual design. The lesson: **always compare screenshots before/after when changing visual components**.
 
 ---
 
@@ -533,21 +562,20 @@ All pages have `generateMetadata` with sign-specific titles, descriptions, OG ta
 
 ---
 
-## 14. Future Roadmap
+## 14. Next Steps (from HANDOFF.md)
 
-| Priority | Feature | Status | Notes |
-|----------|---------|--------|-------|
-| **P1** | Birth chart basics (Big 3: Sun/Moon/Rising) | Not started | Most requested by astrology enthusiasts |
-| **P1** | Email sending (daily digest) | Capture built | Needs email service (Resend/SendGrid) |
-| **P1** | Stripe integration for premium tier | Scaffolding built | Pricing page exists, needs payment flow |
-| **P1** | Prompt tightening (integrate astro-context into prompts) | astro-context.ts created | Needs integration into buildHoroscopePrompt |
-| **P2** | Reading history / journal | Streak exists | localStorage → Redis for cross-device sync |
-| **P2** | Server-side rendering of hero sign | Client-side fetch | Eliminate loading spinner for return visitors |
-| **P2** | Clean up remaining dead code | `schema-generator.ts` `generateSchemasOld` | Dead function with undefined var reference |
-| **P3** | Mobile app (React Native / Capacitor) | PWA available | PWA covers most use cases |
-| **P3** | Community features | Not started | Reflection prompts, user submissions |
-| **P3** | Audio narration | Not started | 60-second voiced daily readings |
-| **P3** | Ambient sound design | Not started | Optional meditative audio per mode |
+| Priority | Feature | Status |
+|----------|---------|--------|
+| **P0** | Extract share-card.ts into shared package | MCP server has a copy that will drift |
+| **P1** | Agent definitions (daily-publisher, social-poster, onboarding-guide) | Not started |
+| **P1** | More MCP Apps (philosopher picker, reading dashboard) | Not started |
+| **P1** | Social accounts (TikTok, X + Ayrshare connection) | Facebook Page live |
+| **P2** | P2 backlog (council rotation sign variance, spurious fetch, stale test) | Not started |
+| **P2** | Delete remaining old utils (migrate last consumers) | In progress |
+| **P2** | Tests for impure tools (cache:store, cache:retrieve, reading:generate) | Need mocking |
+| **P3** | Birth chart basics (Big 3: Sun/Moon/Rising) | Not started |
+| **P3** | Stripe integration for premium tier | Pricing page exists |
+| **P3** | Reading history / personal journal | Streak exists in Zustand |
 
 ---
 
