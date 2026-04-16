@@ -14,10 +14,9 @@
 import OpenAI from 'openai';
 import { getSignProfile, type SignProfile } from '@/tools/zodiac/sign-profile';
 import { getFormatTemplate, type FormatTemplateResult } from '@/tools/reading/format-template';
-import { getQuotes, type VerifiedQuote } from '@/tools/reading/quote-bank';
+import { getQuotes, type VerifiedQuote, VALID_AUTHORS } from '@/tools/reading/quote-bank';
 import { lookupPhilosopher } from '@/tools/philosopher/registry';
 import { VERIFIED_QUOTES } from '@/utils/verified-quotes';
-import { VALID_AUTHORS } from '@/utils/horoscope-prompts';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -32,16 +31,8 @@ export interface GenerateReadingInput {
   date?: string;
 }
 
-export interface ReadingOutput {
-  sign: string;
-  date: string;
-  philosopher: string;
-  message: string;
-  bestMatch: string;
-  inspirationalQuote: string;
-  quoteAuthor: string;
-  peacefulThought: string;
-}
+export type { ReadingOutput } from '@/tools/reading/types';
+import type { ReadingOutput } from '@/tools/reading/types';
 
 // ─── Prompt Builder ─────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import { ConstellationIcon, USE_CONSTELLATION_ICONS } from '@/components/icons/C
 // Redis imports are dynamic (below) to avoid client initialization at build time
 // — the frontend Vercel project doesn't have Redis env vars
 import { getArchiveDateRange, isValidArchiveDate, formatArchiveDate } from '@/utils/daily-archive';
-import { HoroscopeData } from '@/utils/horoscope-generator';
+import { HoroscopeData } from '@/tools/reading/types';
 
 export const revalidate = 86400; // ISR: 24h
 

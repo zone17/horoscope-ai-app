@@ -1,0 +1,16 @@
+{
+  "name": "@horoscope/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shared atomic tools for the Horoscope Philosophy Engine",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo 'No tests yet'"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -2,12 +2,16 @@
   "name": "horoscope-ai-api",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/shared",
+    "packages/mcp-server"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.447",
