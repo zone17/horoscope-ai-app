@@ -29,7 +29,7 @@ import { z } from 'zod';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateShareCard } from './tools/share-card.js';
+import { generateShareCard } from '@horoscope/shared';
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 
 const __filename = fileURLToPath(import.meta.url);

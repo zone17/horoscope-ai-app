@@ -4,7 +4,7 @@
  */
 
 import { SIGN_META, VALID_SIGNS, type ValidSign, isValidSign } from '@/constants/zodiac';
-import type { HoroscopeData } from '@/utils/horoscope-generator';
+import type { HoroscopeData } from '@/tools/reading/types';
 
 /** Element-to-hex color map matching the site's design system */
 export const ELEMENT_COLORS: Record<string, string> = {
