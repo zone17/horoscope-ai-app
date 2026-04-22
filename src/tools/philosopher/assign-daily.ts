@@ -79,14 +79,22 @@ function signIndex(sign: string): number {
 // ─── Core Logic ─────────────────────────────────────────────────────────
 
 /**
- * Council mode: pick from the user's selected philosophers using date-seed rotation.
+ * Council mode: pick from the user's selected philosophers using a
+ * (sign, date)-seeded rotation so every sign rotates independently.
+ *
+ * Without the sign term, all 12 signs sharing a council would see the same
+ * philosopher on the same day — collapsing the personalization the council
+ * is meant to provide.
  */
 function assignFromCouncil(
   validCouncil: string[],
+  sign: string,
   date: string,
 ): AssignDailyOutput {
   const dayNum = dayNumber(date);
-  const picked = validCouncil[dayNum % validCouncil.length];
+  const sIdx = Math.max(signIndex(sign), 0);
+  const rotationIndex = (dayNum + sIdx) % validCouncil.length;
+  const picked = validCouncil[rotationIndex];
   const entry = lookupPhilosopher(picked);
   return {
     philosopher: entry?.name ?? picked,
@@ -151,7 +159,7 @@ export function assignDaily(input: AssignDailyInput): AssignDailyOutput {
   if (input.council && input.council.length > 0) {
     const { valid } = validatePhilosophers(input.council);
     if (valid.length > 0) {
-      return assignFromCouncil(valid, date);
+      return assignFromCouncil(valid, sign, date);
     }
     // All council names invalid — fall through to default
   }
