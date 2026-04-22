@@ -37,6 +37,7 @@ const __dirname = dirname(__filename);
 
 const API_BASE = process.env.HOROSCOPE_API_URL || 'https://api.gettodayshoroscope.com';
 const SHARE_CARD_RESOURCE_URI = 'ui://horoscope/share-card.html';
+const PHILOSOPHER_PICKER_RESOURCE_URI = 'ui://horoscope/philosopher-picker.html';
 
 const VALID_SIGNS = [
   'aries', 'taurus', 'gemini', 'cancer',
@@ -70,29 +71,81 @@ const ELEMENT_COMPAT: Record<string, string[]> = {
   Water: ['Water', 'Earth'],
 };
 
-const PHILOSOPHERS = [
+// NOTE: Mirrors `src/tools/philosopher/registry.ts` (canonical source, 54 entries).
+// Kept in sync manually until the shared-package extraction (tracked in
+// docs/solutions/mcp-apps/mcp-apps-share-card-20260414.md as a deferred item —
+// "Extract embedded SIGN_DATA/PHILOSOPHERS into shared data") lands, at which
+// point this array should be replaced by a single import from `@horoscope/shared`.
+const PHILOSOPHERS: Array<{ name: string; tradition: string; era: string }> = [
+  // Stoicism (8)
   { name: 'Marcus Aurelius', tradition: 'Stoicism', era: 'ancient' },
   { name: 'Seneca', tradition: 'Stoicism', era: 'ancient' },
   { name: 'Epictetus', tradition: 'Stoicism', era: 'ancient' },
+  { name: 'Cato the Younger', tradition: 'Stoicism', era: 'ancient' },
+  { name: 'Musonius Rufus', tradition: 'Stoicism', era: 'ancient' },
+  { name: 'Cleanthes', tradition: 'Stoicism', era: 'ancient' },
+  { name: 'Zeno of Citium', tradition: 'Stoicism', era: 'ancient' },
+  { name: 'Chrysippus', tradition: 'Stoicism', era: 'ancient' },
+
+  // Epicureanism (1)
   { name: 'Epicurus', tradition: 'Epicureanism', era: 'ancient' },
+
+  // Classical (3)
   { name: 'Socrates', tradition: 'Classical', era: 'ancient' },
   { name: 'Plato', tradition: 'Classical', era: 'ancient' },
   { name: 'Aristotle', tradition: 'Classical', era: 'ancient' },
+
+  // Eastern Wisdom (9)
   { name: 'Lao Tzu', tradition: 'Eastern Wisdom', era: 'ancient' },
   { name: 'Alan Watts', tradition: 'Eastern Wisdom', era: 'modern' },
-  { name: 'Rumi', tradition: 'Eastern Wisdom', era: 'medieval' },
+  { name: 'Jiddu Krishnamurti', tradition: 'Eastern Wisdom', era: 'modern' },
   { name: 'Thich Nhat Hanh', tradition: 'Eastern Wisdom', era: 'modern' },
+  { name: 'Rumi', tradition: 'Eastern Wisdom', era: 'medieval' },
+  { name: 'Confucius', tradition: 'Eastern Wisdom', era: 'ancient' },
+  { name: 'Zhuangzi', tradition: 'Eastern Wisdom', era: 'ancient' },
+  { name: 'D.T. Suzuki', tradition: 'Eastern Wisdom', era: 'modern' },
+  { name: 'Pema Chodron', tradition: 'Eastern Wisdom', era: 'contemporary' },
+
+  // Science & Wonder (9)
   { name: 'Albert Einstein', tradition: 'Science & Wonder', era: 'modern' },
   { name: 'Richard Feynman', tradition: 'Science & Wonder', era: 'modern' },
   { name: 'Carl Sagan', tradition: 'Science & Wonder', era: 'modern' },
+  { name: 'Marie Curie', tradition: 'Science & Wonder', era: 'modern' },
+  { name: 'Nikola Tesla', tradition: 'Science & Wonder', era: 'modern' },
+  { name: 'Rachel Carson', tradition: 'Science & Wonder', era: 'modern' },
+  { name: 'Neil deGrasse Tyson', tradition: 'Science & Wonder', era: 'contemporary' },
+  { name: 'Ada Lovelace', tradition: 'Science & Wonder', era: 'modern' },
+  { name: 'Werner Heisenberg', tradition: 'Science & Wonder', era: 'modern' },
+
+  // Poetry & Soul (9)
   { name: 'Friedrich Nietzsche', tradition: 'Poetry & Soul', era: 'modern' },
+  { name: 'Ralph Waldo Emerson', tradition: 'Poetry & Soul', era: 'modern' },
+  { name: 'Kahlil Gibran', tradition: 'Poetry & Soul', era: 'modern' },
   { name: 'Mary Oliver', tradition: 'Poetry & Soul', era: 'modern' },
+  { name: 'Oscar Wilde', tradition: 'Poetry & Soul', era: 'modern' },
+  { name: 'Henry David Thoreau', tradition: 'Poetry & Soul', era: 'modern' },
   { name: 'Maya Angelou', tradition: 'Poetry & Soul', era: 'modern' },
+  { name: 'Walt Whitman', tradition: 'Poetry & Soul', era: 'modern' },
+  { name: 'Hermann Hesse', tradition: 'Poetry & Soul', era: 'modern' },
+
+  // Spiritual Leaders (9)
+  { name: 'Dr. Joe Dispenza', tradition: 'Spiritual Leaders', era: 'contemporary' },
+  { name: 'Walter Russell', tradition: 'Spiritual Leaders', era: 'modern' },
   { name: 'Eckhart Tolle', tradition: 'Spiritual Leaders', era: 'contemporary' },
   { name: 'Ram Dass', tradition: 'Spiritual Leaders', era: 'modern' },
+  { name: 'Deepak Chopra', tradition: 'Spiritual Leaders', era: 'contemporary' },
+  { name: 'Paramahansa Yogananda', tradition: 'Spiritual Leaders', era: 'modern' },
+  { name: 'Mooji', tradition: 'Spiritual Leaders', era: 'contemporary' },
+  { name: 'Sadhguru', tradition: 'Spiritual Leaders', era: 'contemporary' },
+  { name: 'Wayne Dyer', tradition: 'Spiritual Leaders', era: 'modern' },
+
+  // Existentialism (4)
   { name: 'Simone de Beauvoir', tradition: 'Existentialism', era: 'modern' },
   { name: 'Albert Camus', tradition: 'Existentialism', era: 'modern' },
   { name: 'Viktor Frankl', tradition: 'Existentialism', era: 'modern' },
+  { name: 'Hannah Arendt', tradition: 'Existentialism', era: 'modern' },
+
+  // Contemporary (2)
   { name: 'Nassim Nicholas Taleb', tradition: 'Contemporary', era: 'contemporary' },
   { name: 'Naval Ravikant', tradition: 'Contemporary', era: 'contemporary' },
 ];
@@ -377,6 +430,92 @@ registerAppResource(
         text: html,
       }],
     };
+  }
+);
+
+registerAppResource(
+  server,
+  'Philosopher Picker',
+  PHILOSOPHER_PICKER_RESOURCE_URI,
+  { description: 'Interactive picker for assembling a daily philosopher council from 54 thinkers across 9 traditions' },
+  async () => {
+    const htmlPath = join(__dirname, '..', 'dist', 'philosopher-picker.html');
+    if (!existsSync(htmlPath)) {
+      return {
+        contents: [{
+          uri: PHILOSOPHER_PICKER_RESOURCE_URI,
+          mimeType: RESOURCE_MIME_TYPE,
+          text: '<html><body><p>Philosopher picker app not built. Run: npm run build:app:philosopher-picker</p></body></html>',
+        }],
+      };
+    }
+    const html = readFileSync(htmlPath, 'utf-8');
+    return {
+      contents: [{
+        uri: PHILOSOPHER_PICKER_RESOURCE_URI,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: html,
+      }],
+    };
+  }
+);
+
+// ═══ PHILOSOPHER PICKER TOOLS ═══════════════════════════════════════
+//
+// `philosopher_picker_open` returns the MCP App resource link so the client
+// can render the picker. `philosopher_picker_confirm` is the echo verb the
+// UI calls on submit — it validates names against the registry and returns
+// the structured council. Both are thin compositions over `philosopher_list`.
+
+registerAppTool(
+  server,
+  'philosopher_picker_open',
+  {
+    title: 'Open Philosopher Picker',
+    description: 'Open an interactive picker UI to browse 54 philosophers across 9 traditions and assemble a council of up to 5. Renders as an MCP App in supporting clients.',
+    inputSchema: {
+      sign: signEnum.optional().describe('Optional zodiac sign to seed the "For your sign" recommendations'),
+    },
+    _meta: {
+      ui: { resourceUri: PHILOSOPHER_PICKER_RESOURCE_URI },
+    },
+  },
+  async ({ sign }) => {
+    return jsonResult({ sign: sign || null, maxCouncil: 5 });
+  }
+);
+
+server.registerTool(
+  'philosopher_picker_confirm',
+  {
+    title: 'Confirm Philosopher Council',
+    description: 'Echo verb invoked by the Philosopher Picker UI when the user confirms their council. Validates names against the philosopher registry and returns the structured council. Pure composition — no side effects, no generation.',
+    inputSchema: {
+      sign: signEnum.optional().describe('Zodiac sign the council was assembled for'),
+      philosophers: z
+        .array(z.string())
+        .min(1)
+        .max(5)
+        .describe('Selected philosopher names (1-5)'),
+    },
+  },
+  async ({ sign, philosophers }) => {
+    const valid: Array<{ name: string; tradition: string; era: string }> = [];
+    const invalid: string[] = [];
+    for (const name of philosophers) {
+      const p = PHILOSOPHERS.find((x) => x.name.toLowerCase() === name.toLowerCase());
+      if (p) valid.push({ name: p.name, tradition: p.tradition, era: p.era });
+      else invalid.push(name);
+    }
+    if (invalid.length > 0) {
+      return errorResult(`Unknown philosopher name(s): ${invalid.join(', ')}`);
+    }
+    return jsonResult({
+      sign: sign || null,
+      count: valid.length,
+      council: valid,
+      philosophersCsv: valid.map((v) => v.name).join(','),
+    });
   }
 );
 
