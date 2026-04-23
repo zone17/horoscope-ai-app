@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "next build",
+  "buildCommand": "npm run build --workspace=packages/shared && next build",
   "outputDirectory": ".next",
   "functions": {
     "src/app/api/**/*": {
