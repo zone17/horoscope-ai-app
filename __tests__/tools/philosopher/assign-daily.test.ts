@@ -86,6 +86,42 @@ describe('philosopher:assign-daily', () => {
     expect(result.philosopher).toBe('Seneca');
   });
 
+  it('varies council assignment across signs on the same date (P2 #1)', () => {
+    // A 3-member council on 12 signs should not collapse to one philosopher.
+    // With (sign, date) rotation the same council yields multiple picks.
+    const council = ['Seneca', 'Alan Watts', 'Rumi'];
+    const date = '2026-04-14';
+    const signs = [
+      'aries', 'taurus', 'gemini', 'cancer',
+      'leo', 'virgo', 'libra', 'scorpio',
+      'sagittarius', 'capricorn', 'aquarius', 'pisces',
+    ];
+    const picks = signs.map(
+      (sign) => assignDaily({ sign, council, date }).philosopher
+    );
+    // Council has 3 distinct members — across 12 signs we must see at least 2.
+    expect(new Set(picks).size).toBeGreaterThan(1);
+    // And every member should appear at least once (12 signs, 3 slots, offsets hit all).
+    for (const member of council) {
+      expect(picks).toContain(member);
+    }
+  });
+
+  it('varies per-sign even when council size divides 12 cleanly', () => {
+    // A 2-member council on 12 signs: half should get one, half the other.
+    const council = ['Seneca', 'Alan Watts'];
+    const date = '2026-04-14';
+    const signs = [
+      'aries', 'taurus', 'gemini', 'cancer',
+      'leo', 'virgo', 'libra', 'scorpio',
+      'sagittarius', 'capricorn', 'aquarius', 'pisces',
+    ];
+    const picks = signs.map(
+      (sign) => assignDaily({ sign, council, date }).philosopher
+    );
+    expect(new Set(picks).size).toBe(2);
+  });
+
   // ─── Council validation ───────────────────────────────────────────
 
   it('falls back to default when all council names are invalid', () => {

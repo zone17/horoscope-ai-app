@@ -12,6 +12,7 @@
  */
 
 import { redis } from '@/utils/redis';
+import { isValidSign } from '@/tools/zodiac/sign-profile';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -29,14 +30,6 @@ export interface SegmentOutput {
   subscribers: SubscriberRecord[];
   count: number;
 }
-
-// ─── Constants ──────────────────────────────────────────────────────────
-
-const VALID_SIGNS = new Set([
-  'aries', 'taurus', 'gemini', 'cancer',
-  'leo', 'virgo', 'libra', 'scorpio',
-  'sagittarius', 'capricorn', 'aquarius', 'pisces',
-]);
 
 // ─── Core Logic ─────────────────────────────────────────────────────────
 
@@ -56,7 +49,7 @@ export async function segment(input: SegmentInput): Promise<SegmentOutput> {
   const { sign } = input;
 
   // Validate sign if provided
-  if (sign && !VALID_SIGNS.has(sign.toLowerCase())) {
+  if (sign && !isValidSign(sign)) {
     return { subscribers: [], count: 0 };
   }
 

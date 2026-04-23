@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useMode } from '@/hooks/useMode';
 import { getPhilosopher } from '@/constants/philosophers';
@@ -31,6 +31,17 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Tracks mount state so a fetch resolved after unmount (e.g. user clicked
+  // "Edit your council" mid-flight) doesn't setState on a dead component and
+  // doesn't record a stale reading. Fix for P2 #3 — spurious fetch on edit-council.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const fetchReading = useCallback(async () => {
     if (!userSign) return;
 
@@ -45,9 +56,11 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
       }
 
       const res = await fetch(`/api/horoscope?${params.toString()}`);
+      if (!mountedRef.current) return;
       if (!res.ok) throw new Error('Failed to fetch your reading');
 
       const json = await res.json();
+      if (!mountedRef.current) return;
       if (json.success && json.data) {
         setData(json.data);
         recordReading();
@@ -55,9 +68,10 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
         throw new Error('Unexpected response format');
       }
     } catch (err) {
+      if (!mountedRef.current) return;
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [userSign, selectedPhilosophers, recordReading]);
 

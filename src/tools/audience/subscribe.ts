@@ -12,6 +12,7 @@
  */
 
 import { redis } from '@/utils/redis';
+import { isValidSign } from '@/tools/zodiac/sign-profile';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -32,12 +33,6 @@ export interface SubscribeOutput {
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────
-
-const VALID_SIGNS = new Set([
-  'aries', 'taurus', 'gemini', 'cancer',
-  'leo', 'virgo', 'libra', 'scorpio',
-  'sagittarius', 'capricorn', 'aquarius', 'pisces',
-]);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -94,7 +89,7 @@ export async function subscribe(input: SubscribeInput): Promise<SubscribeOutput>
   }
 
   // Validate sign if provided
-  if (sign && !VALID_SIGNS.has(sign.toLowerCase())) {
+  if (sign && !isValidSign(sign)) {
     return { success: false, message: 'Invalid zodiac sign' };
   }
 
