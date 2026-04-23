@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Philosopher Picker</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <h1>Pick your council</h1>
+      <p id="subtitle">Choose up to <span id="max-count">5</span> philosophers to guide your daily reading.</p>
+    </header>
+
+    <section id="council-bar">
+      <div id="council-slots" aria-label="Selected council"></div>
+      <button id="confirm-btn" disabled>Confirm council</button>
+    </section>
+
+    <section id="filters">
+      <div id="view-tabs" role="tablist">
+        <button class="tab active" role="tab" data-view="recommended">For your sign</button>
+        <button class="tab" role="tab" data-view="all">All philosophers</button>
+        <button class="tab" role="tab" data-view="tradition">By tradition</button>
+      </div>
+
+      <div id="sign-row" class="filter-row">
+        <span class="filter-label">Sign:</span>
+        <div id="sign-picker" role="radiogroup" aria-label="Zodiac sign"></div>
+      </div>
+
+      <div id="tradition-row" class="filter-row hidden">
+        <span class="filter-label">Tradition:</span>
+        <div id="tradition-picker" role="radiogroup" aria-label="Philosophical tradition"></div>
+      </div>
+    </section>
+
+    <main id="philosopher-list" aria-live="polite"></main>
+
+    <div id="result-banner" class="hidden">
+      <p id="result-message"></p>
+    </div>
+  </div>
+
+  <template id="philosopher-card-template">
+    <article class="philosopher-card">
+      <header class="pc-head">
+        <h3 class="pc-name"></h3>
+        <span class="pc-tradition"></span>
+      </header>
+      <p class="pc-description"></p>
+      <blockquote class="pc-quote"></blockquote>
+      <footer class="pc-foot">
+        <span class="pc-reason"></span>
+        <button class="pc-toggle" type="button">Add</button>
+      </footer>
+    </article>
+  </template>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -9,9 +9,12 @@
     "horoscope-philosophy-mcp": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc && npm run build:app",
+    "build": "tsc && npm run build:apps",
     "build:server": "tsc",
+    "build:apps": "npm run build:app:share-card && npm run build:app:philosopher-picker",
     "build:app": "vite build",
+    "build:app:share-card": "MCP_APP=share-card vite build",
+    "build:app:philosopher-picker": "MCP_APP=philosopher-picker vite build",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "echo 'No tests yet'"
