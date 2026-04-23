@@ -6,7 +6,12 @@
 //
 // We inline them in the app because the Vite singlefile build lives outside
 // the Next.js workspace and cannot resolve `@/*` path aliases. The logic is a
-// verbatim port: element-affinity + seeded wildcard, no new behavior.
+// verbatim port: element-affinity + seeded wildcard, same buildReason table,
+// same {name, reason} public shape plus transparent metadata (tradition, era,
+// element, reasonKind) that the UI layer uses for badges.
+//
+// When the canonical registry is hoisted into `@horoscope/shared`, this file
+// should collapse to a single re-export from that package.
 
 import {
   PHILOSOPHERS,
@@ -44,7 +49,67 @@ function seededShuffle(arr, seed) {
   return result;
 }
 
-/** recommendPhilosophers — element-affinity + 1 wildcard. Mirrors recommend.ts. */
+// ─── Sign-Specific Reason Templates (mirror recommend.ts) ──────────
+//
+// Keys are the canonical Tradition string values.
+
+const ELEMENT_REASONS = {
+  Fire: {
+    'Stoicism':
+      'Stoic discipline channels your fire into focused, unstoppable action.',
+    'Poetry & Soul':
+      'Their poetic vision matches your creative energy and passion for meaning.',
+  },
+  Earth: {
+    'Stoicism':
+      'Stoic pragmatism aligns with your grounded, results-oriented nature.',
+    'Science & Wonder':
+      'Their spirit of inquiry resonates with your love of tangible, provable truth.',
+  },
+  Air: {
+    'Classical':
+      'Classical depth feeds your hunger for rigorous, layered thinking.',
+    'Contemporary':
+      'Their systems thinking mirrors how you naturally see connections everywhere.',
+    'Existentialism':
+      'Existential questions energize your restless intellectual curiosity.',
+  },
+  Water: {
+    'Eastern Wisdom':
+      'Eastern wisdom honors the emotional depth and intuition you navigate by.',
+    'Spiritual Leaders':
+      'Their inner journey mirrors your instinct to explore beneath the surface.',
+    'Poetry & Soul':
+      'Poetic language speaks to the part of you that feels what words can barely hold.',
+  },
+};
+
+const WILDCARD_REASON_PREFIX = 'A surprising pairing:';
+
+/**
+ * buildReason — mirrors src/tools/philosopher/recommend.ts buildReason().
+ * Returns a human-readable reason string, chosen from ELEMENT_REASONS for
+ * affinity picks or a generated line for wildcards.
+ */
+function buildReason(philosopher, element, isWildcard) {
+  if (isWildcard) {
+    return `${WILDCARD_REASON_PREFIX} ${philosopher.name}'s ${philosopher.tradition.toLowerCase()} perspective offers a fresh lens that complements your ${element.toLowerCase()} sign energy.`;
+  }
+  const templateReason = ELEMENT_REASONS[element]?.[philosopher.tradition];
+  if (templateReason) return templateReason;
+  // Fallback for traditions that match but don't have a specific template
+  return `${philosopher.tradition} wisdom pairs naturally with your ${element.toLowerCase()} sign temperament.`;
+}
+
+/**
+ * recommendPhilosophers — element-affinity + 1 wildcard. Mirrors recommend.ts.
+ *
+ * Canonical return shape is `{name, reason: <human string>}`. We also surface
+ * `tradition`, `era`, `element`, and `reasonKind` ('affinity' | 'wildcard')
+ * as transparent metadata — the picker UI consumes these for badges and
+ * filtering. Keeping the human `reason` string identical to canonical means
+ * this file is trivially replaceable by a shared-package re-export later.
+ */
 export function recommendPhilosophers(sign, count = 5) {
   const element = SIGN_ELEMENTS[sign];
   if (!element) return [];
@@ -64,7 +129,14 @@ export function recommendPhilosophers(sign, count = 5) {
     if (picks.length >= affinitySlots) break;
     if (picked.has(p.name)) continue;
     picked.add(p.name);
-    picks.push({ ...p, reason: 'affinity', element });
+    picks.push({
+      name: p.name,
+      tradition: p.tradition,
+      era: p.era,
+      reason: buildReason(p, element, false),
+      reasonKind: 'affinity',
+      element,
+    });
   }
 
   if (count > 1) {
@@ -76,7 +148,14 @@ export function recommendPhilosophers(sign, count = 5) {
       if (picks.length >= count) break;
       if (picked.has(p.name)) continue;
       picked.add(p.name);
-      picks.push({ ...p, reason: 'wildcard', element });
+      picks.push({
+        name: p.name,
+        tradition: p.tradition,
+        era: p.era,
+        reason: buildReason(p, element, true),
+        reasonKind: 'wildcard',
+        element,
+      });
     }
   }
 

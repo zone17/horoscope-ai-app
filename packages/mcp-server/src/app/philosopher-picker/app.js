@@ -121,12 +121,17 @@ function getCurrentList() {
   if (state.view === 'recommended') {
     // Compose: recommendPhilosophers(sign, 10) — give the user breathing room.
     const recs = recommendPhilosophers(state.sign, 10);
-    // Join the recommendation reason onto the registry entry (which has quote/description).
-    return recs.map((r) => ({
-      ...r,
-      reasonLabel: r.reason === 'wildcard' ? 'Surprise pick' : `Matches your ${r.element.toLowerCase()} sign`,
-      reasonKind: r.reason,
-    }));
+    // Merge registry details (description, quote) with the recommendation.
+    // `r.reasonKind` ('affinity' | 'wildcard') drives the badge; `r.reason` is the
+    // canonical human string from buildReason() and is shown as the card tooltip/label.
+    return recs.map((r) => {
+      const registry = PHILOSOPHERS.find((p) => p.name === r.name) || {};
+      return {
+        ...registry,
+        ...r,
+        reasonLabel: r.reasonKind === 'wildcard' ? 'Surprise pick' : `Matches your ${r.element.toLowerCase()} sign`,
+      };
+    });
   }
   if (state.view === 'tradition') {
     // Compose: listPhilosophers({tradition}).
@@ -185,6 +190,9 @@ function renderCard(p, canAdd) {
   if (p.reasonLabel) {
     reasonEl.textContent = p.reasonLabel;
     if (p.reasonKind) reasonEl.classList.add(p.reasonKind);
+    // Surface the canonical human reason (from buildReason) as hover detail
+    // so the "why" behind the badge is reachable without cluttering the card.
+    if (p.reason) reasonEl.title = p.reason;
   } else {
     reasonEl.textContent = '';
   }
