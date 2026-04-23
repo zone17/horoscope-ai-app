@@ -323,9 +323,11 @@ els.confirmBtn.addEventListener('click', async () => {
   };
 
   try {
-    // Report the selection back via the philosopher_recommend tool.
-    // Using an EXISTING verb — no new workflow, just echoing the chosen set
-    // through a tool call so the client sees the structured output.
+    // Submit to the new atomic `philosopher_picker_confirm` verb — a pure
+    // validator (no I/O, no generation) that mirrors `philosopher_lookup`'s
+    // atomic-validator shape. The picker composes existing verbs client-side;
+    // this final call is the one compositional surface where server validation
+    // makes sense (normalize casing, separate valid from invalid names).
     const result = await mcpApp.callServerTool({
       name: 'philosopher_picker_confirm',
       arguments: payload,
