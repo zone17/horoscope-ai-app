@@ -333,10 +333,24 @@ els.confirmBtn.addEventListener('click', async () => {
       arguments: payload,
     });
 
+    // The confirm verb now returns a partial-success payload:
+    //   { sign, valid, invalid, council, philosophersCsv, isPartial }
+    // with isError: true only when valid.length === 0. Parse it and surface a
+    // soft notice when some names were dropped so the user can re-edit.
     const textContent = result.content?.find((c) => c.type === 'text');
-    const message = textContent?.text
-      ? `Council confirmed: ${council.map((c) => c.name).join(', ')}`
-      : `Council confirmed: ${council.map((c) => c.name).join(', ')}`;
+    let parsed = null;
+    try {
+      if (textContent?.text) parsed = JSON.parse(textContent.text);
+    } catch {
+      // Non-JSON (legacy shape) — fall through to fallback message.
+    }
+    const confirmedNames = parsed?.valid?.length
+      ? parsed.valid.map((v) => v.name)
+      : council.map((c) => c.name);
+    const fallbackMsg = `Council confirmed: ${confirmedNames.join(', ')}`;
+    const message = parsed?.isPartial && parsed?.invalid?.length
+      ? `${fallbackMsg} (dropped ${parsed.invalid.length} invalid name${parsed.invalid.length === 1 ? '' : 's'}: ${parsed.invalid.join(', ')})`
+      : fallbackMsg;
     showBanner(message);
   } catch (err) {
     // Allow user to re-edit if the call fails.
