@@ -31,6 +31,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateShareCard } from '@horoscope/shared';
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
+import { confirmCouncil } from './confirm-council.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -151,6 +152,10 @@ const PHILOSOPHERS: Array<{ name: string; tradition: string; era: string }> = [
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────
+
+// `confirmCouncil` — pure validator for the `philosopher_picker_confirm`
+// tool — is extracted to `./confirm-council.ts` so tests can import it
+// without triggering the StdioServerTransport startup in this module.
 
 async function apiCall(path: string, params?: Record<string, string>): Promise<any> {
   const url = new URL(path, API_BASE);
@@ -489,7 +494,7 @@ server.registerTool(
   'philosopher_picker_confirm',
   {
     title: 'Confirm Philosopher Council',
-    description: 'Echo verb invoked by the Philosopher Picker UI when the user confirms their council. Validates names against the philosopher registry and returns the structured council. Pure composition — no side effects, no generation.',
+    description: 'Atomic validator invoked by the Philosopher Picker UI when the user confirms their council. Mirrors the canonical `validatePhilosophers` shape: returns `valid` and `invalid` lists separately and surfaces a usable `council` whenever at least one name matches the registry. Pure composition — no side effects, no generation.',
     inputSchema: {
       sign: signEnum.optional().describe('Zodiac sign the council was assembled for'),
       philosophers: z
@@ -500,22 +505,16 @@ server.registerTool(
     },
   },
   async ({ sign, philosophers }) => {
-    const valid: Array<{ name: string; tradition: string; era: string }> = [];
-    const invalid: string[] = [];
-    for (const name of philosophers) {
-      const p = PHILOSOPHERS.find((x) => x.name.toLowerCase() === name.toLowerCase());
-      if (p) valid.push({ name: p.name, tradition: p.tradition, era: p.era });
-      else invalid.push(name);
+    const payload = confirmCouncil({ sign, philosophers }, PHILOSOPHERS);
+    // Hard failure only when NO usable names — preserves partial-success info
+    // for the caller so one typo doesn't discard the rest of the council.
+    if (payload.valid.length === 0) {
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(payload, null, 2) }],
+        isError: true as const,
+      };
     }
-    if (invalid.length > 0) {
-      return errorResult(`Unknown philosopher name(s): ${invalid.join(', ')}`);
-    }
-    return jsonResult({
-      sign: sign || null,
-      count: valid.length,
-      council: valid,
-      philosophersCsv: valid.map((v) => v.name).join(','),
-    });
+    return jsonResult(payload);
   }
 );
 
