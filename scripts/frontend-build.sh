@@ -19,6 +19,12 @@ if [ -f src/middleware.ts ]; then
   echo "Moved middleware to temp backup"
 fi
 
+# Build shared workspace packages first — @horoscope/shared exports a tsc-built
+# dist/ that next build imports via src/tools/content/share-card.ts. Without this
+# step, Vercel preview deploys fail with "Cannot find module '@horoscope/shared'".
+echo "Building @horoscope/shared..."
+npm run build --workspace=packages/shared
+
 # Build
 echo "Running Next.js build..."
 npx next build
