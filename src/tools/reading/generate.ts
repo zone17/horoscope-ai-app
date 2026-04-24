@@ -12,6 +12,8 @@
  */
 
 import OpenAI from 'openai';
+import { generateText } from '@/tools/ai/provider';
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/utils/feature-flags';
 import { getSignProfile, type SignProfile } from '@/tools/zodiac/sign-profile';
 import { getFormatTemplate, type FormatTemplateResult } from '@/tools/reading/format-template';
 import { getQuotes, type VerifiedQuote, VALID_AUTHORS } from '@/tools/reading/quote-bank';
@@ -131,12 +133,52 @@ Respond ONLY with valid JSON.`;
  * Generate a complete reading for a sign with a specific philosopher.
  * Calls OpenAI, parses the response, validates the output.
  */
-export async function generateReading(input: GenerateReadingInput): Promise<ReadingOutput> {
+/**
+ * Internal transport: calls the model via either legacy OpenAI SDK or the
+ * AI SDK + Gateway, gated by FEATURE_FLAG_USE_AI_SDK.
+ *
+ * Both paths target gpt-4o-mini for Phase 1b parity — same family, same
+ * prompt, same max-output-token budget. One intentional divergence:
+ * the legacy path enforces JSON via OpenAI's `response_format: json_object`;
+ * the AI SDK path relies on the prompt's "Respond ONLY with valid JSON."
+ * instruction alone. Hard JSON-mode enforcement via `generateObject` + Zod
+ * lands in PR C (and replaces this helper). That is why the flag defaults
+ * off — rollout is gated on PR C's structured output landing first.
+ *
+ * TODO(PR C): delete this helper and inline the AI SDK call back into
+ * generateReading once the legacy branch is removed.
+ */
+async function callModelForReading(prompt: string): Promise<string> {
+  if (isFeatureEnabled(FEATURE_FLAGS.USE_AI_SDK)) {
+    const { text } = await generateText({
+      model: 'openai/gpt-4o-mini',
+      prompt,
+      // maxOutputTokens is the AI SDK's normalized output-only cap; for the
+      // OpenAI chat completions backend this maps 1:1 to `max_tokens: 800`.
+      maxOutputTokens: 800,
+    });
+    return text;
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey || apiKey === 'your_openai_api_key_here') {
     throw new Error('OpenAI API key not properly configured');
   }
+  const openai = new OpenAI({ apiKey });
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini-2024-07-18',
+    messages: [{ role: 'user', content: prompt }],
+    response_format: { type: 'json_object' },
+    max_tokens: 800,
+  });
+  const content = response.choices[0].message.content;
+  if (!content) {
+    throw new Error('OpenAI returned empty content');
+  }
+  return content;
+}
 
+export async function generateReading(input: GenerateReadingInput): Promise<ReadingOutput> {
   const normalizedSign = input.sign.toLowerCase();
   const resolvedDate = input.date ?? new Date().toISOString().split('T')[0];
 
@@ -145,25 +187,13 @@ export async function generateReading(input: GenerateReadingInput): Promise<Read
 
   console.log(`[reading:generate] Generating ${normalizedSign} with philosopher: ${input.philosopher}`);
 
-  const openai = new OpenAI({ apiKey });
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini-2024-07-18',
-    messages: [{ role: 'user', content: prompt }],
-    response_format: { type: 'json_object' },
-    max_tokens: 800,
-  });
-
-  const content = response.choices[0].message.content;
-  if (!content) {
-    throw new Error('OpenAI returned empty content');
-  }
+  const content = await callModelForReading(prompt);
 
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(content);
   } catch {
-    throw new Error(`OpenAI returned invalid JSON: ${content.substring(0, 200)}`);
+    throw new Error(`Model returned invalid JSON: ${content.substring(0, 200)}`);
   }
 
   // Validate required fields
