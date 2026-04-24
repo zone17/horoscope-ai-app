@@ -225,6 +225,7 @@ MCP Apps: interactive HTML share card (`ui://horoscope/share-card.html`), Vite s
 | `NEXT_PUBLIC_API_URL` | Optional | API base URL override |
 | `HOROSCOPE_API_URL` | MCP server | API base for MCP tool delegation |
 | `AI_GATEWAY_API_KEY` | For local dev (AI SDK) | Vercel AI Gateway auth. Vercel-deployed envs use `VERCEL_OIDC_TOKEN` automatically when this is unset. |
+| `FEATURE_FLAG_USE_AI_SDK` | Optional | Parity flag for Phase 1b: when `true`, `reading:generate` routes through `@/tools/ai/provider` instead of the legacy OpenAI SDK. Default off. Removed in Phase 1c after rollout. |
 
 Redis is lazy-initialized via Proxy in `utils/redis.ts`. App won't crash without Redis — just won't cache or rate-limit.
 
