@@ -137,19 +137,25 @@ Respond ONLY with valid JSON.`;
  * Internal transport: calls the model via either legacy OpenAI SDK or the
  * AI SDK + Gateway, gated by FEATURE_FLAG_USE_AI_SDK.
  *
- * Both paths target gpt-4o-mini for Phase 1b parity — same prompt, same
- * model, same response_format. Only the transport differs. PR C swaps the
- * model to Anthropic via MODELS.haiku once parity is proven.
+ * Both paths target gpt-4o-mini for Phase 1b parity — same family, same
+ * prompt, same max-output-token budget. One intentional divergence:
+ * the legacy path enforces JSON via OpenAI's `response_format: json_object`;
+ * the AI SDK path relies on the prompt's "Respond ONLY with valid JSON."
+ * instruction alone. Hard JSON-mode enforcement via `generateObject` + Zod
+ * lands in PR C (and replaces this helper). That is why the flag defaults
+ * off — rollout is gated on PR C's structured output landing first.
+ *
+ * TODO(PR C): delete this helper and inline the AI SDK call back into
+ * generateReading once the legacy branch is removed.
  */
 async function callModelForReading(prompt: string): Promise<string> {
   if (isFeatureEnabled(FEATURE_FLAGS.USE_AI_SDK)) {
     const { text } = await generateText({
       model: 'openai/gpt-4o-mini',
       prompt,
+      // maxOutputTokens is the AI SDK's normalized output-only cap; for the
+      // OpenAI chat completions backend this maps 1:1 to `max_tokens: 800`.
       maxOutputTokens: 800,
-      providerOptions: {
-        openai: { responseFormat: { type: 'json_object' } },
-      },
     });
     return text;
   }

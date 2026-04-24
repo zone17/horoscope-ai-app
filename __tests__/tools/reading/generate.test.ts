@@ -37,6 +37,8 @@ jest.mock('openai', () => {
 });
 
 describe('reading:generate — Phase 1b parity', () => {
+  const originalOpenAIKey = process.env.OPENAI_API_KEY;
+
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.OPENAI_API_KEY = 'test-key-not-placeholder';
@@ -48,6 +50,11 @@ describe('reading:generate — Phase 1b parity', () => {
 
   afterEach(() => {
     delete process.env.FEATURE_FLAG_USE_AI_SDK;
+    if (originalOpenAIKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = originalOpenAIKey;
+    }
   });
 
   describe('legacy path (USE_AI_SDK off / unset)', () => {
@@ -79,18 +86,19 @@ describe('reading:generate — Phase 1b parity', () => {
       expect(mockOpenAIChatCompletionsCreate).not.toHaveBeenCalled();
     });
 
-    it('targets openai/gpt-4o-mini via gateway with json_object response_format and maxOutputTokens 800', async () => {
+    it('targets openai/gpt-4o-mini via gateway with maxOutputTokens 800', async () => {
+      // Hard JSON-mode enforcement is intentionally NOT asserted here: the AI
+      // SDK OpenAI chat provider does not expose `response_format` via
+      // `providerOptions`. Canonical JSON enforcement lands in PR C via
+      // `generateObject` + Zod, which replaces this call entirely. The flag
+      // defaults off so this divergence has no production blast radius.
       process.env.FEATURE_FLAG_USE_AI_SDK = 'true';
       await generateReading({ sign: 'aries', philosopher: 'Marcus Aurelius', date: '2026-04-24' });
-      expect(mockGenerateText).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: 'openai/gpt-4o-mini',
-          maxOutputTokens: 800,
-          providerOptions: {
-            openai: { responseFormat: { type: 'json_object' } },
-          },
-        }),
+      const [[call]] = mockGenerateText.mock.calls;
+      expect(call).toEqual(
+        expect.objectContaining({ model: 'openai/gpt-4o-mini', maxOutputTokens: 800 }),
       );
+      expect(call).not.toHaveProperty('providerOptions');
     });
   });
 
