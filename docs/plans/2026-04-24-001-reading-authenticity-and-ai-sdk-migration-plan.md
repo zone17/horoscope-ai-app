@@ -1,8 +1,21 @@
 # Plan: Reading Authenticity + AI SDK Migration
 
 > **Date**: 2026-04-24
-> **Status**: Approved, ready to execute
+> **Status**: In progress — Phase 1a and 1b shipped; Phase 1c is next
 > **Scope**: Rework the reading generation pipeline to produce authentic, philosopher-grounded readings. Migrate all model access to Vercel AI SDK via AI Gateway. Add daily-rhythm astronomical inputs.
+
+## Progress tracker
+
+| Phase | Status | PR | Notes |
+|---|---|---|---|
+| 1a — AI SDK + Gateway wiring | ✅ Shipped | #60 → `3835d33` | `src/tools/ai/provider.ts` is the single chokepoint; MODELS constants verified against live Gateway |
+| 1b — `reading:generate` parity port | ✅ Shipped | #61 → `70332da` | Behind `FEATURE_FLAG_USE_AI_SDK` (default off); production still on legacy |
+| 1c — Flip flag + model swap + Zod | 🔜 Next | — | Haiku vs Sonnet decided by A/B; `generateObject` replaces the deferred `providerOptions` workaround |
+| 1d — Corpus retrieval infrastructure | 🔜 After 1c | — | Blocked on open question: living-philosopher corpus posture |
+| 1e — Self-critique pass | 🔜 After 1d | — | Anti-cliché, anti-Barnum, anti-astrology-template |
+| 2a — `astronomy:moon-phase` verb | 🔜 After Phase 1 | — | Facts in, texturally out |
+| 2b — `calendar:seasonal-marker` verb | 🔜 After Phase 1 | — | 8 hardcoded dates/year |
+| 2c — `astronomy:moon-sign` verb | 🔜 After Phase 2a | — | Lands last so writing foundation can carry nuance |
 
 ---
 
@@ -38,25 +51,34 @@ Each stage is its own PR with its own review.
 
 ### Phase 1 — Writing Foundation
 
-**PR A — AI SDK + AI Gateway wiring**
-- Install `ai`, `@ai-sdk/gateway` (or plain `"provider/model"` strings via gateway)
-- Add `AI_GATEWAY_API_KEY` env var (Vercel env sync)
-- New file: `src/tools/ai/provider.ts` — thin wrapper that exposes `generateText`, `generateObject`, `streamText` for the rest of the codebase
-- Smoke test: a minimal `generateText` call verifies the gateway path end-to-end
-- No behavior change yet; no migration of existing code
+**PR A — AI SDK + AI Gateway wiring** ✅ **Shipped as PR #60 (`3835d33`)**
+- Installed `ai@^6.0.168`; routing through AI Gateway using plain `"provider/model"` strings (no explicit `@ai-sdk/gateway` dep needed).
+- `AI_GATEWAY_API_KEY` configured in Vercel env for the API project (production, preview, development). Local dev uses the same var in `.env.local`; Vercel-deployed envs can also use `VERCEL_OIDC_TOKEN` auto-provisioned.
+- `src/tools/ai/provider.ts` re-exports `generateText` / `generateObject` / `streamText` + exposes `MODELS` constant (`haiku` → `anthropic/claude-haiku-4.5`, `sonnet` → `anthropic/claude-sonnet-4.6`, `opus` → `anthropic/claude-opus-4.7`). All three IDs verified against the live Gateway's `/v1/models` endpoint.
+- 6 contract tests using `@jest-environment node` (AI SDK needs Web Streams APIs not in jsdom).
+- `jest.setup.js` guarded to let node-env tests opt out of DOM setup.
+- No behavior change.
 
-**PR B — Port `reading:generate` to AI SDK (parity run)**
-- Behind feature flag `FEATURE_FLAG_USE_AI_SDK` (default off)
-- When flag is on, route through `src/tools/ai/provider.ts`
-- Still targeting `gpt-4o-mini` for exact parity — this PR proves the abstraction works without changing output
-- A/B diff 12 signs × 3 philosophers; outputs must match token-for-token within rounding
+**PR B — Port `reading:generate` to AI SDK (parity run)** ✅ **Shipped as PR #61 (`70332da`)**
+- Feature flag `FEATURE_FLAG_USE_AI_SDK` added to `src/utils/feature-flags.ts`. Default off.
+- `callModelForReading(prompt)` internal helper branches on the flag:
+  - Off: legacy OpenAI SDK direct, `gpt-4o-mini-2024-07-18`, `response_format: json_object`, `max_tokens: 800`.
+  - On: `generateText` via `@/tools/ai/provider`, model `openai/gpt-4o-mini` (via Gateway), `maxOutputTokens: 800`. No JSON-mode enforcement (see below).
+- 6 parity tests covering transport selection + output-shape equivalence under both paths.
+- **Known deferred divergence**: `providerOptions.openai.responseFormat` is NOT a documented AI SDK OpenAI chat provider option — setting it was silently no-op. Review caught this. AI SDK path currently relies on the prompt's "Respond ONLY with valid JSON." instruction alone for JSON output. PR C replaces `generateText` with `generateObject` + Zod schema, which is the canonical AI SDK JSON enforcement mechanism. The flag stays default-off until PR C lands to avoid this divergence leaking to users.
 
-**PR C — Swap to Sonnet 4.6 + `generateObject` + Zod schema**
-- Flip the model to `MODELS.haiku` (`anthropic/claude-haiku-4.5`) for first pass (cost-sensitive), or `MODELS.sonnet` (`anthropic/claude-sonnet-4.6`) if quality delta justifies. Always route through `MODELS` from `@/tools/ai/provider` — never hardcode gateway IDs in consumers, since those are the single source of truth.
-- Replace free-form JSON parsing with `generateObject` + Zod schema defining `ReadingOutput`
-- Schema enforces: `message` (40–80 words), `bestMatch` (comma-separated sign list), `inspirationalQuote`, `quoteAuthor`, `peacefulThought`
-- Side-by-side quality eval: generate 12 signs × 3 philosophers on both old (gpt-4o-mini) and new (Sonnet 4.6) paths; manual authenticity review
-- Roll forward or iterate based on eval
+**PR C — Swap to Sonnet 4.6 (or Haiku 4.5) + `generateObject` + Zod schema** 🔜 **Next**
+- **A/B eval first** — before the PR lands, write a local script that generates 12 signs × 3 philosophers on both Haiku 4.5 and Sonnet 4.6 with the current prompt. Blind-score for voice authenticity, anti-template adherence, Barnum-resistance. Cost delta at 13M tokens/year is ~$100-150 — voice quality wins if the delta is material.
+- Flip the model by updating `callModelForReading` to call `generateObject` with the chosen `MODELS.*` alias. Always route through `MODELS` from `@/tools/ai/provider` — never hardcode gateway IDs in consumers.
+- Replace `generateText` + free-form JSON parsing with `generateObject` + Zod schema defining `ReadingOutput`. **This closes the deferred JSON-mode divergence from PR B.** Schema enforces:
+  - `message`: string, ≥40 words, ≤80 words
+  - `bestMatch`: string (comma-separated sign list, normalized downstream)
+  - `inspirationalQuote`: string (validated against `quote-bank` in downstream logic)
+  - `quoteAuthor`: string (validated against `VALID_AUTHORS`)
+  - `peacefulThought`: string (1-2 sentences)
+- Delete the legacy OpenAI SDK branch from `callModelForReading`; inline the AI SDK call back into `generateReading` (per `TODO(PR C)` comment). Remove `FEATURE_FLAG_USE_AI_SDK` from `feature-flags.ts` and `HANDOFF.md` env table. Remove `OPENAI_API_KEY` from Vercel env at the end of rollout (if fully retired).
+- Flip `FEATURE_FLAG_USE_AI_SDK=true` in Vercel preview env first; validate via preview deploy. Then production. Or ship the PR with the flag code deleted entirely since the divergence is closed.
+- Update tests: the 6 parity tests in `__tests__/tools/reading/generate.test.ts` collapse into single-path tests for the new canonical transport.
 
 **PR D — Corpus retrieval infrastructure (all 54, deep for ~15–20)**
 - New package: `@horoscope/corpus` OR extend `@horoscope/shared` with corpus utilities
