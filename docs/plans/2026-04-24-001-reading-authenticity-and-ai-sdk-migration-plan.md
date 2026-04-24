@@ -52,7 +52,7 @@ Each stage is its own PR with its own review.
 - A/B diff 12 signs × 3 philosophers; outputs must match token-for-token within rounding
 
 **PR C — Swap to Sonnet 4.6 + `generateObject` + Zod schema**
-- Flip the model to `anthropic/claude-haiku-4-5` for first pass (cost-sensitive), or `anthropic/claude-sonnet-4-6` if quality delta justifies
+- Flip the model to `MODELS.haiku` (`anthropic/claude-haiku-4.5`) for first pass (cost-sensitive), or `MODELS.sonnet` (`anthropic/claude-sonnet-4.6`) if quality delta justifies. Always route through `MODELS` from `@/tools/ai/provider` — never hardcode gateway IDs in consumers, since those are the single source of truth.
 - Replace free-form JSON parsing with `generateObject` + Zod schema defining `ReadingOutput`
 - Schema enforces: `message` (40–80 words), `bestMatch` (comma-separated sign list), `inspirationalQuote`, `quoteAuthor`, `peacefulThought`
 - Side-by-side quality eval: generate 12 signs × 3 philosophers on both old (gpt-4o-mini) and new (Sonnet 4.6) paths; manual authenticity review
