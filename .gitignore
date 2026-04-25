@@ -56,3 +56,5 @@ next-env.d.ts
 .env.production.local
 .env.eval
 .claude/
+.context/
+docs/evals/*.checkpoint.json

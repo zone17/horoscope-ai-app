@@ -41,7 +41,7 @@ config({ path: '.env.eval', override: true });
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { generateObject } from '../../src/tools/ai/provider';
+import { generateObject, MODELS } from '../../src/tools/ai/provider';
 import { buildReadingPrompt } from '../../src/tools/reading/generate';
 import { judgeReading, type JudgeResult } from '../../src/tools/reading/judge';
 import { VALID_SIGNS, type ValidSign } from '../../src/tools/zodiac/sign-profile';
@@ -66,15 +66,18 @@ const ReadingSchema = z.object({
 const EVAL_DATE = '2026-04-25';
 const PHILOSOPHERS = ['Seneca', 'Alan Watts', 'Naval Ravikant'] as const;
 
-// We name the model conditions explicitly here rather than reusing MODELS
-// from the provider — this script intentionally compares the legacy
-// incumbent (gpt-4o-mini) AND the three Anthropic candidates side-by-side.
-// MODELS only exposes the Anthropic aliases; gpt-4o-mini is the contrast.
+// Model conditions compared in this eval. The three Anthropic candidates are
+// referenced through the MODELS chokepoint per HANDOFF §12 Pitfall #14 — if
+// MODELS.haiku ever rotates to a newer ID, this eval automatically tracks
+// the rotation instead of silently measuring the old version. The incumbent
+// gpt-4o-mini is intentionally a string literal because it is NOT in MODELS:
+// the chokepoint deliberately excludes the legacy provider, so this is the
+// one place the literal is the source of truth (it is the contrast arm).
 const MODEL_CONDITIONS = [
   { id: 'openai/gpt-4o-mini', label: 'gpt-4o-mini (incumbent)' },
-  { id: 'anthropic/claude-haiku-4.5', label: 'Haiku 4.5' },
-  { id: 'anthropic/claude-sonnet-4.6', label: 'Sonnet 4.6' },
-  { id: 'anthropic/claude-opus-4.7', label: 'Opus 4.7' },
+  { id: MODELS.haiku, label: 'Haiku 4.5' },
+  { id: MODELS.sonnet, label: 'Sonnet 4.6' },
+  { id: MODELS.opus, label: 'Opus 4.7' },
 ] as const;
 
 const OUTPUT_DIR = join(process.cwd(), 'docs/evals');
@@ -394,8 +397,23 @@ async function main() {
   const completedKeys = new Set<string>();
   if (args.resume && existsSync(CHECKPOINT_PATH)) {
     rows = JSON.parse(readFileSync(CHECKPOINT_PATH, 'utf-8')) as EvalRow[];
-    for (const r of rows) completedKeys.add(`${r.sign}|${r.philosopher}|${r.modelId}`);
-    console.log(`[eval] Resumed from checkpoint: ${rows.length} rows already complete.`);
+    // Only treat cells with a successful judge result as completed. Failed
+    // cells (gen-fail, judge-fail, schema flake) stay in `rows` for the
+    // record but are eligible for retry on the next run — otherwise a
+    // transient 429 burst silently becomes a permanent skip and the
+    // baseline summary is built on a quietly-degraded dataset.
+    let retryable = 0;
+    for (const r of rows) {
+      if (r.judge && !r.generationError && !r.judgeError) {
+        completedKeys.add(`${r.sign}|${r.philosopher}|${r.modelId}`);
+      } else {
+        retryable++;
+      }
+    }
+    console.log(`[eval] Resumed from checkpoint: ${completedKeys.size} cells complete, ${retryable} retryable failures will re-run.`);
+    // Drop failed rows so the retried run can append fresh results without
+    // duplicates in the final output.
+    rows = rows.filter(r => r.judge && !r.generationError && !r.judgeError);
   }
 
   const remaining = cells.filter(c => !completedKeys.has(`${c.sign}|${c.philosopher}|${c.model.id}`));
@@ -407,7 +425,11 @@ async function main() {
     process.stdout.write(`[eval] ${i}/${remaining.length} ${cell.sign} / ${cell.philosopher} / ${cell.model.label} ... `);
     const row = await runOneCell(cell.sign, cell.philosopher, cell.model);
     rows.push(row);
-    const status = row.parseError ? `parse-fail` : row.judgeError ? `judge-fail` : `overall=${row.judge?.scores.overall}`;
+    const status = row.generationError
+      ? `gen-fail`
+      : row.judgeError
+        ? `judge-fail`
+        : `overall=${row.judge?.scores.overall}`;
     console.log(`${status} (${row.durationMs}ms)`);
     // Checkpoint after every cell
     writeFileSync(CHECKPOINT_PATH, JSON.stringify(rows, null, 2));
