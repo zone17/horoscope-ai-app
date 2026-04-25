@@ -1,7 +1,7 @@
 # Project Context: gettodayshoroscope.com
 
-> **Last updated**: 2026-04-15
-> **Status**: Production — 53 PRs shipped, agent-native architecture (PR #48), 120 tool tests, MCP server + MCP Apps
+> **Last updated**: 2026-04-25
+> **Status**: Production — 63 PRs shipped, agent-native architecture (PR #48), 143 tool tests, MCP server + MCP Apps, AI SDK + Gateway chokepoint (PR #60), LLM-as-judge verb (PR #63)
 
 ---
 
@@ -179,7 +179,8 @@ From a 12-sign audit by a content strategist:
 |-----------|-------|---------|
 | `zodiac/` | sign-profile, sign-compatibility | 12 sign personalities, element matching |
 | `philosopher/` | registry, assign-daily, recommend | 54 philosophers, 9 traditions, rotation, suggestions |
-| `reading/` | generate, quote-bank, format-template | AI generation, verified quotes, 12 writing formats |
+| `reading/` | generate, judge, quote-bank, format-template | AI generation, LLM-as-judge scoring (5 axes, prompt-injection hardened — see [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md)), verified quotes, 12 writing formats |
+| `ai/` | provider | AI SDK + Gateway chokepoint — single import surface for `generateText`/`generateObject`/`streamText` + canonical `MODELS` constants |
 | `cache/` | keys, store, retrieve, invalidate | Redis cache with auto-keyed derivation |
 | `content/` | format, share-card, distribute | 6 platform formats, SVG cards, Ayrshare posting |
 | `audience/` | subscribe, unsubscribe, segment | Redis-based rate-limited subscription |
@@ -390,6 +391,25 @@ Or regenerate individual signs by hitting `/api/horoscope?sign=X` (generates on 
 ---
 
 ## 9. Common Pitfalls
+
+> See also: canonical pattern indexes at [`docs/solutions/patterns/critical-patterns.md`](./solutions/patterns/critical-patterns.md) (P1-class) and [`docs/solutions/patterns/common-solutions.md`](./solutions/patterns/common-solutions.md) (P2/P3). The table below is the operational quick reference; the pattern files carry the full detection rules and remediation playbooks.
+
+### Critical Patterns Index (P1)
+
+| # | Pattern | When it bites | Source |
+|---|---|---|---|
+| 1 | LLM-as-judge prompt-injection (4-vector hardening) | Any verb where input prose is itself model-generated (judge, critic, scorer, RAG-with-judge). Naive delimiters are escapable; failure mode is silent quality collapse. | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
+
+### Top Common Solutions (P2/P3)
+
+| # | Pattern | Severity | Source |
+|---|---|---|---|
+| 1 | Refactor regression — sanitized alias not propagated to every interpolation site | P2 | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
+| 2 | Cross-family LLM-as-judge bias | P2 | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
+| 3 | Re-baseline eval after material prompt changes | P2 | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
+| 4 | Bounded review-loop budget exception (self-introduced regressions don't count) | P2 (process) | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
+
+### Operational Pitfalls
 
 | Pitfall | Details | How to Avoid |
 |---------|---------|-------------|
