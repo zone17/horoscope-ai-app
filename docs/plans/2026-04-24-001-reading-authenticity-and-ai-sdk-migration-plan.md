@@ -10,9 +10,10 @@
 |---|---|---|---|
 | 1a — AI SDK + Gateway wiring | ✅ Shipped | #60 → `3835d33` | `src/tools/ai/provider.ts` is the single chokepoint; MODELS constants verified against live Gateway |
 | 1b — `reading:generate` parity port | ✅ Shipped | #61 → `70332da` | Behind `FEATURE_FLAG_USE_AI_SDK` (default off); production still on legacy |
-| 1c — Flip flag + model swap + Zod | 🔜 Next | — | Haiku vs Sonnet decided by A/B; `generateObject` replaces the deferred `providerOptions` workaround |
+| **1b.5 — `reading:judge` verb + 4-model baseline eval** | **🔄 In progress** | — | New PR. Ships the judge verb that PR C, D, and E all need; produces 144-reading baseline (gpt-4o-mini, Haiku 4.5, Sonnet 4.6, Opus 4.7) that decides PR C's model. Plan: [`2026-04-25-001-...`](./2026-04-25-001-reading-eval-harness-and-model-baseline-plan.md) |
+| 1c — Flip flag + model swap + Zod | 🔜 After 1b.5 | — | Model decided by 1b.5 baseline data (not just Haiku-vs-Sonnet — incumbent and Opus also in scope); `generateObject` replaces the deferred `providerOptions` workaround |
 | 1d — Corpus retrieval infrastructure | 🔜 After 1c | — | Blocked on open question: living-philosopher corpus posture |
-| 1e — Self-critique pass | 🔜 After 1d | — | Anti-cliché, anti-Barnum, anti-astrology-template |
+| 1e — Self-critique pass (composition, not fold-in) | 🔜 After 1d | — | **`reading:generate` + `reading:judge` composed at the call site** (cron route, agent runtime). NOT a workflow folded into `reading:generate`. Anti-cliché, anti-Barnum, anti-astrology-template criteria already encoded in the judge verb shipped in 1b.5 |
 | 2a — `astronomy:moon-phase` verb | 🔜 After Phase 1 | — | Facts in, texturally out |
 | 2b — `calendar:seasonal-marker` verb | 🔜 After Phase 1 | — | 8 hardcoded dates/year |
 | 2c — `astronomy:moon-sign` verb | 🔜 After Phase 2a | — | Lands last so writing foundation can carry nuance |
@@ -88,16 +89,16 @@ Each stage is its own PR with its own review.
 - Ship mechanism with deep corpus for ~15–20 PD philosophers (Stoics, Classical, older Eastern Wisdom, older Science & Wonder); backfill others in follow-up PRs
 - `reading:generate` prompt assembly gains a "grounded passages" section when corpus returns results
 
-**PR E — Self-critique pass**
-- Second AI SDK call: given a generated reading, evaluate against:
-  - Current `avoidPatterns` per sign
-  - Forbidden-phrase list (tapestry, celestial, embrace, navigate, etc.)
-  - Barnum-pattern detection (vague statements that could apply to any sign)
-  - Astrology-template patterns ("as the new moon rises", "the cosmos whispers")
-  - Quote verification (any quoted text in `inspirationalQuote` must match `quote-bank` or retrieved corpus)
-- If critique fails, regenerate with specific feedback injected into the prompt
-- Cap at 2 critique rounds to bound latency/cost
-- Use Haiku 4.5 for critique (cheap, fast)
+**PR E — Self-critique pass (composition, NOT fold-in)**
+
+The critique loop lives in the **caller** (cron route, agent runtime, future `daily-publisher` agent), not inside `reading:generate`. `reading:generate` and `reading:judge` (shipped in PR B.5) stay as independent atomic verbs; PR E is the composition that wires them. Folding the loop into `reading:generate` would make it a workflow — exactly what the architecture principles forbid.
+
+- `reading:judge` already exists (shipped PR B.5), already evaluates against the project's full criteria set (sign-specific `avoidPatterns`, global banned-word list, Barnum patterns, astrology-template patterns, quote fidelity).
+- **Scope-narrowing finding from the PR B.5 baseline**: at Anthropic-grade models, **anti-template scored a perfect 5.00 on every reading (107/107)**. Anti-template critique is wasted compute. Phase 1e should regenerate-on-fail only when **antiBarnum < threshold** (the one axis where no model scored a 5 — current floor 3.94-4.00) and possibly when **voiceAuthenticity drops to 3 or below** on understated signs. Drop the anti-template critique pass entirely. See [`docs/evals/2026-04-25-baseline.md`](../evals/2026-04-25-baseline.md) §"Editorial reading of the data" #2.
+- PR E adds the composition: caller invokes `reading:generate` → `reading:judge` → if antiBarnum (or voice) below threshold, regenerate with feedback injected into the prompt → re-judge.
+- Cap at 2 critique rounds to bound latency/cost; threshold tuned from PR B.5 baseline scores (suggested initial threshold: regenerate if antiBarnum ≤ 3 OR voiceAuthenticity ≤ 3).
+- Quote verification continues to happen in `reading:generate`'s validators (correctness/safety); the judge's quote-fidelity score is a separate prose-quality signal.
+- Where the composition lives: most likely a thin verb-shaped wrapper like `reading:generate-with-critique` that the cron route can call instead of bare `reading:generate`. The wrapper itself is composition — single function, no business logic, just the loop. Daily-publisher agent definition gains it as an additional tool.
 
 ### Phase 2 — Daily Rhythm Inputs
 
