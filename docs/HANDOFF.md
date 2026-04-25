@@ -112,6 +112,16 @@ src/tools/
 ├── reading/
 │   ├── generate.ts              ← Main generation verb. Branches on
 │   │                              FEATURE_FLAG_USE_AI_SDK (see §6).
+│   ├── judge.ts                 ← reading:judge — scores any reading on 5 axes
+│   │                              (voice, anti-Barnum, anti-template,
+│   │                              quote fidelity, overall) via MODELS.haiku +
+│   │                              generateObject + Zod. Pure verb; PR E
+│   │                              composes it with generate at the call site
+│   │                              (NOT folded into generate.ts). Banned-word
+│   │                              and astrology-trope lists exported as
+│   │                              BANNED_WORDS / BANNED_PHRASES /
+│   │                              ASTROLOGY_TROPES — single source of truth
+│   │                              for the anti-template moat.
 │   ├── quote-bank.ts            ← VERIFIED_QUOTES + VALID_AUTHORS validation list.
 │   ├── format-template.ts       ← 12 writing-format rotations, sign-aware + date-seeded.
 │   └── types.ts                 ← ReadingOutput (camelCase) + HoroscopeData (snake_case).
@@ -134,7 +144,7 @@ src/tools/
     └── segment.ts               ← Same composition pattern.
 ```
 
-**20 tool files total.** All pure or nearly pure; side effects restricted to Redis/OpenAI/AI-Gateway/Ayrshare. New code goes here first; old consumers migrate to these opportunistically.
+**21 tool files total.** All pure or nearly pure; side effects restricted to Redis/OpenAI/AI-Gateway/Ayrshare. New code goes here first; old consumers migrate to these opportunistically.
 
 ### `src/agents/` — agent definitions (declarative)
 
@@ -369,9 +379,10 @@ Readings should sound like the philosopher is actually speaking — a "mashup *i
 |---|---|---|---|
 | **1a** | AI SDK + Gateway chokepoint | ✅ Shipped (PR #60, merged `3835d33`) | `src/tools/ai/provider.ts` is the single import surface |
 | **1b** | `reading:generate` parity port behind flag | ✅ Shipped (PR #61, merged `70332da`) | Flag defaults off; production still on legacy |
-| **1c** | Flip flag + model swap + `generateObject` + Zod | 🔜 Next | Haiku vs Sonnet decided by A/B eval; Zod schema defines `ReadingOutput` strictly |
+| **1b.5** | `reading:judge` verb + 4-model baseline eval | 🔄 In progress (`feat/reading-auth/eval-harness-baseline`) | Ships the judge that PR C, D, E all reuse. Baseline at `docs/evals/2026-04-25-baseline.md` decides PR C's model. Plan: [`2026-04-25-001`](./plans/2026-04-25-001-reading-eval-harness-and-model-baseline-plan.md) |
+| **1c** | Adopt baseline-picked model + `generateObject` + Zod | 🔜 After 1b.5 | Model decided by 1b.5 baseline; Zod schema defines `ReadingOutput` strictly; `FEATURE_FLAG_USE_AI_SDK` retired |
 | **1d** | Corpus retrieval infrastructure | 🔜 After 1c | **Blocked on open question**: living-philosopher corpus posture (see §13) |
-| **1e** | Self-critique pass | 🔜 After 1d | Anti-cliché, anti-Barnum, anti-astrology-template. Haiku 4.5 for critique cost. |
+| **1e** | Self-critique pass (composition, not fold-in) | 🔜 After 1d | `reading:generate` + `reading:judge` composed at the call site (cron route, agent runtime). NOT folded into `reading:generate` — that would make it a workflow. Criteria already encoded in the judge verb (1b.5). |
 | **2a** | `astronomy:moon-phase` atomic verb | 🔜 After Phase 1 | Prompt-engineered against template tropes |
 | **2b** | `calendar:seasonal-marker` atomic verb | 🔜 After Phase 1 | 8 hardcoded dates |
 | **2c** | `astronomy:moon-sign` atomic verb | 🔜 After Phase 2a | Lands last so writing foundation can carry nuance |
@@ -508,14 +519,11 @@ For Naval Ravikant, Deepak Chopra, Sadhguru, Eckhart Tolle, Pema Chodron, Wayne 
 
 **Lean**: (b) — (a)'s risk isn't worth it pre-scale; (c) creates a permanent two-tier quality gap. **Must be decided before Phase 1d starts.**
 
-### Haiku vs Sonnet for reading generation (decided in Phase 1c A/B)
+### Reading-generation model choice (decided by PR B.5 baseline)
 
-Phase 1c ships the flip-flag + model-swap work. A/B eval should compare:
-- `MODELS.haiku` (cheap, fast, step up from gpt-4o-mini)
-- `MODELS.sonnet` (best voice consistency, 7-10× cost, ~$100-150/year added)
-- Same prompts, same corpus (whatever exists at 1c time), blind quality scoring
+Originally framed as Haiku-vs-Sonnet. **PR B.5 (`feat/reading-auth/eval-harness-baseline`) widens the eval to four models** — adds the incumbent `gpt-4o-mini` (which was a default-of-convenience from PR #29, never re-justified) and the ceiling check `Opus 4.7`. The eval also produces per-sign and per-philosopher breakdowns so worst-case voice performance is visible, not hidden inside an average.
 
-**Lean**: Sonnet 4.6 if A/B confirms the delta is material; Haiku as fallback. Both are cheap at ~13M tokens/year.
+The decision and supporting data live at [`docs/evals/2026-04-25-baseline.md`](./evals/2026-04-25-baseline.md). PR C consumes this directly — no further A/B run needed.
 
 ### Agent runtime architecture (pre-Phase 2 decision)
 
@@ -655,6 +663,8 @@ Current memory files for this project:
 |---|---|
 | **`docs/HANDOFF.md`** | **THIS FILE — start here** |
 | `docs/plans/2026-04-24-001-reading-authenticity-and-ai-sdk-migration-plan.md` | Active initiative — full multi-PR plan, phase-by-phase |
+| `docs/plans/2026-04-25-001-reading-eval-harness-and-model-baseline-plan.md` | PR B.5 — judge verb + 4-model baseline (inserts before PR C) |
+| `docs/evals/` | Durable measurement artifacts (one paired `{date}-{slug}.{json,md}` per decision). Conventions in `docs/evals/README.md`. |
 | `docs/ARCHITECTURE.md` | System diagrams, data flow, deployment topology |
 | `docs/PROJECT_CONTEXT.md` | Design system, SEO, competitive positioning |
 | `docs/plans/` | Historical plans (8 sprint plans preceding the current initiative) |
@@ -669,12 +679,9 @@ Current memory files for this project:
 
 1. **Read the plan doc** — `docs/plans/2026-04-24-001-reading-authenticity-and-ai-sdk-migration-plan.md`. It's the source of truth for remaining phases.
 
-2. **Decide Haiku vs Sonnet for PR C** — can be done by:
-   - Writing a one-off local script that generates 12 signs × 3 philosophers on both models
-   - Blind-scoring the outputs for voice authenticity, anti-Barnum, anti-template
-   - Picking the winner; the cost delta is ~$100-150/year — voice quality wins if the delta is material
+2. **Read the PR B.5 baseline** — `docs/evals/2026-04-25-baseline.md`. The model recommendation for PR C lives there with its supporting per-model, per-sign, and per-philosopher tables. The eval covers four models (`gpt-4o-mini`, Haiku 4.5, Sonnet 4.6, Opus 4.7) using `generateObject` + Zod — the same JSON-mode mechanism PR C will adopt.
 
-3. **Start PR C** (Phase 1c) — flip flag, swap model, add `generateObject` with Zod schema defining `ReadingOutput`. Schema enforces: `message` (40-80 words), `bestMatch` (comma-separated sign list), `inspirationalQuote`, `quoteAuthor`, `peacefulThought`. This replaces the deferred `providerOptions.responseFormat` workaround from PR #61.
+3. **Start PR C** (Phase 1c) — adopt the model the baseline picked, integrate `generateObject` with a canonical Zod schema for `ReadingOutput` into `reading:generate`, retire `callModelForReading` and `FEATURE_FLAG_USE_AI_SDK`. Schema enforces: `message` (40-80 words), `bestMatch` (comma-separated sign list), `inspirationalQuote`, `quoteAuthor`, `peacefulThought`. This closes the deferred `providerOptions.responseFormat` workaround from PR #61.
 
 4. **Resolve the living-philosopher corpus question** before starting PR D. The plan doc flags this as a blocker; see §13 here.
 
