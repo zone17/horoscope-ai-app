@@ -258,14 +258,55 @@ describe('/api/cron/daily/[sign]', () => {
     expect(body.social.platformResults.facebook.error).toBe('Ayrshare 401');
   });
 
-  it('honors SOCIAL_PLATFORMS env override', async () => {
+  it('honors SOCIAL_PLATFORMS env override and posts to each platform independently', async () => {
     process.env.SOCIAL_PLATFORMS = 'facebook,x,tiktok';
+    // Per-platform mock: distribute is called once per platform with a
+    // single-element platforms array. Each call returns its own result.
+    mockDistribute.mockImplementation(async ({ platforms }: { platforms: string[] }) => ({
+      success: true,
+      platformResults: { [platforms[0]]: { success: true, postId: `${platforms[0]}-1` } },
+    }));
 
-    await GET(makeRequest({ authHeader: 'Bearer test-secret' }), makeContext('aries'));
+    const res = await GET(makeRequest({ authHeader: 'Bearer test-secret' }), makeContext('aries'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
 
-    expect(mockDistribute).toHaveBeenCalledTimes(1);
-    const call = mockDistribute.mock.calls[0][0];
-    expect(call.platforms).toEqual(['facebook', 'x', 'tiktok']);
+    expect(mockDistribute).toHaveBeenCalledTimes(3);
+    // Each call gets a single-platform array; the route formats per-platform
+    // so an X-rejected post on facebook formatting doesn't propagate.
+    expect(mockDistribute.mock.calls[0][0].platforms).toEqual(['facebook']);
+    expect(mockDistribute.mock.calls[1][0].platforms).toEqual(['x']);
+    expect(mockDistribute.mock.calls[2][0].platforms).toEqual(['tiktok']);
+
+    // Content must differ per platform — X is character-capped at 280, FB
+    // is long-form. If they were equal, the bug would still be present.
+    const fbContent = mockDistribute.mock.calls[0][0].content as string;
+    const xContent = mockDistribute.mock.calls[1][0].content as string;
+    expect(fbContent).not.toBe(xContent);
+    expect(xContent.length).toBeLessThanOrEqual(280);
+
+    expect(body.social.attempted).toEqual(['facebook', 'x', 'tiktok']);
+    expect(body.social.success).toBe(true);
+  });
+
+  it('records per-platform partial success when one platform fails', async () => {
+    process.env.SOCIAL_PLATFORMS = 'facebook,x';
+    mockDistribute.mockImplementation(async ({ platforms }: { platforms: string[] }) => {
+      const p = platforms[0];
+      if (p === 'x') {
+        return { success: false, platformResults: { x: { success: false, error: 'rate limited' } } };
+      }
+      return { success: true, platformResults: { facebook: { success: true, postId: 'fb-1' } } };
+    });
+
+    const res = await GET(makeRequest({ authHeader: 'Bearer test-secret' }), makeContext('aries'));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    // social.success is "all platforms succeeded" — partial = false.
+    expect(body.social.success).toBe(false);
+    expect(body.social.platformResults.facebook.success).toBe(true);
+    expect(body.social.platformResults.x.success).toBe(false);
+    expect(body.social.platformResults.x.error).toBe('rate limited');
   });
 
   it('skips distribute when SOCIAL_PLATFORMS is set to an empty list', async () => {

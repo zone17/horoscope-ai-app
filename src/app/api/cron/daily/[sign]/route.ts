@@ -197,35 +197,57 @@ export async function GET(
     platformResults: {},
   };
 
-  if (platforms.length > 0) {
+  // Format and post per platform. Each platform has its own length budget
+  // and hashtag strategy (X is 280 chars; FB allows long-form CTA; etc.) —
+  // posting a single FB-formatted blob to all platforms would silently
+  // truncate or get rejected on X. Sequential per-platform calls keep each
+  // post correctly sized; total added latency is ~1s × N.
+  const platformResults: Record<string, { success: boolean; error?: string }> = {};
+  let anyPlatformSucceeded = false;
+
+  for (const platform of platforms) {
     try {
       const formatted = formatReading({
         reading: readingForFormat(reading, philosopher),
-        platform: platforms[0] satisfies Platform,
+        platform: platform satisfies Platform,
       });
-      // Append hashtags as a single line so the post is platform-tuned text +
-      // discoverability tags. formatReading owns hashtag strategy per platform;
-      // distribute is a dumb passthrough.
+      // formatReading owns per-platform hashtag strategy; appending here
+      // keeps distribute as a dumb passthrough.
       const hashtagSuffix = formatted.hashtags.length > 0
         ? '\n\n' + formatted.hashtags.map((h) => `#${h}`).join(' ')
         : '';
       const post = formatted.text + hashtagSuffix;
 
-      const distributed = await distribute({ content: post, platforms });
-      social = {
-        attempted: platforms,
+      const distributed = await distribute({ content: post, platforms: [platform] });
+      const result = distributed.platformResults[platform] ?? {
         success: distributed.success,
-        platformResults: Object.fromEntries(
-          Object.entries(distributed.platformResults).map(([k, v]) => [
-            k,
-            { success: v.success, error: v.error },
-          ]),
-        ),
+        error: distributed.success ? undefined : 'No result returned for platform',
       };
+      platformResults[platform] = { success: result.success, error: result.error };
+      if (result.success) anyPlatformSucceeded = true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown distribute error';
-      errors.push(`distribute: ${msg}`);
-      console.error(`[cron:daily/${sign}] distribute failed:`, msg);
+      platformResults[platform] = { success: false, error: msg };
+      errors.push(`distribute:${platform}: ${msg}`);
+      console.error(`[cron:daily/${sign}] distribute failed for ${platform}:`, msg);
+    }
+  }
+
+  if (platforms.length > 0) {
+    social = {
+      attempted: platforms,
+      // success means "all attempted platforms succeeded" — same contract as
+      // the underlying distribute verb; partial-success is visible per platform.
+      success: platforms.every((p) => platformResults[p]?.success === true),
+      platformResults,
+    };
+    if (!social.success && anyPlatformSucceeded) {
+      console.warn(
+        `[cron:daily/${sign}] partial social success — ${Object.entries(platformResults)
+          .filter(([, r]) => !r.success)
+          .map(([p, r]) => `${p}: ${r.error ?? 'unknown'}`)
+          .join('; ')}`,
+      );
     }
   }
 
