@@ -1,7 +1,7 @@
 # Project Context: gettodayshoroscope.com
 
-> **Last updated**: 2026-04-25
-> **Status**: Production — 63 PRs shipped, agent-native architecture (PR #48), 143 tool tests, MCP server + MCP Apps, AI SDK + Gateway chokepoint (PR #60), LLM-as-judge verb (PR #63)
+> **Last updated**: 2026-04-26
+> **Status**: Production — 65 PRs shipped, agent-native architecture (PR #48), 147 tool tests, MCP server + MCP Apps, AI SDK + Gateway chokepoint (PR #60), LLM-as-judge verb (PR #63), Sonnet 4.6 + canonical Zod schema for `reading:generate` (PR #65)
 
 ---
 
@@ -399,6 +399,7 @@ Or regenerate individual signs by hitting `/api/horoscope?sign=X` (generates on 
 | # | Pattern | When it bites | Source |
 |---|---|---|---|
 | 1 | LLM-as-judge prompt-injection (4-vector hardening) | Any verb where input prose is itself model-generated (judge, critic, scorer, RAG-with-judge). Naive delimiters are escapable; failure mode is silent quality collapse. | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
+| 2 | generateObject production hardening (5-point pattern) | Any verb using `generateObject` on a production path. Naive wiring (one call, no retry, no fallbacks) cascades into 24h-of-500s outages because the AI SDK doesn't auto-retry, cron silently skips failures, and post-call validators can empty out without the schema noticing. | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
 
 ### Top Common Solutions (P2/P3)
 
@@ -408,6 +409,10 @@ Or regenerate individual signs by hitting `/api/horoscope?sign=X` (generates on 
 | 2 | Cross-family LLM-as-judge bias | P2 | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
 | 3 | Re-baseline eval after material prompt changes | P2 | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
 | 4 | Bounded review-loop budget exception (self-introduced regressions don't count) | P2 (process) | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
+| 5 | Word-count whitespace edge — `''.split(/\s+/).length === 1` | P3 | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
+| 6 | Test fixture silently fires telemetry warn on every passing test | P3 | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
+| 7 | Schema shape introspection in tests is Zod-version-coupled | P3 | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
+| 8 | Chokepoint comment is a lie when a legacy direct-import remains | P2 (docs truth) | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
 
 ### Operational Pitfalls
 
