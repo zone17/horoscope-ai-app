@@ -30,6 +30,15 @@ export interface GenerateReadingInput {
   format?: string;
   /** Date in YYYY-MM-DD format (defaults to today) */
   date?: string;
+  /**
+   * Optional critique feedback to inject into the prompt for a regeneration.
+   * Used by `reading:generate-with-critique` (Phase 1e) — when the judge
+   * scores a previous attempt below threshold, the wrapper builds a feedback
+   * string from the judge's violations + rationale and passes it here so the
+   * model knows what to fix on the retry. Verb stays atomic; the critique
+   * loop lives in the wrapper, not here.
+   */
+  feedback?: string;
 }
 
 export type { ReadingOutput } from '@/tools/reading/types';
@@ -107,7 +116,7 @@ ${writingFormat}
 
 ## ${profile.exampleOpener}
 ${quoteBankSection}
-
+${input.feedback ? `\n## CRITIQUE FROM PRIOR ATTEMPT — FIX THESE\nA previous draft of this reading scored below the quality bar. The judge flagged the issues below. Address each one in this attempt; do not repeat them.\n\n${input.feedback}\n` : ''}
 ## WHAT TO INCLUDE (as object fields)
 1. **message**: The main horoscope (40-80 words, following the voice and format above)
 2. **bestMatch**: 3-4 compatible signs as lowercase comma-separated string (e.g., "aries, gemini, libra")
