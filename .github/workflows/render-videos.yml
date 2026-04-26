@@ -61,8 +61,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Chrome for Remotion
-        run: npx remotion ensure-chrome
+      # Note: in Remotion 4.0.447 (this project's version) the `ensure-chrome`
+      # CLI was removed. `renderMedia()` lazy-installs Chromium on first call,
+      # which adds ~30-90s to the first sign's render. Acceptable cost for
+      # the simplicity of not pinning a separate browser-install step that
+      # rots with Remotion versions.
 
       - name: Install edge-tts (voiceover)
         # Without this, the script's voiceover step ENOENTs and falls back
