@@ -45,6 +45,23 @@ export const ReadingOutputModelSchema = z.object({
 
 export type ReadingOutputModel = z.infer<typeof ReadingOutputModelSchema>;
 
+/**
+ * Compile-time invariant: ReadingOutputModel (the schema-inferred type)
+ * must structurally match ReadingOutput minus the three fields the verb
+ * injects (sign, date, philosopher). If ReadingOutput renames or retypes
+ * one of those fields, this assignment fails to compile — preventing
+ * silent schema drift between the two declarations.
+ */
+type _AssertModelMatchesReadingOutput = ReadingOutputModel extends Omit<ReadingOutput, 'sign' | 'date' | 'philosopher'>
+  ? Omit<ReadingOutput, 'sign' | 'date' | 'philosopher'> extends ReadingOutputModel
+    ? true
+    : false
+  : false;
+const _MODEL_MATCHES_READING_OUTPUT: _AssertModelMatchesReadingOutput = true;
+// Suppress unused-symbol warnings — the value's only purpose is to make TS
+// evaluate the conditional type at module load.
+void _MODEL_MATCHES_READING_OUTPUT;
+
 /** API/frontend snake_case shape */
 export interface HoroscopeData {
   sign: string;

@@ -16,7 +16,7 @@ import { generateObject, MODELS } from '@/tools/ai/provider';
 import { getSignProfile, type SignProfile } from '@/tools/zodiac/sign-profile';
 import { getFormatTemplate, type FormatTemplateResult } from '@/tools/reading/format-template';
 import { getQuotes, type VerifiedQuote, VALID_AUTHORS } from '@/tools/reading/quote-bank';
-import { ReadingOutputModelSchema } from '@/tools/reading/types';
+import { ReadingOutputModelSchema, type ReadingOutputModel } from '@/tools/reading/types';
 import { VERIFIED_QUOTES } from '@/utils/verified-quotes';
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -125,6 +125,90 @@ ${quoteBankSection}
 // ─── Generator ──────────────────────────────────────────────────────────
 
 /**
+ * Element-based fallback compatibility map. Used when the model produces a
+ * `bestMatch` that contains only the user's own sign, leaving the post-filter
+ * result empty. Mirrors the prompt's compatibility rules (Fire+Air, Earth+Water,
+ * etc.) so the surfaced UI is never blank. Each fallback is the canonical
+ * 3-sign list excluding the user's own sign.
+ */
+const ELEMENT_FALLBACK_MATCHES: Record<string, string> = {
+  aries: 'leo, sagittarius, gemini',
+  leo: 'aries, sagittarius, gemini',
+  sagittarius: 'aries, leo, libra',
+  taurus: 'virgo, capricorn, cancer',
+  virgo: 'taurus, capricorn, scorpio',
+  capricorn: 'taurus, virgo, pisces',
+  gemini: 'libra, aquarius, leo',
+  libra: 'gemini, aquarius, sagittarius',
+  aquarius: 'gemini, libra, aries',
+  cancer: 'scorpio, pisces, taurus',
+  scorpio: 'cancer, pisces, virgo',
+  pisces: 'cancer, scorpio, capricorn',
+};
+
+/**
+ * Pre-parse normalisation: if the model returns snake_case keys instead of
+ * camelCase (a known dialect drift especially around model rotations), map
+ * them in. The schema is canonical camelCase, so we just translate before
+ * Zod ever sees the payload. Defense-in-depth — the prompt + schema should
+ * already produce camelCase, but a single retry-friendly normaliser eliminates
+ * a whole class of NoObjectGeneratedError.
+ */
+function normaliseModelKeys(raw: Record<string, unknown>): Record<string, unknown> {
+  const map: Record<string, string> = {
+    best_match: 'bestMatch',
+    inspirational_quote: 'inspirationalQuote',
+    quote_author: 'quoteAuthor',
+    peaceful_thought: 'peacefulThought',
+  };
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    out[map[k] ?? k] = v;
+  }
+  return out;
+}
+
+/**
+ * Single-retry wrapper around `generateObject`. The Sonnet schema-rejection
+ * rate is unknown at PR C merge time and the cron has no second-attempt
+ * loop — so a single transient flake (NoObjectGeneratedError, AI_TypeValidationError,
+ * or transport-level throttle) would skip a sign for 24h. One retry gates
+ * the worst case while keeping cost bounded (≤2 calls per sign).
+ *
+ * On the second attempt we route through `generateText` and run the model
+ * output through `normaliseModelKeys` + Zod ourselves — bypasses any
+ * SDK-side strictness that may have rejected on the first call (e.g. tool-call
+ * formatting). The retry is explicitly NOT a tighter retry budget; if both
+ * fail, propagate the error so the caller (cron, route handler) can decide
+ * to surface a 500, fall back to a stale cache, or skip the sign.
+ */
+async function generateAndValidateOnce(prompt: string) {
+  const { object } = await generateObject({
+    model: MODELS.sonnet,
+    schema: ReadingOutputModelSchema,
+    prompt,
+    maxOutputTokens: 800,
+  });
+  return object;
+}
+
+async function generateAndValidateRetry(prompt: string) {
+  // Retry path: ask the model for raw text, normalise snake_case → camelCase
+  // defensively, then schema-parse ourselves. Same model, same prompt, but
+  // a different transport mode that bypasses the structured-output enforcement
+  // mode the first call may have tripped on.
+  const { generateText } = await import('@/tools/ai/provider');
+  const { text } = await generateText({
+    model: MODELS.sonnet,
+    prompt: `${prompt}\n\nReturn ONLY a JSON object — no markdown fences, no commentary.`,
+    maxOutputTokens: 800,
+  });
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+  const raw = JSON.parse(cleaned) as Record<string, unknown>;
+  return ReadingOutputModelSchema.parse(normaliseModelKeys(raw));
+}
+
+/**
  * reading:generate
  *
  * Generate a complete reading for a sign with a specific philosopher.
@@ -132,9 +216,12 @@ ${quoteBankSection}
  * canonical `ReadingOutputModelSchema`. Model is pinned to `MODELS.sonnet`
  * (decision recorded in `docs/evals/2026-04-25-baseline.md`).
  *
+ * One retry on schema/transport failure (see `generateAndValidateRetry`).
+ *
  * Post-call validators (quote-author allowlist, quote-bank fallback,
- * self-match filter) operate on the schema-validated object — they
- * enforce business rules the schema can't express.
+ * self-match filter, element-based bestMatch fallback) operate on the
+ * schema-validated object — they enforce business rules the schema can't
+ * express.
  */
 export async function generateReading(input: GenerateReadingInput): Promise<ReadingOutput> {
   const normalizedSign = input.sign.toLowerCase();
@@ -144,35 +231,36 @@ export async function generateReading(input: GenerateReadingInput): Promise<Read
 
   console.log(`[reading:generate] Generating ${normalizedSign} with philosopher: ${input.philosopher}`);
 
-  const { object } = await generateObject({
-    model: MODELS.sonnet,
-    schema: ReadingOutputModelSchema,
-    prompt,
-    maxOutputTokens: 800,
-  });
+  let object: ReadingOutputModel;
+  try {
+    object = await generateAndValidateOnce(prompt);
+  } catch (firstError) {
+    console.warn(`[reading:generate] First attempt failed (${(firstError as Error).message}). Retrying via raw-text + manual schema parse.`);
+    object = await generateAndValidateRetry(prompt);
+  }
 
   // Soft word-count telemetry. The 40-80 range is a prompt-level instruction,
   // not a hard schema constraint — strict refinement risks flaky throws on
   // otherwise-acceptable output. Log when the model misses the target so
   // compliance can be tracked over time and the schema tightened later if
   // the data supports it.
-  const wordCount = object.message.trim().split(/\s+/).length;
+  const trimmed = object.message.trim();
+  const wordCount = trimmed === '' ? 0 : trimmed.split(/\s+/).length;
   if (wordCount < 40 || wordCount > 80) {
     console.warn(`[reading:generate] message word count out of target range: ${wordCount} (target 40-80)`);
   }
 
-  // Validate quote author against approved list. Non-conformant authors
-  // are overridden with the assigned philosopher so the daily card never
-  // surfaces an unknown attribution.
+  // Override unknown attributions — UX guarantee that the daily card never
+  // surfaces an unrecognised author.
   let quoteAuthor = object.quoteAuthor;
   if (!VALID_AUTHORS.some(author => quoteAuthor.toLowerCase().includes(author.toLowerCase()))) {
     console.warn(`[reading:generate] Invalid quote author: ${quoteAuthor}. Overriding with assigned: ${input.philosopher}`);
     quoteAuthor = input.philosopher;
   }
 
-  // Validate quote against the verified-quote bank when one exists for the
-  // assigned philosopher. Unverified quotes are replaced with a deterministic
-  // pick from the bank (date-seeded) — protects against fabrication.
+  // Replace fabricated quotes with a deterministic pick from the verified bank
+  // when bank coverage exists for this philosopher. Date-seeded so the same
+  // (philosopher, date) deterministically picks the same fallback quote.
   let inspirationalQuote = object.inspirationalQuote;
   const authorQuotes = VERIFIED_QUOTES[input.philosopher];
   if (authorQuotes && authorQuotes.length > 0) {
@@ -187,11 +275,18 @@ export async function generateReading(input: GenerateReadingInput): Promise<Read
     }
   }
 
-  // Filter self-matches from bestMatch — Aries shouldn't show "aries" in
-  // its own compatibility list. Lowercasing also normalises minor model
-  // capitalisation drift.
-  const matches = object.bestMatch.toLowerCase().split(',').map(s => s.trim());
-  const bestMatch = matches.filter(match => match !== normalizedSign).join(', ');
+  // Lowercase normalises model capitalisation drift; filter prevents the
+  // sign listing itself in its own compatibility row. If the model only
+  // returned the user's own sign, the filter would leave an empty string
+  // — fall back to the canonical element-based compatibility list so the
+  // UI never renders a blank "Best matches:" row.
+  const matches = object.bestMatch.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+  const filtered = matches.filter(match => match !== normalizedSign);
+  let bestMatch = filtered.join(', ');
+  if (bestMatch === '') {
+    console.warn(`[reading:generate] bestMatch empty after self-filter (model returned: "${object.bestMatch}"). Falling back to element-based default.`);
+    bestMatch = ELEMENT_FALLBACK_MATCHES[normalizedSign] ?? '';
+  }
 
   return {
     sign: normalizedSign,
