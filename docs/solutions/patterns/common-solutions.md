@@ -16,6 +16,8 @@
 | 6 | Test fixture silently fires telemetry warn on every passing test | [`design-patterns/generateobject-production-hardening-20260426.md`](../design-patterns/generateobject-production-hardening-20260426.md) | P3 | 1 (PR #65) |
 | 7 | Schema shape introspection in tests is Zod-version-coupled | [`design-patterns/generateobject-production-hardening-20260426.md`](../design-patterns/generateobject-production-hardening-20260426.md) | P3 | 1 (PR #65) |
 | 8 | Chokepoint comment is a lie when a legacy direct-import remains | [`design-patterns/generateobject-production-hardening-20260426.md`](../design-patterns/generateobject-production-hardening-20260426.md) | P2 (docs truth) | 1 (PR #65) |
+| 9 | Identical-fixture test masks BEST-of-N regression (test must use distinct quality levels) | [`design-patterns/critique-loop-best-of-n-hardening-20260426.md`](../design-patterns/critique-loop-best-of-n-hardening-20260426.md) | P2 (testing) | 1 (PR #67) |
+| 10 | Computing a value from a comparison that's true by construction | [`design-patterns/critique-loop-best-of-n-hardening-20260426.md`](../design-patterns/critique-loop-best-of-n-hardening-20260426.md) | P3 | 1 (PR #67) |
 
 ---
 
@@ -105,3 +107,27 @@ The identity check is stronger (catches a regression where someone inlined a sch
 - Update the comment to call out the gap explicitly with a cross-reference (e.g., "Known gap: `path/to/legacy.ts` still uses X directly; on migration backlog. Until that lands, env var Y must remain set.")
 
 Comments that say "single X" are aspirational unless the codebase enforces it.
+
+---
+
+## 9. Identical-fixture test masks BEST-of-N regression (test must use distinct quality levels)
+
+**Symptom**: A test for a BEST-of-N composer used 3 identical FAILING_JUDGE responses to exercise the budget-exhaustion path and asserted `result.reading.message === 'attempt 2'`. With BEST-of-N tracking, that test passes trivially in BOTH the correct-implementation case (all 3 attempts have identical quality, last one is also a valid "best") AND the broken-implementation case (returns LAST regardless). Zero protection against the regression.
+
+**Rule**: When a contract is "surface the best of N attempts," the test must use N **distinct** quality levels with a known ordering — e.g., STRONG_FAIL → WEAK_FAIL → WEAK_FAIL with strictly different composite scores. Otherwise the test passes whether the implementation tracks best or just returns last.
+
+**Pattern marker**: any test for a "best/maximum/optimal" selector that uses identical inputs across the search space is a candidate for this anti-pattern.
+
+---
+
+## 10. Computing a value from a comparison that's true by construction
+
+**Symptom**: An early implementation of a budget-exhausted log line wrote:
+```ts
+const surfacedRound = compositeQuality(judge) > compositeQuality(best.judge) ? rounds : -1;
+```
+The intent was "log which round was surfaced." But by the time this line ran, `judge` had just been considered for `best`, so `judge ≤ best` by construction — the comparison was always false, the value was always `-1`, and the log line was a permanent lie.
+
+**Rule**: When a comparison's result is determined by surrounding control flow, track the underlying value directly instead of re-deriving it. The "clever" derivation will be wrong by construction. Add a single `round: number` field to the tracked record (e.g., `best = { reading, judge, round }`) so the value is explicit.
+
+**Code marker**: a ternary comparing a freshly-computed value against a previously-computed best is suspicious whenever the freshly-computed value just went through a "is this the new best?" check above it.

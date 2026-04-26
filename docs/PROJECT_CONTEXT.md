@@ -1,7 +1,7 @@
 # Project Context: gettodayshoroscope.com
 
 > **Last updated**: 2026-04-26
-> **Status**: Production — 65 PRs shipped, agent-native architecture (PR #48), 147 tool tests, MCP server + MCP Apps, AI SDK + Gateway chokepoint (PR #60), LLM-as-judge verb (PR #63), Sonnet 4.6 + canonical Zod schema for `reading:generate` (PR #65)
+> **Status**: Production — 67 PRs shipped, agent-native architecture (PR #48), 159 tool tests, MCP server + MCP Apps, AI SDK + Gateway chokepoint (PR #60), LLM-as-judge verb (PR #63), Sonnet 4.6 + canonical Zod schema for `reading:generate` (PR #65), critique-loop composer `reading:generate-with-critique` shipped (PR #67 — verb live, cron rewiring blocked on function-timeout fix). **Phase 1 of the Reading Authenticity initiative is functionally complete; Phase 1d (corpus retrieval) remains, blocked on the living-philosopher posture decision.**
 
 ---
 
@@ -179,7 +179,7 @@ From a 12-sign audit by a content strategist:
 |-----------|-------|---------|
 | `zodiac/` | sign-profile, sign-compatibility | 12 sign personalities, element matching |
 | `philosopher/` | registry, assign-daily, recommend | 54 philosophers, 9 traditions, rotation, suggestions |
-| `reading/` | generate, judge, quote-bank, format-template | AI generation, LLM-as-judge scoring (5 axes, prompt-injection hardened — see [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md)), verified quotes, 12 writing formats |
+| `reading/` | generate, judge, generate-with-critique, quote-bank, format-template | AI generation (Sonnet 4.6 + canonical Zod schema), LLM-as-judge scoring (5 axes, prompt-injection hardened — see [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md)), critique-loop composer wrapping generate+judge with BEST-of-N (see [`design-patterns/critique-loop-best-of-n-hardening-20260426.md`](./solutions/design-patterns/critique-loop-best-of-n-hardening-20260426.md)), verified quotes, 12 writing formats |
 | `ai/` | provider | AI SDK + Gateway chokepoint — single import surface for `generateText`/`generateObject`/`streamText` + canonical `MODELS` constants |
 | `cache/` | keys, store, retrieve, invalidate | Redis cache with auto-keyed derivation |
 | `content/` | format, share-card, distribute | 6 platform formats, SVG cards, Ayrshare posting |
@@ -400,6 +400,7 @@ Or regenerate individual signs by hitting `/api/horoscope?sign=X` (generates on 
 |---|---|---|---|
 | 1 | LLM-as-judge prompt-injection (4-vector hardening) | Any verb where input prose is itself model-generated (judge, critic, scorer, RAG-with-judge). Naive delimiters are escapable; failure mode is silent quality collapse. | [`design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md`](./solutions/design-patterns/llm-as-judge-prompt-injection-hardening-20260425.md) |
 | 2 | generateObject production hardening (5-point pattern) | Any verb using `generateObject` on a production path. Naive wiring (one call, no retry, no fallbacks) cascades into 24h-of-500s outages because the AI SDK doesn't auto-retry, cron silently skips failures, and post-call validators can empty out without the schema noticing. | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
+| 3 | Critique-loop hardening (4-point: BEST-of-N + symmetric defense + recency-bias placement) | Any composer wrapping generate + judge in a bounded `generate → judge → regenerate` loop. Without the 4 points, the loop systematically degrades quality on the cells it was supposed to improve (oscillating regenerations ship the worst attempt; judge-output → next-prompt is an injection chain; critique mid-prompt displaces contract attention). | [`design-patterns/critique-loop-best-of-n-hardening-20260426.md`](./solutions/design-patterns/critique-loop-best-of-n-hardening-20260426.md) |
 
 ### Top Common Solutions (P2/P3)
 
@@ -413,6 +414,8 @@ Or regenerate individual signs by hitting `/api/horoscope?sign=X` (generates on 
 | 6 | Test fixture silently fires telemetry warn on every passing test | P3 | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
 | 7 | Schema shape introspection in tests is Zod-version-coupled | P3 | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
 | 8 | Chokepoint comment is a lie when a legacy direct-import remains | P2 (docs truth) | [`design-patterns/generateobject-production-hardening-20260426.md`](./solutions/design-patterns/generateobject-production-hardening-20260426.md) |
+| 9 | Identical-fixture test masks BEST-of-N regression | P2 (testing) | [`design-patterns/critique-loop-best-of-n-hardening-20260426.md`](./solutions/design-patterns/critique-loop-best-of-n-hardening-20260426.md) |
+| 10 | Computing a value from a comparison true by construction | P3 | [`design-patterns/critique-loop-best-of-n-hardening-20260426.md`](./solutions/design-patterns/critique-loop-best-of-n-hardening-20260426.md) |
 
 ### Operational Pitfalls
 
