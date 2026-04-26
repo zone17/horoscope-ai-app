@@ -19,6 +19,7 @@ config({ path: '.env.local' });
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import type { HoroscopeData } from '../src/tools/reading/types';
 
 // Signs ordered by engagement priority (research-backed)
 const ENGAGEMENT_ORDER = [
@@ -201,10 +202,26 @@ async function sendTelegramSummary(
   }
 }
 
-async function loadRedisHelpers() {
-  const { horoscopeKeys } = await import('../src/utils/cache-keys');
-  const { safelyRetrieveForUI } = await import('../src/utils/redis-helpers');
-  return { horoscopeKeys, safelyRetrieveForUI };
+/**
+ * The script's source of truth is the public API. The per-sign cron at 0:00
+ * UTC pre-populates the cache; this video pipeline runs at 1am UTC, so the
+ * API serves cache hits in <100ms. Reading via the API (instead of going
+ * direct to Redis) keeps the script cache-key-agnostic — when storage shape
+ * evolves the API absorbs it, no script changes needed.
+ */
+const API_BASE = process.env.HOROSCOPE_API_URL ?? 'https://api.gettodayshoroscope.com';
+
+async function fetchReading(sign: string): Promise<HoroscopeData | { error: string }> {
+  try {
+    const url = `${API_BASE}/api/horoscope?sign=${encodeURIComponent(sign)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) return { error: `API ${resp.status} on ${sign}` };
+    const json = (await resp.json()) as { success?: boolean; data?: HoroscopeData; error?: string };
+    if (!json.success || !json.data) return { error: json.error ?? 'API returned no data' };
+    return json.data;
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Unknown fetch error' };
+  }
 }
 
 async function renderSign(sign: string, today: string, tmpDir: string): Promise<RenderResult> {
@@ -212,19 +229,16 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
   console.log(`\n[render] Starting: ${sign}`);
 
   try {
-    // 1. Read cached reading from Redis
-    const { horoscopeKeys, safelyRetrieveForUI } = await loadRedisHelpers();
-    const cacheKey = horoscopeKeys.daily(sign, today);
-    const reading = await safelyRetrieveForUI<any>(cacheKey);
-
-    if (!reading) {
-      console.warn(`[render] No cached reading for ${sign} on ${today} — skipping`);
-      return { sign, error: 'No cached reading' };
+    // 1. Fetch reading from public API (cache hit when per-sign cron has run).
+    const fetched = await fetchReading(sign);
+    if ('error' in fetched) {
+      console.warn(`[render] No reading for ${sign}: ${fetched.error} — skipping`);
+      return { sign, error: fetched.error };
     }
 
-    // 2. Transform to video props
+    // 2. Transform to video props (HoroscopeData snake_case → HoroscopeVideoProps)
     const { getSignVideoProps } = await import('../src/utils/video-helpers');
-    const props = getSignVideoProps(sign, reading);
+    const props = getSignVideoProps(sign, fetched);
 
     if (DRY_RUN) {
       console.log(`[dry-run] Would render ${sign}: ${JSON.stringify(props).substring(0, 100)}...`);
@@ -408,34 +422,12 @@ async function main() {
 
   const signs = SINGLE_SIGN ? [SINGLE_SIGN] : ENGAGEMENT_ORDER;
 
-  // Pre-render: ensure all signs have cached readings for today
-  // The Vercel cron times out on batch generation, so we generate missing ones here
-  if (!DRY_RUN) {
-    console.log('[pre-render] Checking cached readings for all signs...');
-    const { horoscopeKeys, safelyRetrieveForUI } = await loadRedisHelpers();
-    for (const sign of signs) {
-      const cached = await safelyRetrieveForUI(horoscopeKeys.daily(sign, today));
-      if (!cached) {
-        console.log(`[pre-render] Generating missing reading for ${sign}...`);
-        try {
-          // Hit the API to trigger on-demand generation + caching
-          const resp = await fetch(`https://api.gettodayshoroscope.com/api/horoscope?sign=${sign}`);
-          if (resp.ok) {
-            console.log(`[pre-render] ✓ ${sign} generated`);
-          } else {
-            console.warn(`[pre-render] ✗ ${sign} API returned ${resp.status}`);
-          }
-          // Small delay to avoid hammering the API
-          await new Promise((r) => setTimeout(r, 2000));
-        } catch (err) {
-          console.warn(`[pre-render] ✗ ${sign} generation failed:`, err instanceof Error ? err.message : err);
-        }
-      } else {
-        console.log(`[pre-render] ✓ ${sign} already cached`);
-      }
-    }
-    console.log('[pre-render] All signs checked\n');
-  }
+  // Pre-render block removed: the per-sign Vercel cron at 0:00 UTC populates
+  // every sign's reading before this video pipeline runs at 1:00 UTC. Each
+  // renderSign call hits /api/horoscope?sign=X which serves from cache (or
+  // generates on demand if cache is somehow empty). The script no longer
+  // touches Redis directly — the API is the single source of truth, so
+  // cache-key changes never break the pipeline.
 
   const results: RenderResult[] = [];
 
