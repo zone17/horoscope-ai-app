@@ -30,12 +30,41 @@ export interface GenerateReadingInput {
   format?: string;
   /** Date in YYYY-MM-DD format (defaults to today) */
   date?: string;
+  /**
+   * Optional critique feedback to inject into the prompt for a regeneration.
+   * Used by `reading:generate-with-critique` (Phase 1e) — when the judge
+   * scores a previous attempt below threshold, the wrapper builds a feedback
+   * string from the judge's violations + rationale and passes it here so the
+   * model knows what to fix on the retry. Verb stays atomic; the critique
+   * loop lives in the wrapper, not here.
+   */
+  feedback?: string;
 }
 
 export type { ReadingOutput } from '@/tools/reading/types';
 import type { ReadingOutput } from '@/tools/reading/types';
 
 // ─── Prompt Builder ─────────────────────────────────────────────────────
+
+/**
+ * Sanitize the optional `feedback` parameter before interpolating into the
+ * prompt template. The feedback is exposed as part of `GenerateReadingInput`
+ * for the Phase 1e critique composer, which means any caller — including
+ * future callers that route external input through this verb — could pass
+ * arbitrary strings here. Defense-in-depth mirrors `judge.ts:sanitizeForPrompt`:
+ * strip structural escape chars, drop leading markdown headings, drop
+ * horizontal rules, collapse newlines, cap length so a runaway field
+ * cannot dilute the rest of the prompt.
+ */
+function sanitizeFeedback(value: string, maxChars = 4000): string {
+  return value
+    .replace(/[<>"`]/g, '')
+    .replace(/^[ \t]*#{1,6}\s+/gm, '')
+    .replace(/^---+$/gm, '')
+    .replace(/[\r\n]+/g, ' ')
+    .trim()
+    .slice(0, maxChars);
+}
 
 /**
  * reading:build-prompt
@@ -119,7 +148,7 @@ ${quoteBankSection}
    ${normalizedSign === 'libra' ? '- MUST include aquarius' : ''}${normalizedSign === 'aquarius' ? '- MUST include libra' : ''}
 3. **inspirationalQuote**: ${philosopherInstruction} Copy the quote EXACTLY as provided — do not modify it.
 4. **quoteAuthor**: Exact name of the philosopher
-5. **peacefulThought**: A 1-2 sentence nighttime wind-down thought. Not generic — make it specific to this sign's energy today. No greeting, no "dear [sign]."`;
+5. **peacefulThought**: A 1-2 sentence nighttime wind-down thought. Not generic — make it specific to this sign's energy today. No greeting, no "dear [sign]."${input.feedback ? `\n\n## CRITIQUE FROM PRIOR ATTEMPT — FIX THESE BEFORE RETURNING\nA previous draft of this reading scored below the quality bar. The judge flagged the issues below. Address each one in this attempt; do not repeat them. The field requirements above remain authoritative — fix the critique while still satisfying every WHAT TO INCLUDE constraint.\n\n${sanitizeFeedback(input.feedback)}` : ''}`;
 }
 
 // ─── Generator ──────────────────────────────────────────────────────────

@@ -109,19 +109,28 @@ src/tools/
 │                                  human-readable reasons via buildReason().
 
 ├── reading/
-│   ├── generate.ts              ← Main generation verb. Branches on
-│   │                              MODELS.sonnet via generateObject +
-│   │                              ReadingOutputModelSchema (see §6).
+│   ├── generate.ts              ← Main generation verb. MODELS.sonnet via
+│   │                              generateObject + ReadingOutputModelSchema
+│   │                              (see §6). Accepts optional `feedback`
+│   │                              parameter for critique-loop regenerations.
 │   ├── judge.ts                 ← reading:judge — scores any reading on 5 axes
 │   │                              (voice, anti-Barnum, anti-template,
 │   │                              quote fidelity, overall) via MODELS.haiku +
-│   │                              generateObject + Zod. Pure verb; PR E
-│   │                              composes it with generate at the call site
-│   │                              (NOT folded into generate.ts). Banned-word
+│   │                              generateObject + Zod. Pure verb. Banned-word
 │   │                              and astrology-trope lists exported as
 │   │                              BANNED_WORDS / BANNED_PHRASES /
 │   │                              ASTROLOGY_TROPES — single source of truth
 │   │                              for the anti-template moat.
+│   ├── generate-with-critique.ts ← Phase 1e composer. Wraps generate +
+│   │                              judge in a bounded critique loop
+│   │                              (max 2 regenerations). Threshold:
+│   │                              overall ≤ 3 OR antiBarnum ≤ 3 OR
+│   │                              voiceAuthenticity ≤ 3 (anti-template
+│   │                              dropped per baseline data). Composition
+│   │                              lives HERE — neither generate.ts nor
+│   │                              judge.ts know about each other. Cron
+│   │                              migration to use this verb is BLOCKED on
+│   │                              the function-timeout fix (see §15).
 │   ├── quote-bank.ts            ← VERIFIED_QUOTES + VALID_AUTHORS validation list.
 │   ├── format-template.ts       ← 12 writing-format rotations, sign-aware + date-seeded.
 │   └── types.ts                 ← ReadingOutput (camelCase) + HoroscopeData (snake_case)
@@ -147,7 +156,7 @@ src/tools/
     └── segment.ts               ← Same composition pattern.
 ```
 
-**21 tool files total.** All pure or nearly pure; side effects restricted to Redis/OpenAI/AI-Gateway/Ayrshare. New code goes here first; old consumers migrate to these opportunistically.
+**22 tool files total.** All pure or nearly pure; side effects restricted to Redis/OpenAI/AI-Gateway/Ayrshare. New code goes here first; old consumers migrate to these opportunistically.
 
 ### `src/agents/` — agent definitions (declarative)
 
@@ -378,7 +387,7 @@ Readings should sound like the philosopher is actually speaking — a "mashup *i
 | **1b.5** | `reading:judge` verb + 4-model baseline eval | 🔄 In progress (`feat/reading-auth/eval-harness-baseline`) | Ships the judge that PR C, D, E all reuse. Baseline at `docs/evals/2026-04-25-baseline.md` decides PR C's model. Plan: [`2026-04-25-001`](./plans/2026-04-25-001-reading-eval-harness-and-model-baseline-plan.md) |
 | **1c** | Adopt Sonnet 4.6 + `generateObject` + canonical Zod schema | ✅ Shipped (PR #65) | `ReadingOutputModelSchema` in `src/tools/reading/types.ts` enforced via `generateObject`; `FEATURE_FLAG_USE_AI_SDK` and legacy OpenAI SDK path deleted; eval script imports the canonical schema |
 | **1d** | Corpus retrieval infrastructure | 🔜 After 1c | **Blocked on open question**: living-philosopher corpus posture (see §13) |
-| **1e** | Self-critique pass (composition, not fold-in) | 🔜 After 1d | `reading:generate` + `reading:judge` composed at the call site (cron route, agent runtime). NOT folded into `reading:generate` — that would make it a workflow. Criteria already encoded in the judge verb (1b.5). |
+| **1e** | Self-critique pass (composition, not fold-in) | ✅ Shipped (PR #67) | `reading:generate-with-critique` composes the two verbs at the call site. Threshold: overall ≤ 3 OR antiBarnum ≤ 3 OR voiceAuthenticity ≤ 3 (anti-template dropped per baseline). Bounded 2 critique rounds. **Cron migration blocked on function-timeout fix** — see §15 backlog. |
 | **2a** | `astronomy:moon-phase` atomic verb | 🔜 After Phase 1 | Prompt-engineered against template tropes |
 | **2b** | `calendar:seasonal-marker` atomic verb | 🔜 After Phase 1 | 8 hardcoded dates |
 | **2c** | `astronomy:moon-sign` atomic verb | 🔜 After Phase 2a | Lands last so writing foundation can carry nuance |
@@ -618,6 +627,7 @@ Current memory files for this project:
 | 4 | Registry hoist to `@horoscope/shared` | Tracked; see §13. |
 | 5 | `frontend-build.sh` has a `set -e` + `mv` pattern that can leave `src/app/api` unrestored on build failure | Pre-existing; low priority. Wrap critical section in a `trap`. |
 | 6 | Vercel deploy false-positive (GH Actions retry/timeout) | Diagnostic recipe is documented; fix is lower priority since the actual deploy succeeds. |
+| 7 | **Cron `/api/cron/daily-horoscope` migration to `generate-with-critique`** | **BLOCKED on function-timeout fix.** Sequential 12-sign loop with bare Sonnet (~10s/sign) already approaches the 30s `maxDuration` (Pitfall #9 + ADV-PR65-02). Critique loop (up to 3 generations + 3 judges per sign) makes it strictly worse. Fix path: parallelize with bounded concurrency (Promise.all pool), OR split into 12 per-sign cron entries, OR move to Vercel Workflows / Queues. After timeout fix, swap `generateReading` → `generateReadingWithCritique` in the cron route — single line. The verb is shipped and tested today (PR #67); only the operational rewiring is gated. |
 
 ### Medium-term (post-Phase 2)
 
@@ -672,16 +682,16 @@ Current memory files for this project:
 
 ## 18. Immediate next actions (for the next session)
 
-1. **Read the plan doc** — `docs/plans/2026-04-24-001-reading-authenticity-and-ai-sdk-migration-plan.md`. It's the source of truth for remaining phases. Phases 1a, 1b, 1b.5, and 1c are all shipped. Next is Phase 1d.
+1. **Read the plan doc** — `docs/plans/2026-04-24-001-reading-authenticity-and-ai-sdk-migration-plan.md`. Phases 1a, 1b, 1b.5, 1c, AND 1e are all shipped. Phase 1d is the only Phase 1 work remaining; Phase 2 follows.
 
-2. **Resolve the living-philosopher corpus question** — this is the blocker for Phase 1d. See §13 here. The lean is option (b) — index only freely-shared material — but it must be decided before Phase 1d starts.
+2. **Cron-timeout fix unblocks the critique loop in production.** The `generate-with-critique` verb is shipped (PR #67) and tested but not yet wired into the cron because the existing `for (sign of VALID_SIGNS) await generate(...)` already approaches the 30s function timeout under bare Sonnet. Fix path in §15 backlog #7. Once the cron parallelizes (or splits per-sign), swap `generateReading` → `generateReadingWithCritique` in `src/app/api/cron/daily-horoscope/route.ts` — one-line change.
 
-3. **Watch Sonnet 4.6 production stability for ~1 week**, then remove `OPENAI_API_KEY` from the Vercel env (no longer used by `reading:generate`). The legacy `horoscope-generator.ts` for monthly pages still uses it — verify no other consumers before removal.
+3. **Resolve the living-philosopher corpus question** — blocker for Phase 1d. See §13 here. Lean is option (b) — index only freely-shared material.
 
-4. **Start Phase 1d when the corpus posture is decided** — see parent plan PR D.
+4. **Watch Sonnet 4.6 production stability for ~1 week**, then remove `OPENAI_API_KEY` from the Vercel env (no longer used by `reading:generate`). The legacy `horoscope-generator.ts` for monthly pages still uses it — verify no other consumers before removal.
 
-5. **Phase 1e is unblocked any time after PR C ships** — composes `reading:generate` + `reading:judge` at the call site (cron route or future agent runtime). Per the PR B.5 baseline, scoped narrowly: regenerate-on-fail when antiBarnum ≤ 3 OR voiceAuthenticity ≤ 3. Anti-template is fully solved at Sonnet (5.00 across 36/36 cells) — wasted compute as a critique axis.
+5. **Start Phase 1d when the corpus posture is decided** — see parent plan PR D.
 
 6. **Keep the loop**: spawn → principle-aware implementation → multi-persona review → remediation → merge → verify Vercel deploy state. The pattern works.
 
-Ready to build. Main at `05e06bd` (will update after PR C lands).
+Ready to build. Main updates after PR #67 lands.
