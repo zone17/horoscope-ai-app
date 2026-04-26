@@ -26,6 +26,7 @@ const mockSegment = jest.fn();
 const mockSendDailyEmail = jest.fn();
 const mockDistribute = jest.fn();
 const mockRedisPing = jest.fn();
+const mockRedisSet = jest.fn();
 
 jest.mock('@/tools/reading/generate-with-critique', () => ({
   generateReadingWithCritique: (...args: unknown[]) => mockGenerateWithCritique(...args),
@@ -48,7 +49,10 @@ jest.mock('@/tools/content/distribute', () => ({
 }));
 
 jest.mock('@/utils/redis', () => ({
-  redis: { ping: () => mockRedisPing() },
+  redis: {
+    ping: () => mockRedisPing(),
+    set: (...args: unknown[]) => mockRedisSet(...args),
+  },
 }));
 
 // Import AFTER mocks are registered
@@ -60,8 +64,11 @@ const READING: ReadingOutput = {
   sign: 'aries',
   date: '2026-04-26',
   philosopher: 'Alan Watts',
+  // Long enough that an UNFORMATTED post (raw message + quote + author) blows
+  // past 280 chars — so the X-platform cap test below actually exercises the
+  // 280-char limit, not just trivially passes on a short fixture.
   message:
-    'A test reading message of sufficient length to satisfy schema and look reasonable in any downstream formatter that lays it out for a subscriber.',
+    'You are not a stranger to the world; the world is the very fabric of you, breathing through every choice you make today. Notice the small reluctance that hides under your busy hours — the one that whispers there is something you are postponing because it asks more honesty of you than you have practiced. Today is a generous day to practice it. Step toward the conversation, the page, the call you have been deferring; the universe rarely rewards delay, and almost always meets honest motion with luck that looks like coincidence.',
   bestMatch: 'leo, sagittarius, gemini',
   inspirationalQuote: 'You are the universe experiencing itself.',
   quoteAuthor: 'Alan Watts',
@@ -108,6 +115,7 @@ describe('/api/cron/daily/[sign]', () => {
 
     // Reasonable defaults for "happy path"
     mockRedisPing.mockResolvedValue('PONG');
+    mockRedisSet.mockResolvedValue('OK'); // lock acquires successfully by default
     mockGenerateWithCritique.mockResolvedValue(CRITIQUE_OK);
     mockStore.mockResolvedValue({ success: true, key: 'horoscope-prod:aries:Alan Watts:2026-04-26' });
     mockSegment.mockResolvedValue({ subscribers: [], count: 0 });
@@ -154,6 +162,7 @@ describe('/api/cron/daily/[sign]', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
+    expect(body.published).toBe(true); // FB succeeded
     expect(body.sign).toBe('aries');
     expect(body.philosopher).toBeTruthy();
     expect(body.cached).toBe(true);
@@ -164,6 +173,11 @@ describe('/api/cron/daily/[sign]', () => {
     expect(mockGenerateWithCritique).toHaveBeenCalledTimes(1);
     expect(mockStore).toHaveBeenCalledTimes(1);
     expect(mockDistribute).toHaveBeenCalledTimes(1);
+    // Idempotency lock was acquired before generation began.
+    expect(mockRedisSet).toHaveBeenCalledTimes(1);
+    const lockArgs = mockRedisSet.mock.calls[0];
+    expect(lockArgs[0]).toMatch(/^cron-lock:aries:/);
+    expect(lockArgs[2]).toMatchObject({ nx: true });
   });
 
   it('emails each subscriber when segment returns any', async () => {
@@ -324,7 +338,7 @@ describe('/api/cron/daily/[sign]', () => {
     expect(body.social.attempted).toEqual(['facebook']);
   });
 
-  it('logs and returns thresholdMissedAfterMaxRounds when critique loop exhausts budget', async () => {
+  it('quality-gates social distribute when critique loop exhausts budget', async () => {
     mockGenerateWithCritique.mockResolvedValue({
       ...CRITIQUE_OK,
       rounds: 2,
@@ -339,9 +353,18 @@ describe('/api/cron/daily/[sign]', () => {
     const body = await res.json();
     expect(body.thresholdMissedAfterMaxRounds).toBe(true);
     expect(body.rounds).toBe(2);
-    // Reading is still surfaced and stored — best-of-N path.
+    expect(body.qualityGated).toBe(true);
+    // Reading is still surfaced and stored — best-of-N path. Email still
+    // delivers (subscribers expect daily delivery and the reading is the
+    // best of N attempts), but social is held back to avoid public posting
+    // of degraded content.
     expect(mockStore).toHaveBeenCalledTimes(1);
-    expect(mockDistribute).toHaveBeenCalledTimes(1);
+    expect(mockDistribute).not.toHaveBeenCalled();
+    // social.attempted reflects what we WOULD have posted to so ops can see
+    // the gate fired against the configured platform list.
+    expect(body.social.attempted).toEqual(['facebook']);
+    expect(body.social.success).toBe(false);
+    expect(body.social.platformResults).toEqual({});
   });
 
   it('lowercases sign param so /api/cron/daily/ARIES still works', async () => {
@@ -352,5 +375,129 @@ describe('/api/cron/daily/[sign]', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.sign).toBe('aries');
+  });
+
+  // ─── Idempotency lock ────────────────────────────────────────────────
+
+  it('short-circuits with alreadyRunning:true when the per-(sign,date) lock is already held', async () => {
+    // Upstash returns null when SET NX rejects an existing key.
+    mockRedisSet.mockResolvedValue(null);
+
+    const res = await GET(
+      makeRequest({ authHeader: 'Bearer test-secret' }),
+      makeContext('aries'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.published).toBe(false);
+    expect(body.alreadyRunning).toBe(true);
+    // No work happened — generation, store, segment, distribute all skipped.
+    expect(mockGenerateWithCritique).not.toHaveBeenCalled();
+    expect(mockStore).not.toHaveBeenCalled();
+    expect(mockSegment).not.toHaveBeenCalled();
+    expect(mockDistribute).not.toHaveBeenCalled();
+  });
+
+  it('skips the lock when Redis is down (fail-open: better duplicate than no publish)', async () => {
+    mockRedisPing.mockRejectedValue(new Error('redis down'));
+
+    const res = await GET(
+      makeRequest({ authHeader: 'Bearer test-secret' }),
+      makeContext('aries'),
+    );
+    expect(res.status).toBe(200);
+    // SET should NOT be attempted when ping failed.
+    expect(mockRedisSet).not.toHaveBeenCalled();
+    // Generation + distribute still proceed.
+    expect(mockGenerateWithCritique).toHaveBeenCalledTimes(1);
+    expect(mockDistribute).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── SOCIAL_PLATFORMS edge cases ─────────────────────────────────────
+
+  it('dedups SOCIAL_PLATFORMS so "facebook,facebook" does not double-post', async () => {
+    process.env.SOCIAL_PLATFORMS = 'facebook,facebook';
+    await GET(makeRequest({ authHeader: 'Bearer test-secret' }), makeContext('aries'));
+    expect(mockDistribute).toHaveBeenCalledTimes(1);
+    expect(mockDistribute.mock.calls[0][0].platforms).toEqual(['facebook']);
+  });
+
+  it('falls back to default ["facebook"] when SOCIAL_PLATFORMS contains only invalid entries', async () => {
+    process.env.SOCIAL_PLATFORMS = 'twiter,linkdin'; // typos / unknown platforms
+    const warnSpy = jest.spyOn(console, 'warn');
+
+    const res = await GET(
+      makeRequest({ authHeader: 'Bearer test-secret' }),
+      makeContext('aries'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // Fallback fires so cron does not silently no-post; warn surfaces the typo.
+    expect(body.social.attempted).toEqual(['facebook']);
+    expect(mockDistribute).toHaveBeenCalledTimes(1);
+    expect(mockDistribute.mock.calls[0][0].platforms).toEqual(['facebook']);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('matched no allowed platforms'),
+    );
+  });
+
+  it('drops invalid entries silently when SOCIAL_PLATFORMS has at least one valid platform', async () => {
+    process.env.SOCIAL_PLATFORMS = 'facebook,twiter';
+    await GET(makeRequest({ authHeader: 'Bearer test-secret' }), makeContext('aries'));
+    expect(mockDistribute).toHaveBeenCalledTimes(1);
+    expect(mockDistribute.mock.calls[0][0].platforms).toEqual(['facebook']);
+  });
+
+  // ─── published vs success semantics ──────────────────────────────────
+
+  it('published:false when generation succeeded but every email and platform failed', async () => {
+    mockSegment.mockResolvedValue({
+      subscribers: [{ email: 'a@b.com', sign: 'aries' }],
+      count: 1,
+    });
+    mockSendDailyEmail.mockResolvedValue({ success: false, email: 'a@b.com', error: 'resend down' });
+    mockDistribute.mockResolvedValue({
+      success: false,
+      platformResults: { facebook: { success: false, error: 'ayrshare 401' } },
+    });
+
+    const res = await GET(
+      makeRequest({ authHeader: 'Bearer test-secret' }),
+      makeContext('aries'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // success: cron didn't crash. published: nothing actually reached anyone.
+    expect(body.success).toBe(true);
+    expect(body.published).toBe(false);
+    expect(body.emailed).toBe(0);
+    expect(body.emailErrors).toBe(1);
+    expect(body.social.success).toBe(false);
+  });
+
+  it('published:true when no subscribers AND no platforms (vacuous publish)', async () => {
+    process.env.SOCIAL_PLATFORMS = 'twiter'; // → falls back to facebook (default)
+    // To truly have no platforms, the only path is the quality gate. So this
+    // test sets up no subscribers + quality gate (no platforms posted) and
+    // asserts the route still reports the run as a non-error.
+    mockGenerateWithCritique.mockResolvedValue({
+      ...CRITIQUE_OK,
+      rounds: 2,
+      thresholdMissedAfterMaxRounds: true,
+    });
+    mockSegment.mockResolvedValue({ subscribers: [], count: 0 });
+
+    const res = await GET(
+      makeRequest({ authHeader: 'Bearer test-secret' }),
+      makeContext('aries'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    // No subscribers, no platforms posted (quality gate) → published is
+    // vacuously true: there was nothing to publish, run is a non-error.
+    expect(body.published).toBe(true);
+    expect(body.qualityGated).toBe(true);
   });
 });

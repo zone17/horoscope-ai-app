@@ -28,7 +28,11 @@ import { sendDailyEmail, type ReadingContent } from '@/utils/email';
 import { assignDaily } from '@/tools/philosopher/assign-daily';
 import { generateReadingWithCritique } from '@/tools/reading/generate-with-critique';
 import { store } from '@/tools/cache/store';
-import { formatReading, type Platform } from '@/tools/content/format';
+import {
+  formatReading,
+  type Platform,
+  type ReadingContent as FormatReadingContent,
+} from '@/tools/content/format';
 import { distribute } from '@/tools/content/distribute';
 import { segment } from '@/tools/audience/segment';
 import { isValidSign, VALID_SIGNS, type ValidSign } from '@/tools/zodiac/sign-profile';
@@ -55,14 +59,60 @@ const ALLOWED_SOCIAL: SocialPlatform[] = ['facebook', 'x', 'tiktok', 'instagram'
 function getSocialPlatforms(): SocialPlatform[] {
   const raw = process.env.SOCIAL_PLATFORMS;
   if (!raw) return ['facebook'];
-  return raw
-    .split(',')
-    .map((p) => p.trim().toLowerCase())
-    .filter((p): p is SocialPlatform => ALLOWED_SOCIAL.includes(p as SocialPlatform));
+  const requested = raw.split(',').map((p) => p.trim().toLowerCase()).filter(Boolean);
+  const filtered = requested.filter(
+    (p): p is SocialPlatform => ALLOWED_SOCIAL.includes(p as SocialPlatform),
+  );
+  // Dedup so SOCIAL_PLATFORMS="facebook,facebook" does not double-post.
+  const deduped = Array.from(new Set(filtered));
+  if (requested.length > 0 && deduped.length === 0) {
+    // All entries were rejected by the allowlist — likely an ops typo. Fall
+    // back to the safe default so the cron does not silently no-post.
+    console.warn(
+      `[cron] SOCIAL_PLATFORMS=${JSON.stringify(raw)} matched no allowed platforms (${ALLOWED_SOCIAL.join('|')}); falling back to ['facebook']`,
+    );
+    return ['facebook'];
+  }
+  return deduped;
+}
+
+/**
+ * Acquire a per-(sign,date) idempotency lock so a cron retry or a concurrent
+ * manual curl cannot double-publish. Atomic SET NX with a 24h TTL — first
+ * caller wins, all later callers short-circuit. Fails open (returns true) if
+ * Redis is unreachable: silent double-publish is bad, but silent no-publish
+ * is worse, and the cron lock is a soft guarantee.
+ */
+async function tryAcquireDailyLock(sign: string, date: string): Promise<boolean> {
+  try {
+    const result = await redis.set(`cron-lock:${sign}:${date}`, new Date().toISOString(), {
+      nx: true,
+      ex: 24 * 60 * 60,
+    });
+    return result === 'OK';
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown';
+    console.warn(`[cron:daily/${sign}] lock acquire failed (${msg}); proceeding without lock`);
+    return true;
+  }
 }
 
 interface SignCronResult {
+  /** True when the cron handler completed without throwing. Distinct from
+   *  `published` — generation can succeed but every email and every social
+   *  post fail; that path returns success:true, published:false. */
   success: boolean;
+  /** True when this invocation actually published anything visible to users
+   *  (at least one email sent OR at least one social platform succeeded),
+   *  OR when there was nothing to publish (no subscribers and no platforms). */
+  published: boolean;
+  /** True when an earlier invocation already ran for this (sign,date) pair
+   *  and we short-circuited to avoid double-publishing. */
+  alreadyRunning?: boolean;
+  /** True when the critique loop's quality threshold could not be met after
+   *  the round budget was exhausted; the route stores the reading but skips
+   *  social distribution to avoid publishing degraded content publicly. */
+  qualityGated?: boolean;
   sign: string;
   date: string;
   philosopher?: string;
@@ -116,6 +166,30 @@ export async function GET(
   } catch {
     redisHealthy = false;
     console.warn(`[cron:daily/${sign}] Redis unavailable — skipping cache + segment`);
+  }
+
+  // ─── Idempotency lock ───────────────────────────────────────────────
+  // A Vercel cron retry (transient flake) or a concurrent manual curl would
+  // otherwise double-send emails and double-post social. Per-(sign,date)
+  // Redis lock makes this at-most-once-per-day. Skipped when Redis is down
+  // (fail-open: missed publish > duplicate publish under provider outage).
+  if (redisHealthy) {
+    const acquired = await tryAcquireDailyLock(sign, date);
+    if (!acquired) {
+      console.warn(`[cron:daily/${sign}] lock already held for ${date} — skipping to avoid double-publish`);
+      return NextResponse.json({
+        success: true,
+        published: false,
+        alreadyRunning: true,
+        sign,
+        date,
+        cached: false,
+        emailed: 0,
+        emailErrors: 0,
+        social: { attempted: [], success: false, platformResults: {} },
+        errors: [],
+      });
+    }
   }
 
   // ─── Generate ───────────────────────────────────────────────────────
@@ -174,10 +248,8 @@ export async function GET(
         };
 
         for (const sub of subscribers) {
-          const sendResult = await sendDailyEmail(
-            { email: sub.email, sign: sign as ValidSign },
-            emailContent,
-          );
+          // sign is narrowed to ValidSign by isValidSign above; no cast needed.
+          const sendResult = await sendDailyEmail({ email: sub.email, sign }, emailContent);
           if (sendResult.success) emailed++;
           else emailErrors++;
         }
@@ -190,12 +262,19 @@ export async function GET(
   }
 
   // ─── Social distribute (best-effort) ────────────────────────────────
-  const platforms = getSocialPlatforms();
-  let social: SignCronResult['social'] = {
-    attempted: platforms,
-    success: false,
-    platformResults: {},
-  };
+  // Quality gate: when the critique loop exhausted its budget, we still
+  // store the reading + email subscribers (subscribers expect daily delivery
+  // and the reading is the BEST of N attempts), but we do NOT post the
+  // degraded content publicly to social — the moat is anti-template quality.
+  const requestedPlatforms = getSocialPlatforms();
+  const qualityGated = result.thresholdMissedAfterMaxRounds;
+  const platforms = qualityGated ? [] : requestedPlatforms;
+
+  if (qualityGated && requestedPlatforms.length > 0) {
+    console.warn(
+      `[cron:daily/${sign}] skipping social distribute (${requestedPlatforms.join(',')}) — quality threshold missed after ${result.rounds} critique rounds. Email + cache still ran.`,
+    );
+  }
 
   // Format and post per platform. Each platform has its own length budget
   // and hashtag strategy (X is 280 chars; FB allows long-form CTA; etc.) —
@@ -219,12 +298,12 @@ export async function GET(
       const post = formatted.text + hashtagSuffix;
 
       const distributed = await distribute({ content: post, platforms: [platform] });
-      const result = distributed.platformResults[platform] ?? {
+      const platformResult = distributed.platformResults[platform] ?? {
         success: distributed.success,
         error: distributed.success ? undefined : 'No result returned for platform',
       };
-      platformResults[platform] = { success: result.success, error: result.error };
-      if (result.success) anyPlatformSucceeded = true;
+      platformResults[platform] = { success: platformResult.success, error: platformResult.error };
+      if (platformResult.success) anyPlatformSucceeded = true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown distribute error';
       platformResults[platform] = { success: false, error: msg };
@@ -233,26 +312,40 @@ export async function GET(
     }
   }
 
-  if (platforms.length > 0) {
-    social = {
-      attempted: platforms,
-      // success means "all attempted platforms succeeded" — same contract as
-      // the underlying distribute verb; partial-success is visible per platform.
-      success: platforms.every((p) => platformResults[p]?.success === true),
-      platformResults,
-    };
-    if (!social.success && anyPlatformSucceeded) {
-      console.warn(
-        `[cron:daily/${sign}] partial social success — ${Object.entries(platformResults)
-          .filter(([, r]) => !r.success)
-          .map(([p, r]) => `${p}: ${r.error ?? 'unknown'}`)
-          .join('; ')}`,
-      );
-    }
+  // Surface BOTH what we attempted and what we would have attempted (for
+  // observability when the quality gate fired). On the quality-gated path
+  // platformResults is empty by construction; success: false and
+  // qualityGated: true together tell ops "we held back deliberately."
+  const social: SignCronResult['social'] = {
+    attempted: qualityGated ? requestedPlatforms : platforms,
+    success: platforms.length > 0 && platforms.every((p) => platformResults[p]?.success === true),
+    platformResults,
+  };
+  if (platforms.length > 0 && !social.success && anyPlatformSucceeded) {
+    console.warn(
+      `[cron:daily/${sign}] partial social success — ${Object.entries(platformResults)
+        .filter(([, r]) => !r.success)
+        .map(([p, r]) => `${p}: ${r.error ?? 'unknown'}`)
+        .join('; ')}`,
+    );
   }
+
+  // `published` is the user-visible truth: did anything actually reach a
+  // subscriber or social platform? Distinct from `success` (cron didn't
+  // throw). When the route didn't actually attempt to publish anywhere
+  // (no subscribers AND no post-gate platforms) the run is vacuously
+  // published — there was nothing to publish, so the absence of failure
+  // is the absence of failure. Note: `platforms` here is the post-quality-
+  // gate list. A run that was quality-gated with zero subscribers
+  // produces published:true because no degraded content went out — that
+  // is a non-error outcome, not a publishing failure.
+  const triedToPublish = emailed + emailErrors > 0 || platforms.length > 0;
+  const published = !triedToPublish || emailed > 0 || anyPlatformSucceeded;
 
   return NextResponse.json({
     success: true,
+    published,
+    qualityGated: qualityGated || undefined,
     sign,
     date,
     philosopher,
@@ -276,6 +369,7 @@ function emptyResult(input: {
 }): SignCronResult {
   return {
     success: false,
+    published: false,
     sign: input.sign,
     date: input.date,
     philosopher: input.philosopher,
@@ -290,12 +384,13 @@ function emptyResult(input: {
 /**
  * Adapt a tool ReadingOutput to the ReadingContent shape `formatReading`
  * expects. They are nearly identical — `formatReading` just needs the
- * sign/philosopher/date as siblings of the message fields.
+ * sign/philosopher/date as siblings of the message fields. Explicit return
+ * type prevents silent drift if ReadingContent gains a required field.
  */
 function readingForFormat(
   reading: Awaited<ReturnType<typeof generateReadingWithCritique>>['reading'],
   philosopher: string,
-) {
+): FormatReadingContent {
   return {
     sign: reading.sign,
     message: reading.message,
