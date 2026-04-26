@@ -7,13 +7,25 @@
     "src/app/api/**/*": {
       "memory": 1024,
       "maxDuration": 30
+    },
+    "src/app/api/cron/daily/[sign]/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
     }
   },
   "crons": [
-    {
-      "path": "/api/cron/daily-horoscope",
-      "schedule": "0 0 * * *"
-    }
+    { "path": "/api/cron/daily/aries",       "schedule": "0 0 * * *"  },
+    { "path": "/api/cron/daily/taurus",      "schedule": "1 0 * * *"  },
+    { "path": "/api/cron/daily/gemini",      "schedule": "2 0 * * *"  },
+    { "path": "/api/cron/daily/cancer",      "schedule": "3 0 * * *"  },
+    { "path": "/api/cron/daily/leo",         "schedule": "4 0 * * *"  },
+    { "path": "/api/cron/daily/virgo",       "schedule": "5 0 * * *"  },
+    { "path": "/api/cron/daily/libra",       "schedule": "6 0 * * *"  },
+    { "path": "/api/cron/daily/scorpio",     "schedule": "7 0 * * *"  },
+    { "path": "/api/cron/daily/sagittarius", "schedule": "8 0 * * *"  },
+    { "path": "/api/cron/daily/capricorn",   "schedule": "9 0 * * *"  },
+    { "path": "/api/cron/daily/aquarius",    "schedule": "10 0 * * *" },
+    { "path": "/api/cron/daily/pisces",      "schedule": "11 0 * * *" }
   ],
   "env": {
     "FEATURE_FLAG_USE_REDIS_CACHE": "true",
@@ -21,4 +33,4 @@
     "FEATURE_FLAG_USE_TIMEZONE_CONTENT": "false",
     "FEATURE_FLAG_USE_XML_SITEMAP": "true"
   }
-} 
+}
