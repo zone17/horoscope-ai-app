@@ -1,3 +1,14 @@
+/**
+ * /api/cron/daily-horoscope — DEPRECATED MANUAL FALLBACK.
+ *
+ * Superseded by /api/cron/daily/[sign] (12 per-sign cron entries in vercel.json).
+ * This route is no longer scheduled — it remains callable via authenticated
+ * curl for manual backfills or emergency recovery only. It still uses the
+ * bare `generateReading` path (no critique loop) and runs all 12 signs
+ * sequentially, which under the 30s function budget is structurally
+ * guaranteed to time out partway through. Do not rely on it for daily
+ * publishing — use the per-sign routes.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { redis } from '@/utils/redis';
 import { sendDailyEmail, type ReadingContent } from '@/utils/email';
