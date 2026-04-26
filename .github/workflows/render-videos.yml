@@ -35,6 +35,14 @@ on:
         required: false
         default: '4'
 
+concurrency:
+  # Serialize runs so a manual workflow_dispatch during a scheduled run
+  # cannot double-write blobs at videos/{today}/{sign}.mp4 or interleave
+  # public/audio/* writes. The second run waits rather than cancelling
+  # the first so a near-complete render is preserved.
+  group: render-videos
+  cancel-in-progress: false
+
 jobs:
   render-and-post:
     runs-on: ubuntu-latest
@@ -55,6 +63,13 @@ jobs:
 
       - name: Install Chrome for Remotion
         run: npx remotion ensure-chrome
+
+      - name: Install edge-tts (voiceover)
+        # Without this, the script's voiceover step ENOENTs and falls back
+        # to silent video; the quality gate's audio check is conditional on
+        # `voiceoverGenerated`, so silent renders pass and ship. Installing
+        # edge-tts here keeps the gate's contract honest.
+        run: pip3 install --user edge-tts
 
       - name: Build CLI args
         id: args
@@ -103,13 +118,20 @@ jobs:
           # API source for readings — script fetches /api/horoscope?sign=X
           # so it never needs Redis credentials directly.
           HOROSCOPE_API_URL: ${{ secrets.HOROSCOPE_API_URL || 'https://api.gettodayshoroscope.com' }}
-          # Required: Vercel Blob upload destination
+          # Required: Vercel Blob upload destination.
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-          # Optional: voiceover (script falls back to silent video if absent)
+          # Optional: voiceover via OpenAI TTS as a backup if edge-tts fails.
+          # The primary voiceover path is edge-tts (free, installed above).
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Optional: only used when --no-post is NOT set (manual override)
-          AYRSHARE_API_KEY: ${{ secrets.AYRSHARE_API_KEY }}
-          # Optional: daily spot-check notification with sample video
+          # Optional: daily spot-check notification with sample video.
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          #
+          # AYRSHARE_API_KEY is intentionally NOT exposed here. Social posting
+          # is off until the operator deliberately wires it up; absence of the
+          # secret in the env is the strongest guarantee that a script bug or
+          # a stray --no-post=false manual dispatch cannot leak posts. To
+          # enable social posting later, add the secret line back in the same
+          # PR that connects the social accounts and toggles the no_post
+          # default — that PR becomes the explicit "I am opting in" signal.
         run: npx tsx scripts/render-and-post.ts $ARGS
