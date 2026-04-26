@@ -47,6 +47,26 @@ import type { ReadingOutput } from '@/tools/reading/types';
 // ─── Prompt Builder ─────────────────────────────────────────────────────
 
 /**
+ * Sanitize the optional `feedback` parameter before interpolating into the
+ * prompt template. The feedback is exposed as part of `GenerateReadingInput`
+ * for the Phase 1e critique composer, which means any caller — including
+ * future callers that route external input through this verb — could pass
+ * arbitrary strings here. Defense-in-depth mirrors `judge.ts:sanitizeForPrompt`:
+ * strip structural escape chars, drop leading markdown headings, drop
+ * horizontal rules, collapse newlines, cap length so a runaway field
+ * cannot dilute the rest of the prompt.
+ */
+function sanitizeFeedback(value: string, maxChars = 4000): string {
+  return value
+    .replace(/[<>"`]/g, '')
+    .replace(/^[ \t]*#{1,6}\s+/gm, '')
+    .replace(/^---+$/gm, '')
+    .replace(/[\r\n]+/g, ' ')
+    .trim()
+    .slice(0, maxChars);
+}
+
+/**
  * reading:build-prompt
  *
  * Build the full reading prompt from atomic tool outputs.
@@ -116,7 +136,7 @@ ${writingFormat}
 
 ## ${profile.exampleOpener}
 ${quoteBankSection}
-${input.feedback ? `\n## CRITIQUE FROM PRIOR ATTEMPT — FIX THESE\nA previous draft of this reading scored below the quality bar. The judge flagged the issues below. Address each one in this attempt; do not repeat them.\n\n${input.feedback}\n` : ''}
+
 ## WHAT TO INCLUDE (as object fields)
 1. **message**: The main horoscope (40-80 words, following the voice and format above)
 2. **bestMatch**: 3-4 compatible signs as lowercase comma-separated string (e.g., "aries, gemini, libra")
@@ -128,7 +148,7 @@ ${input.feedback ? `\n## CRITIQUE FROM PRIOR ATTEMPT — FIX THESE\nA previous d
    ${normalizedSign === 'libra' ? '- MUST include aquarius' : ''}${normalizedSign === 'aquarius' ? '- MUST include libra' : ''}
 3. **inspirationalQuote**: ${philosopherInstruction} Copy the quote EXACTLY as provided — do not modify it.
 4. **quoteAuthor**: Exact name of the philosopher
-5. **peacefulThought**: A 1-2 sentence nighttime wind-down thought. Not generic — make it specific to this sign's energy today. No greeting, no "dear [sign]."`;
+5. **peacefulThought**: A 1-2 sentence nighttime wind-down thought. Not generic — make it specific to this sign's energy today. No greeting, no "dear [sign]."${input.feedback ? `\n\n## CRITIQUE FROM PRIOR ATTEMPT — FIX THESE BEFORE RETURNING\nA previous draft of this reading scored below the quality bar. The judge flagged the issues below. Address each one in this attempt; do not repeat them. The field requirements above remain authoritative — fix the critique while still satisfying every WHAT TO INCLUDE constraint.\n\n${sanitizeFeedback(input.feedback)}` : ''}`;
 }
 
 // ─── Generator ──────────────────────────────────────────────────────────

@@ -95,9 +95,34 @@ function shouldRegenerate(judge: JudgeResult): boolean {
 // ─── Feedback construction ──────────────────────────────────────────────
 
 /**
+ * Sanitize judge-output strings (violations, rationale) before embedding
+ * them into the regeneration prompt. The judge's output is itself derived
+ * from a model call, which means a hostile-or-confused upstream reading
+ * could cause Haiku to echo prompt-control language back into a violation
+ * string. `generate.ts:sanitizeFeedback` would catch most of it at the
+ * outer boundary, but defense-in-depth means we strip at this composition
+ * layer too — symmetric with `judge.ts:sanitizeForPrompt` on the input side.
+ *
+ * Strip XML/HTML tag chars, double-quotes, backticks; collapse newlines so
+ * an injected `\n## NEW INSTRUCTIONS\n` becomes inline text; cap length so
+ * a runaway violation cannot dilute the regeneration prompt.
+ */
+function sanitizeJudgeOutput(value: string, maxChars = 500): string {
+  return value
+    .replace(/[<>"`]/g, '')
+    .replace(/^[ \t]*#{1,6}\s+/gm, '')
+    .replace(/[\r\n]+/g, ' ')
+    .trim()
+    .slice(0, maxChars);
+}
+
+/**
  * Translate a judge result into a prompt-ready feedback block. Includes
  * the failing axis scores AND the judge's specific violations + rationale
  * — the model needs the WHY, not just the WHAT, to actually fix the issues.
+ *
+ * All judge-derived strings are sanitized before embedding (defense-in-depth
+ * against prompt-control language echoed back through Haiku).
  *
  * Exported for tests.
  */
@@ -108,11 +133,15 @@ export function buildFeedbackFromJudge(judge: JudgeResult): string {
   if (s.antiBarnum <= 3) failingAxes.push(`antiBarnum=${s.antiBarnum}/5 (too many vague universal statements that could fit any reader)`);
   if (s.voiceAuthenticity <= 3) failingAxes.push(`voiceAuthenticity=${s.voiceAuthenticity}/5 (the sign-specific voice is too generic)`);
 
-  const violations = judge.violations.length > 0
-    ? `Specific violations the judge flagged:\n${judge.violations.map(v => `  - ${v}`).join('\n')}`
+  const sanitizedViolations = judge.violations
+    .map(v => sanitizeJudgeOutput(v))
+    .filter(v => v.length > 0);
+  const violations = sanitizedViolations.length > 0
+    ? `Specific violations the judge flagged:\n${sanitizedViolations.map(v => `  - ${v}`).join('\n')}`
     : '';
-  const rationale = judge.rationale
-    ? `Judge's overall read: ${judge.rationale}`
+  const sanitizedRationale = judge.rationale ? sanitizeJudgeOutput(judge.rationale, 800) : '';
+  const rationale = sanitizedRationale
+    ? `Judge's overall read: ${sanitizedRationale}`
     : '';
 
   return [
@@ -124,18 +153,30 @@ export function buildFeedbackFromJudge(judge: JudgeResult): string {
 
 // ─── Composer ───────────────────────────────────────────────────────────
 
+/**
+ * Composite quality score used to compare attempts when the round budget
+ * is exhausted. Weighted toward the load-bearing axes (overall +
+ * antiBarnum + voice). Anti-template is excluded because Sonnet hits 5
+ * across the board (per baseline) — including it would just add noise.
+ */
+function compositeQuality(judge: JudgeResult): number {
+  const s = judge.scores;
+  return s.overall * 2 + s.antiBarnum + s.voiceAuthenticity;
+}
+
 export async function generateReadingWithCritique(
   input: GenerateWithCritiqueInput,
 ): Promise<GenerateWithCritiqueResult> {
-  let reading: ReadingOutput;
-  let judge: JudgeResult;
   let rounds = 0;
   let feedback: string | undefined;
+  // Track the best attempt seen so far so a budget-exhausted return surfaces
+  // the strongest reading rather than the most recent one. Regenerations are
+  // not monotonically better — Sonnet may follow critique imperfectly and
+  // regress an axis it had right. Without this guard, an oscillating loop
+  // (round 0 fixes Barnum, round 1 fixes voice but breaks Barnum, round 2
+  // breaks both) would ship the worst attempt.
+  let best: { reading: ReadingOutput; judge: JudgeResult; round: number } | null = null;
 
-  // Round 0: initial attempt. Subsequent iterations regenerate with the
-  // judge's feedback until either the threshold is met or we hit the round
-  // budget. Each iteration is exactly 1 generation + 1 judge — bounded by
-  // (1 + MAX_CRITIQUE_ROUNDS) total of each.
   while (true) {
     const generateInput: GenerateReadingInput = {
       sign: input.sign,
@@ -144,8 +185,8 @@ export async function generateReadingWithCritique(
       feedback,
     };
 
-    reading = await generateReading(generateInput);
-    judge = await judgeReading({
+    const reading = await generateReading(generateInput);
+    const judge = await judgeReading({
       reading: {
         message: reading.message,
         inspirationalQuote: reading.inspirationalQuote,
@@ -156,14 +197,24 @@ export async function generateReadingWithCritique(
       philosopher: input.philosopher,
     });
 
+    if (best === null || compositeQuality(judge) > compositeQuality(best.judge)) {
+      best = { reading, judge, round: rounds };
+    }
+
     if (!shouldRegenerate(judge)) {
       console.log(`[reading:generate-with-critique] ${input.sign}/${input.philosopher} accepted at round ${rounds} (overall=${judge.scores.overall}, antiBarnum=${judge.scores.antiBarnum}, voice=${judge.scores.voiceAuthenticity})`);
       return { reading, judge, rounds, thresholdMissedAfterMaxRounds: false };
     }
 
     if (rounds >= MAX_CRITIQUE_ROUNDS) {
-      console.warn(`[reading:generate-with-critique] ${input.sign}/${input.philosopher} still below threshold after ${rounds} critique rounds (overall=${judge.scores.overall}, antiBarnum=${judge.scores.antiBarnum}, voice=${judge.scores.voiceAuthenticity}). Surfacing last attempt.`);
-      return { reading, judge, rounds, thresholdMissedAfterMaxRounds: true };
+      // best is guaranteed non-null here — we set it on every iteration before this branch.
+      console.warn(`[reading:generate-with-critique] ${input.sign}/${input.philosopher} still below threshold after ${rounds} critique rounds. Surfacing best-of-${rounds + 1} from round ${best.round} (best overall=${best.judge.scores.overall}, antiBarnum=${best.judge.scores.antiBarnum}, voice=${best.judge.scores.voiceAuthenticity}; latest from round ${rounds} overall=${judge.scores.overall}, antiBarnum=${judge.scores.antiBarnum}, voice=${judge.scores.voiceAuthenticity}).`);
+      return {
+        reading: best.reading,
+        judge: best.judge,
+        rounds,
+        thresholdMissedAfterMaxRounds: true,
+      };
     }
 
     // Build feedback for the next round and continue.
