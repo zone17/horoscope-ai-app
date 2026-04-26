@@ -19,6 +19,7 @@ config({ path: '.env.local' });
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import type { HoroscopeData } from '../src/tools/reading/types';
 
 // Signs ordered by engagement priority (research-backed)
 const ENGAGEMENT_ORDER = [
@@ -201,10 +202,55 @@ async function sendTelegramSummary(
   }
 }
 
-async function loadRedisHelpers() {
-  const { horoscopeKeys } = await import('../src/utils/cache-keys');
-  const { safelyRetrieveForUI } = await import('../src/utils/redis-helpers');
-  return { horoscopeKeys, safelyRetrieveForUI };
+/**
+ * The script's source of truth is the public API. The per-sign cron at 0:00
+ * UTC pre-populates the cache; this video pipeline runs at 1am UTC, so the
+ * API serves cache hits in <100ms. Reading via the API (instead of going
+ * direct to Redis) keeps the script cache-key-agnostic — when storage shape
+ * evolves the API absorbs it, no script changes needed.
+ */
+const API_BASE = process.env.HOROSCOPE_API_URL ?? 'https://api.gettodayshoroscope.com';
+
+/** Required string fields on the API response that downstream consumers
+ *  (getSignVideoProps + buildNarrationScript) read directly. Missing any of
+ *  these would crash mid-render with a confusing TypeError; we'd rather
+ *  fail fast at the boundary with a precise message. */
+const REQUIRED_READING_FIELDS = [
+  'message',
+  'inspirational_quote',
+  'quote_author',
+  'peaceful_thought',
+  'date',
+] as const;
+
+/** Fetch with a hard upper-bound on wait time. Without this, a slow upstream
+ *  LLM cold-start (cache miss + on-demand generation) can hold the serial
+ *  render loop indefinitely, eventually losing the entire 90-min job to a
+ *  single hung sign. 60s gives generous headroom while bounding blast
+ *  radius — on timeout the sign is skipped and the loop continues. */
+async function fetchReading(sign: string): Promise<HoroscopeData | { error: string }> {
+  try {
+    const url = `${API_BASE}/api/horoscope?sign=${encodeURIComponent(sign)}`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+    if (!resp.ok) return { error: `API ${resp.status} on ${sign}` };
+    const json = (await resp.json()) as { success?: boolean; data?: HoroscopeData; error?: string };
+    if (!json.success || !json.data) return { error: json.error ?? 'API returned no data' };
+    // Validate required fields present and non-empty — protects against API
+    // contract drift (partial cache state, schema change in flight) producing
+    // 12 identical confusing TypeErrors deep in narration generation.
+    const missing = REQUIRED_READING_FIELDS.filter(
+      (f) => typeof json.data?.[f] !== 'string' || (json.data[f] as string).trim() === '',
+    );
+    if (missing.length > 0) {
+      return { error: `API response missing required fields: ${missing.join(', ')}` };
+    }
+    return json.data;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      return { error: `API timeout on ${sign} after 60s` };
+    }
+    return { error: err instanceof Error ? err.message : 'Unknown fetch error' };
+  }
 }
 
 async function renderSign(sign: string, today: string, tmpDir: string): Promise<RenderResult> {
@@ -212,19 +258,16 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
   console.log(`\n[render] Starting: ${sign}`);
 
   try {
-    // 1. Read cached reading from Redis
-    const { horoscopeKeys, safelyRetrieveForUI } = await loadRedisHelpers();
-    const cacheKey = horoscopeKeys.daily(sign, today);
-    const reading = await safelyRetrieveForUI<any>(cacheKey);
-
-    if (!reading) {
-      console.warn(`[render] No cached reading for ${sign} on ${today} — skipping`);
-      return { sign, error: 'No cached reading' };
+    // 1. Fetch reading from public API (cache hit when per-sign cron has run).
+    const fetched = await fetchReading(sign);
+    if ('error' in fetched) {
+      console.warn(`[render] No reading for ${sign}: ${fetched.error} — skipping`);
+      return { sign, error: fetched.error };
     }
 
-    // 2. Transform to video props
+    // 2. Transform to video props (HoroscopeData snake_case → HoroscopeVideoProps)
     const { getSignVideoProps } = await import('../src/utils/video-helpers');
-    const props = getSignVideoProps(sign, reading);
+    const props = getSignVideoProps(sign, fetched);
 
     if (DRY_RUN) {
       console.log(`[dry-run] Would render ${sign}: ${JSON.stringify(props).substring(0, 100)}...`);
@@ -296,7 +339,9 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     }
     console.log(`[quality] ✓ ${sign}: ${qc.summary}`);
 
-    // 5. Upload to Vercel Blob
+    // 5. Upload to Vercel Blob (best-effort with hard timeout — a stalled
+    //    upload would otherwise consume the serial render loop's budget for
+    //    every remaining sign).
     let blobUrl: string | undefined;
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     if (blobToken) {
@@ -305,6 +350,7 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       const blob = await put(`videos/${today}/${sign}.mp4`, videoBuffer, {
         access: 'public',
         token: blobToken,
+        abortSignal: AbortSignal.timeout(120_000),
       });
       blobUrl = blob.url;
       console.log(`[render] Uploaded to Blob: ${blobUrl}`);
@@ -373,6 +419,13 @@ async function postVideos(results: RenderResult[], today: string) {
 }
 
 async function cleanupOldBlobs() {
+  // Hard guard against accidental prod-data deletion from a `--dry-run`
+  // invocation. Cleanup is irreversible; dry-run must never delete.
+  if (DRY_RUN) {
+    console.log('[cleanup] DRY RUN — skipping blob cleanup');
+    return;
+  }
+
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
   if (!blobToken) return;
 
@@ -383,7 +436,19 @@ async function cleanupOldBlobs() {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const old = blobs.filter((b) => new Date(b.uploadedAt) < sevenDaysAgo);
+    // Only delete blobs whose pathname matches the pipeline's own naming
+    // pattern: `videos/YYYY-MM-DD/{sign}.mp4`. This prevents a foreign blob
+    // (e.g., a marketing upload sharing the same store) from being pruned
+    // as collateral damage. The expected sign list comes from the engagement
+    // order (canonical), keeping this list and the video output paths in sync.
+    const VIDEO_PATH_RE = new RegExp(
+      `^videos/\\d{4}-\\d{2}-\\d{2}/(${ENGAGEMENT_ORDER.join('|')})\\.mp4$`,
+    );
+    const old = blobs.filter(
+      (b) =>
+        new Date(b.uploadedAt) < sevenDaysAgo &&
+        VIDEO_PATH_RE.test(b.pathname),
+    );
     if (old.length > 0) {
       console.log(`[cleanup] Deleting ${old.length} blobs older than 7 days`);
       await del(old.map((b) => b.url), { token: blobToken });
@@ -406,36 +471,31 @@ async function main() {
   console.log(`  Post: ${NO_POST || DRY_RUN ? 'NO' : `top ${RAMP_COUNT}`}`);
   console.log(`========================================\n`);
 
+  // Fail fast on a misconfigured production run rather than silently
+  // rendering 12 videos that have no upload destination. Local dev runs
+  // (DRY_RUN) and cases where the operator deliberately wants to test
+  // rendering without a Blob target retain the soft-fail behavior.
+  if (!DRY_RUN && !process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error(
+      '[startup] BLOB_READ_WRITE_TOKEN is not set. Refusing to render — without an upload destination the pipeline produces no deliverables. Set the secret or pass --dry-run.',
+    );
+    process.exit(1);
+  }
+
   const signs = SINGLE_SIGN ? [SINGLE_SIGN] : ENGAGEMENT_ORDER;
 
-  // Pre-render: ensure all signs have cached readings for today
-  // The Vercel cron times out on batch generation, so we generate missing ones here
-  if (!DRY_RUN) {
-    console.log('[pre-render] Checking cached readings for all signs...');
-    const { horoscopeKeys, safelyRetrieveForUI } = await loadRedisHelpers();
-    for (const sign of signs) {
-      const cached = await safelyRetrieveForUI(horoscopeKeys.daily(sign, today));
-      if (!cached) {
-        console.log(`[pre-render] Generating missing reading for ${sign}...`);
-        try {
-          // Hit the API to trigger on-demand generation + caching
-          const resp = await fetch(`https://api.gettodayshoroscope.com/api/horoscope?sign=${sign}`);
-          if (resp.ok) {
-            console.log(`[pre-render] ✓ ${sign} generated`);
-          } else {
-            console.warn(`[pre-render] ✗ ${sign} API returned ${resp.status}`);
-          }
-          // Small delay to avoid hammering the API
-          await new Promise((r) => setTimeout(r, 2000));
-        } catch (err) {
-          console.warn(`[pre-render] ✗ ${sign} generation failed:`, err instanceof Error ? err.message : err);
-        }
-      } else {
-        console.log(`[pre-render] ✓ ${sign} already cached`);
-      }
-    }
-    console.log('[pre-render] All signs checked\n');
-  }
+  // Pre-render block removed: the per-sign Vercel cron at 0:00 UTC populates
+  // every sign's reading before this video pipeline runs at 1:00 UTC. Each
+  // renderSign call hits /api/horoscope?sign=X which serves from cache (or
+  // generates on demand if cache is somehow empty). The script no longer
+  // touches Redis directly — the API is the single source of truth, so
+  // cache-key changes never break the pipeline.
+
+  // Cleanup BEFORE render so the 7-day retention is enforced even if the
+  // render loop crashes (or this process is killed by GH Actions timeout).
+  // Previously cleanup ran only on the happy path, so consecutive failures
+  // could let blob storage grow unbounded inside the 7-day window.
+  await cleanupOldBlobs();
 
   const results: RenderResult[] = [];
 
@@ -448,8 +508,8 @@ async function main() {
   // Post videos
   await postVideos(results, today);
 
-  // Cleanup old blobs
-  await cleanupOldBlobs();
+  // Cleanup runs BEFORE the render loop above (so retention is enforced
+  // even if rendering crashes). No second cleanup needed here.
 
   // Summary
   const successes = results.filter((r) => !r.error);
