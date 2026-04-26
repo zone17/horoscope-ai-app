@@ -3,7 +3,7 @@
 > **Date**: 2026-04-24
 > **Main at**: `70332da` · **PRs shipped**: 61 total · **This session added**: #57, #58, #59, #60, #61
 > **Active initiative**: Reading Authenticity + AI SDK Migration (Phase 1a and 1b complete, Phase 1c next)
-> **Status**: production stable; legacy OpenAI path still serves all production traffic; AI SDK path in code behind `FEATURE_FLAG_USE_AI_SDK` (off)
+> **Status**: production stable; reading generation runs on Anthropic Sonnet 4.6 via Vercel AI Gateway with `generateObject` + canonical Zod schema (Phase 1c shipped)
 
 This is the authoritative onboarding document. Read it top-to-bottom before making changes. Other docs (plan file, memory files, ARCHITECTURE.md) go deeper on specific topics — this is the map.
 
@@ -15,13 +15,12 @@ This is the authoritative onboarding document. Read it top-to-bottom before maki
 - Live on `www.gettodayshoroscope.com` (frontend) and `api.gettodayshoroscope.com` (API), two separate Vercel projects.
 - Users pick a zodiac sign + up to 5 philosophers from a council of 54 thinkers across 9 traditions. Daily reading blends the selected philosophers' frameworks with the sign's voice.
 - 20 atomic tools in `src/tools/`, 3 declarative agent definitions in `src/agents/`, MCP server with 12 tools + 2 interactive MCP Apps, shared package at `packages/shared/`.
-- Reading generation currently uses OpenAI `gpt-4o-mini-2024-07-18` direct (legacy path). Vercel AI SDK + AI Gateway is wired and available behind `FEATURE_FLAG_USE_AI_SDK` — not yet enabled in production.
+- Reading generation runs on Anthropic Sonnet 4.6 via Vercel AI Gateway, with `generateObject` enforcing the canonical `ReadingOutputModelSchema` (Zod, camelCase). Decision recorded in `docs/evals/2026-04-25-baseline.md`. Legacy OpenAI SDK path and `FEATURE_FLAG_USE_AI_SDK` were both retired in Phase 1c.
 
 **What's landing next** (in order, per the active plan):
-1. **Phase 1c** — flip `USE_AI_SDK` on, swap model to Anthropic (Haiku 4.5 or Sonnet 4.6, decided by A/B), add `generateObject` with Zod schema (replaces the `providerOptions` workaround deferred in Phase 1b).
-2. **Phase 1d** — corpus retrieval infrastructure for all 54 philosophers (graceful degradation by depth). This is the single biggest authenticity lever.
-3. **Phase 1e** — self-critique pass against voice rules + anti-Barnum + anti-astrology-template patterns.
-4. **Phase 2** — astronomical rhythm inputs (moon phase, seasonal markers, moon sign) as atomic verbs.
+1. **Phase 1d** — corpus retrieval infrastructure for all 54 philosophers (graceful degradation by depth). This is the single biggest authenticity lever. **Blocked on the living-philosopher corpus posture decision (see §13).**
+2. **Phase 1e** — self-critique pass at the call site composing `reading:generate` + `reading:judge`. Per the PR B.5 baseline, scoped to antiBarnum + voiceAuthenticity (anti-template is fully solved at Sonnet — wasted compute as a critique axis).
+3. **Phase 2** — astronomical rhythm inputs (moon phase, seasonal markers, moon sign) as atomic verbs.
 
 **The mandate behind all of it**: readings should feel like the philosopher is actually speaking — "a mashup of in the style of" the selected gurus, grounded in their real writings. Quotes must be real and attributed. No formulaic check-ins, no horoscope tropes, no Barnum-effect vagueness. The moat is anti-template writing.
 
@@ -111,7 +110,8 @@ src/tools/
 
 ├── reading/
 │   ├── generate.ts              ← Main generation verb. Branches on
-│   │                              FEATURE_FLAG_USE_AI_SDK (see §6).
+│   │                              MODELS.sonnet via generateObject +
+│   │                              ReadingOutputModelSchema (see §6).
 │   ├── judge.ts                 ← reading:judge — scores any reading on 5 axes
 │   │                              (voice, anti-Barnum, anti-template,
 │   │                              quote fidelity, overall) via MODELS.haiku +
@@ -124,7 +124,10 @@ src/tools/
 │   │                              for the anti-template moat.
 │   ├── quote-bank.ts            ← VERIFIED_QUOTES + VALID_AUTHORS validation list.
 │   ├── format-template.ts       ← 12 writing-format rotations, sign-aware + date-seeded.
-│   └── types.ts                 ← ReadingOutput (camelCase) + HoroscopeData (snake_case).
+│   └── types.ts                 ← ReadingOutput (camelCase) + HoroscopeData (snake_case)
+│                                  + ReadingOutputModelSchema (Zod, the runtime
+│                                  parallel of ReadingOutput minus injected fields)
+│                                  enforced by reading:generate via generateObject.
 
 ├── cache/
 │   ├── keys.ts                  ← Deterministic cache key (sign + philosopher + council hash).
@@ -287,48 +290,41 @@ User picks sign (Aries) + council (Seneca, Alan Watts, Rumi, Feynman, Rumi)
    ├─ getQuotes(philosopher, dateSeed)        → 4 verified quotes from quote-bank
    ├─ buildReadingPrompt(...)                 → full prompt: SOUL + voice + rules +
    │                                             format + quote bank section
-   ├─ callModelForReading(prompt)             → BRANCHES ON FEATURE_FLAG_USE_AI_SDK:
-   │                                             (see next subsection)
-   ├─ JSON.parse(content)                     → structured fields
-   ├─ validate quote_author against VALID_AUTHORS
-   ├─ validate inspirational_quote against VERIFIED_QUOTES (override if unverified)
-   └─ filter self-matches from best_match
+   ├─ generateObject({                        → Sonnet 4.6 via AI Gateway,
+   │     model: MODELS.sonnet,                  schema-enforced output via the
+   │     schema: ReadingOutputModelSchema,      canonical ReadingOutputModelSchema
+   │     prompt, maxOutputTokens: 800,          (Zod, camelCase). No flag, no
+   │   })                                       parsing — generateObject returns
+   │                                            { object } directly.
+   ├─ word-count telemetry warning if msg outside 40-80
+   ├─ validate quoteAuthor against VALID_AUTHORS (override if unknown)
+   ├─ validate inspirationalQuote against VERIFIED_QUOTES (override if unverified)
+   └─ filter self-matches from bestMatch
   ↓
 4. store({ sign, philosopher, date, council, reading }) → Redis write
   ↓
 5. toSnakeCase(reading) → response
 ```
 
-### The two model-call paths (Phase 1b parity)
+### The model-call path (Phase 1c canonical, post-#65)
 
-Inside `callModelForReading(prompt)` in `src/tools/reading/generate.ts`:
+Inlined directly in `generateReading` in `src/tools/reading/generate.ts`:
 
-**Legacy path (default, `FEATURE_FLAG_USE_AI_SDK` off or unset):**
 ```ts
-new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  .chat.completions.create({
-    model: 'gpt-4o-mini-2024-07-18',
-    messages: [{ role: 'user', content: prompt }],
-    response_format: { type: 'json_object' },
-    max_tokens: 800,
-  });
-```
-
-**AI SDK path (`FEATURE_FLAG_USE_AI_SDK=true`):**
-```ts
-generateText({
-  model: 'openai/gpt-4o-mini',     // via Vercel AI Gateway
+const { object } = await generateObject({
+  model: MODELS.sonnet,                    // anthropic/claude-sonnet-4.6
+  schema: ReadingOutputModelSchema,        // canonical Zod schema in
+                                           // src/tools/reading/types.ts
   prompt,
   maxOutputTokens: 800,
-  // NOTE: JSON-mode enforcement is intentionally NOT set here.
-  // providerOptions.openai.responseFormat is not a documented key.
-  // PR C (Phase 1c) replaces this with generateObject + Zod.
 });
 ```
 
-Both target gpt-4o-mini for Phase 1b parity. The AI SDK path is **not yet JSON-mode-enforced** — this is a deliberate deferral to Phase 1c (see §8). The flag defaults off so production currently serves 100% legacy-path traffic.
+**Single transport, no flag, no parity layer.** Schema enforcement closes the deferred `providerOptions.responseFormat` workaround from PR #61. Model decision recorded in [`docs/evals/2026-04-25-baseline.md`](./evals/2026-04-25-baseline.md). The post-call validators (quote-author allowlist, quote-bank fallback, self-match filter) operate on the schema-validated object — they enforce business rules the schema can't express.
 
-Test: `__tests__/tools/reading/generate.test.ts` (6 tests, both paths mocked).
+Word-count constraint (40-80 words on `message`) is intentionally a soft prompt-level instruction with post-call telemetry, NOT a Zod refinement. Strict refinement risks flaky throws on otherwise-acceptable model output and degrades UX without improving quality. Tighten if compliance data later supports it.
+
+Test: `__tests__/tools/reading/generate.test.ts` (6 single-path tests; the parity tests from Phase 1b collapsed when the legacy branch was deleted).
 
 ---
 
@@ -380,7 +376,7 @@ Readings should sound like the philosopher is actually speaking — a "mashup *i
 | **1a** | AI SDK + Gateway chokepoint | ✅ Shipped (PR #60, merged `3835d33`) | `src/tools/ai/provider.ts` is the single import surface |
 | **1b** | `reading:generate` parity port behind flag | ✅ Shipped (PR #61, merged `70332da`) | Flag defaults off; production still on legacy |
 | **1b.5** | `reading:judge` verb + 4-model baseline eval | 🔄 In progress (`feat/reading-auth/eval-harness-baseline`) | Ships the judge that PR C, D, E all reuse. Baseline at `docs/evals/2026-04-25-baseline.md` decides PR C's model. Plan: [`2026-04-25-001`](./plans/2026-04-25-001-reading-eval-harness-and-model-baseline-plan.md) |
-| **1c** | Adopt baseline-picked model + `generateObject` + Zod | 🔜 After 1b.5 | Model decided by 1b.5 baseline; Zod schema defines `ReadingOutput` strictly; `FEATURE_FLAG_USE_AI_SDK` retired |
+| **1c** | Adopt Sonnet 4.6 + `generateObject` + canonical Zod schema | ✅ Shipped (PR #65) | `ReadingOutputModelSchema` in `src/tools/reading/types.ts` enforced via `generateObject`; `FEATURE_FLAG_USE_AI_SDK` and legacy OpenAI SDK path deleted; eval script imports the canonical schema |
 | **1d** | Corpus retrieval infrastructure | 🔜 After 1c | **Blocked on open question**: living-philosopher corpus posture (see §13) |
 | **1e** | Self-critique pass (composition, not fold-in) | 🔜 After 1d | `reading:generate` + `reading:judge` composed at the call site (cron route, agent runtime). NOT folded into `reading:generate` — that would make it a workflow. Criteria already encoded in the judge verb (1b.5). |
 | **2a** | `astronomy:moon-phase` atomic verb | 🔜 After Phase 1 | Prompt-engineered against template tropes |
@@ -403,7 +399,7 @@ The initiative's direction is informed by external research (summarized in the p
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `OPENAI_API_KEY` | Yes (while flag off) | Legacy `reading:generate` path. Retired after Phase 1c full rollout. |
+| `OPENAI_API_KEY` | DEPRECATED | No longer used by `reading:generate` after Phase 1c. Still set in Vercel env; safe to remove after a stability window confirms no regressions. |
 | `UPSTASH_REDIS_REST_URL` | Yes (prod) | Cache + subscribers + rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | Yes (prod) | Redis auth |
 | `RESEND_API_KEY` | For email | Daily email sending |
@@ -412,7 +408,6 @@ The initiative's direction is informed by external research (summarized in the p
 | `NEXT_PUBLIC_API_URL` | Optional | API base URL override |
 | `HOROSCOPE_API_URL` | MCP server | API base for MCP tool delegation |
 | `AI_GATEWAY_API_KEY` | For local dev (AI SDK) | Vercel AI Gateway auth. Set in Vercel env for API project as of 2026-04-24. Vercel-deployed envs use `VERCEL_OIDC_TOKEN` automatically when this is unset. |
-| `FEATURE_FLAG_USE_AI_SDK` | Optional | Phase 1b parity flag. When `true`, `reading:generate` routes through `@/tools/ai/provider`. Default off. Removed after Phase 1c rollout. |
 
 Redis is lazy-initialized via Proxy in `utils/redis.ts`. App won't crash without Redis — just won't cache or rate-limit.
 
@@ -677,14 +672,16 @@ Current memory files for this project:
 
 ## 18. Immediate next actions (for the next session)
 
-1. **Read the plan doc** — `docs/plans/2026-04-24-001-reading-authenticity-and-ai-sdk-migration-plan.md`. It's the source of truth for remaining phases.
+1. **Read the plan doc** — `docs/plans/2026-04-24-001-reading-authenticity-and-ai-sdk-migration-plan.md`. It's the source of truth for remaining phases. Phases 1a, 1b, 1b.5, and 1c are all shipped. Next is Phase 1d.
 
-2. **Read the PR B.5 baseline** — `docs/evals/2026-04-25-baseline.md`. The model recommendation for PR C lives there with its supporting per-model, per-sign, and per-philosopher tables. The eval covers four models (`gpt-4o-mini`, Haiku 4.5, Sonnet 4.6, Opus 4.7) using `generateObject` + Zod — the same JSON-mode mechanism PR C will adopt.
+2. **Resolve the living-philosopher corpus question** — this is the blocker for Phase 1d. See §13 here. The lean is option (b) — index only freely-shared material — but it must be decided before Phase 1d starts.
 
-3. **Start PR C** (Phase 1c) — adopt the model the baseline picked, integrate `generateObject` with a canonical Zod schema for `ReadingOutput` into `reading:generate`, retire `callModelForReading` and `FEATURE_FLAG_USE_AI_SDK`. Schema enforces: `message` (40-80 words), `bestMatch` (comma-separated sign list), `inspirationalQuote`, `quoteAuthor`, `peacefulThought`. This closes the deferred `providerOptions.responseFormat` workaround from PR #61.
+3. **Watch Sonnet 4.6 production stability for ~1 week**, then remove `OPENAI_API_KEY` from the Vercel env (no longer used by `reading:generate`). The legacy `horoscope-generator.ts` for monthly pages still uses it — verify no other consumers before removal.
 
-4. **Resolve the living-philosopher corpus question** before starting PR D. The plan doc flags this as a blocker; see §13 here.
+4. **Start Phase 1d when the corpus posture is decided** — see parent plan PR D.
 
-5. **Keep the loop**: spawn → principle-aware implementation → 3-persona review → remediation → merge → verify Vercel deploy state. The pattern works.
+5. **Phase 1e is unblocked any time after PR C ships** — composes `reading:generate` + `reading:judge` at the call site (cron route or future agent runtime). Per the PR B.5 baseline, scoped narrowly: regenerate-on-fail when antiBarnum ≤ 3 OR voiceAuthenticity ≤ 3. Anti-template is fully solved at Sonnet (5.00 across 36/36 cells) — wasted compute as a critique axis.
 
-Ready to build. Main at `70332da`.
+6. **Keep the loop**: spawn → principle-aware implementation → multi-persona review → remediation → merge → verify Vercel deploy state. The pattern works.
+
+Ready to build. Main at `05e06bd` (will update after PR C lands).

@@ -18,10 +18,6 @@ export const FEATURE_FLAGS = {
   USE_ENHANCED_SCHEMA_MARKUP: 'USE_ENHANCED_SCHEMA_MARKUP',
   // Whether to enable XML sitemap generation
   USE_XML_SITEMAP: 'USE_XML_SITEMAP',
-  // Whether reading:generate routes through the Vercel AI SDK + Gateway
-  // (off = legacy OpenAI SDK; on = AI SDK via @/tools/ai/provider).
-  // Parity flag during Phase 1b; removed after migration lands in Phase 1c.
-  USE_AI_SDK: 'USE_AI_SDK',
 };
 
 /**

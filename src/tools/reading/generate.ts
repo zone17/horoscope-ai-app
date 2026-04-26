@@ -2,7 +2,8 @@
  * reading:generate — Atomic tool
  *
  * Composes sign profile, format template, and quote bank into a full
- * reading prompt, calls OpenAI, and returns a structured ReadingOutput.
+ * reading prompt, calls the AI SDK + Gateway via generateObject with a
+ * canonical Zod schema, and returns a structured ReadingOutput.
  *
  * Independently callable: takes explicit inputs, no hidden state,
  * no cache dependency, no council selection.
@@ -11,13 +12,11 @@
  * Output: ReadingOutput
  */
 
-import OpenAI from 'openai';
-import { generateText } from '@/tools/ai/provider';
-import { FEATURE_FLAGS, isFeatureEnabled } from '@/utils/feature-flags';
+import { generateObject, MODELS } from '@/tools/ai/provider';
 import { getSignProfile, type SignProfile } from '@/tools/zodiac/sign-profile';
 import { getFormatTemplate, type FormatTemplateResult } from '@/tools/reading/format-template';
 import { getQuotes, type VerifiedQuote, VALID_AUTHORS } from '@/tools/reading/quote-bank';
-import { lookupPhilosopher } from '@/tools/philosopher/registry';
+import { ReadingOutputModelSchema } from '@/tools/reading/types';
 import { VERIFIED_QUOTES } from '@/utils/verified-quotes';
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -109,20 +108,18 @@ ${writingFormat}
 ## ${profile.exampleOpener}
 ${quoteBankSection}
 
-## WHAT TO INCLUDE (as JSON fields)
+## WHAT TO INCLUDE (as object fields)
 1. **message**: The main horoscope (40-80 words, following the voice and format above)
-2. **best_match**: 3-4 compatible signs as lowercase comma-separated string (e.g., "aries, gemini, libra")
+2. **bestMatch**: 3-4 compatible signs as lowercase comma-separated string (e.g., "aries, gemini, libra")
    - NEVER include ${normalizedSign} in its own matches
    - Fire (aries/leo/sagittarius) pairs with Fire + Air (gemini/libra/aquarius)
    - Earth (taurus/virgo/capricorn) pairs with Earth + Water (cancer/scorpio/pisces)
    - Air pairs with Air + Fire
    - Water pairs with Water + Earth
    ${normalizedSign === 'libra' ? '- MUST include aquarius' : ''}${normalizedSign === 'aquarius' ? '- MUST include libra' : ''}
-3. **inspirational_quote**: ${philosopherInstruction} Copy the quote EXACTLY as provided — do not modify it.
-4. **quote_author**: Exact name of the philosopher
-5. **peaceful_thought**: A 1-2 sentence nighttime wind-down thought. Not generic — make it specific to this sign's energy today. No greeting, no "dear [sign]."
-
-Respond ONLY with valid JSON.`;
+3. **inspirationalQuote**: ${philosopherInstruction} Copy the quote EXACTLY as provided — do not modify it.
+4. **quoteAuthor**: Exact name of the philosopher
+5. **peacefulThought**: A 1-2 sentence nighttime wind-down thought. Not generic — make it specific to this sign's energy today. No greeting, no "dear [sign]."`;
 }
 
 // ─── Generator ──────────────────────────────────────────────────────────
@@ -131,115 +128,79 @@ Respond ONLY with valid JSON.`;
  * reading:generate
  *
  * Generate a complete reading for a sign with a specific philosopher.
- * Calls OpenAI, parses the response, validates the output.
- */
-/**
- * Internal transport: calls the model via either legacy OpenAI SDK or the
- * AI SDK + Gateway, gated by FEATURE_FLAG_USE_AI_SDK.
+ * Routes through the AI SDK + Gateway via `generateObject` with the
+ * canonical `ReadingOutputModelSchema`. Model is pinned to `MODELS.sonnet`
+ * (decision recorded in `docs/evals/2026-04-25-baseline.md`).
  *
- * Both paths target gpt-4o-mini for Phase 1b parity — same family, same
- * prompt, same max-output-token budget. One intentional divergence:
- * the legacy path enforces JSON via OpenAI's `response_format: json_object`;
- * the AI SDK path relies on the prompt's "Respond ONLY with valid JSON."
- * instruction alone. Hard JSON-mode enforcement via `generateObject` + Zod
- * lands in PR C (and replaces this helper). That is why the flag defaults
- * off — rollout is gated on PR C's structured output landing first.
- *
- * TODO(PR C): delete this helper and inline the AI SDK call back into
- * generateReading once the legacy branch is removed.
+ * Post-call validators (quote-author allowlist, quote-bank fallback,
+ * self-match filter) operate on the schema-validated object — they
+ * enforce business rules the schema can't express.
  */
-async function callModelForReading(prompt: string): Promise<string> {
-  if (isFeatureEnabled(FEATURE_FLAGS.USE_AI_SDK)) {
-    const { text } = await generateText({
-      model: 'openai/gpt-4o-mini',
-      prompt,
-      // maxOutputTokens is the AI SDK's normalized output-only cap; for the
-      // OpenAI chat completions backend this maps 1:1 to `max_tokens: 800`.
-      maxOutputTokens: 800,
-    });
-    return text;
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || apiKey === 'your_openai_api_key_here') {
-    throw new Error('OpenAI API key not properly configured');
-  }
-  const openai = new OpenAI({ apiKey });
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini-2024-07-18',
-    messages: [{ role: 'user', content: prompt }],
-    response_format: { type: 'json_object' },
-    max_tokens: 800,
-  });
-  const content = response.choices[0].message.content;
-  if (!content) {
-    throw new Error('OpenAI returned empty content');
-  }
-  return content;
-}
-
 export async function generateReading(input: GenerateReadingInput): Promise<ReadingOutput> {
   const normalizedSign = input.sign.toLowerCase();
   const resolvedDate = input.date ?? new Date().toISOString().split('T')[0];
 
-  // Build the prompt from atomic tools
   const prompt = buildReadingPrompt(input);
 
   console.log(`[reading:generate] Generating ${normalizedSign} with philosopher: ${input.philosopher}`);
 
-  const content = await callModelForReading(prompt);
+  const { object } = await generateObject({
+    model: MODELS.sonnet,
+    schema: ReadingOutputModelSchema,
+    prompt,
+    maxOutputTokens: 800,
+  });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    throw new Error(`Model returned invalid JSON: ${content.substring(0, 200)}`);
+  // Soft word-count telemetry. The 40-80 range is a prompt-level instruction,
+  // not a hard schema constraint — strict refinement risks flaky throws on
+  // otherwise-acceptable output. Log when the model misses the target so
+  // compliance can be tracked over time and the schema tightened later if
+  // the data supports it.
+  const wordCount = object.message.trim().split(/\s+/).length;
+  if (wordCount < 40 || wordCount > 80) {
+    console.warn(`[reading:generate] message word count out of target range: ${wordCount} (target 40-80)`);
   }
 
-  // Validate required fields
-  if (!parsed.message || !parsed.inspirational_quote || !parsed.quote_author) {
-    throw new Error(
-      `Missing required reading fields. Got keys: ${Object.keys(parsed).join(', ')}`
-    );
-  }
-
-  // Validate quote author against approved list
-  const quoteAuthor = String(parsed.quote_author);
+  // Validate quote author against approved list. Non-conformant authors
+  // are overridden with the assigned philosopher so the daily card never
+  // surfaces an unknown attribution.
+  let quoteAuthor = object.quoteAuthor;
   if (!VALID_AUTHORS.some(author => quoteAuthor.toLowerCase().includes(author.toLowerCase()))) {
     console.warn(`[reading:generate] Invalid quote author: ${quoteAuthor}. Overriding with assigned: ${input.philosopher}`);
-    parsed.quote_author = input.philosopher;
+    quoteAuthor = input.philosopher;
   }
 
-  // Validate quote is from verified bank when available
+  // Validate quote against the verified-quote bank when one exists for the
+  // assigned philosopher. Unverified quotes are replaced with a deterministic
+  // pick from the bank (date-seeded) — protects against fabrication.
+  let inspirationalQuote = object.inspirationalQuote;
   const authorQuotes = VERIFIED_QUOTES[input.philosopher];
   if (authorQuotes && authorQuotes.length > 0) {
-    const quote = String(parsed.inspirational_quote);
     const isVerified = authorQuotes.some(vq =>
-      vq.text.toLowerCase() === quote.toLowerCase() ||
-      quote.toLowerCase().includes(vq.text.toLowerCase().substring(0, 30))
+      vq.text.toLowerCase() === inspirationalQuote.toLowerCase() ||
+      inspirationalQuote.toLowerCase().includes(vq.text.toLowerCase().substring(0, 30))
     );
     if (!isVerified) {
-      console.warn(`[reading:generate] Quote not from verified bank, replacing: "${quote}"`);
+      console.warn(`[reading:generate] Quote not from verified bank, replacing: "${inspirationalQuote}"`);
       const dayNum = Math.floor(new Date(resolvedDate).getTime() / (1000 * 60 * 60 * 24));
-      parsed.inspirational_quote = authorQuotes[dayNum % authorQuotes.length].text;
+      inspirationalQuote = authorQuotes[dayNum % authorQuotes.length].text;
     }
   }
 
-  // Filter self-matches from best_match
-  let bestMatch = String(parsed.best_match || '');
-  if (bestMatch) {
-    const matches = bestMatch.toLowerCase().split(',').map(s => s.trim());
-    bestMatch = matches.filter(match => match !== normalizedSign).join(', ');
-  }
+  // Filter self-matches from bestMatch — Aries shouldn't show "aries" in
+  // its own compatibility list. Lowercasing also normalises minor model
+  // capitalisation drift.
+  const matches = object.bestMatch.toLowerCase().split(',').map(s => s.trim());
+  const bestMatch = matches.filter(match => match !== normalizedSign).join(', ');
 
   return {
     sign: normalizedSign,
     date: resolvedDate,
     philosopher: input.philosopher,
-    message: String(parsed.message),
+    message: object.message,
     bestMatch,
-    inspirationalQuote: String(parsed.inspirational_quote),
-    quoteAuthor: String(parsed.quote_author),
-    peacefulThought: String(parsed.peaceful_thought || ''),
+    inspirationalQuote,
+    quoteAuthor,
+    peacefulThought: object.peacefulThought,
   };
 }

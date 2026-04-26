@@ -40,26 +40,11 @@ config({ path: '.env.eval', override: true });
 
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { z } from 'zod';
 import { generateObject, MODELS } from '../../src/tools/ai/provider';
 import { buildReadingPrompt } from '../../src/tools/reading/generate';
 import { judgeReading, type JudgeResult } from '../../src/tools/reading/judge';
+import { ReadingOutputModelSchema, type ReadingOutputModel } from '../../src/tools/reading/types';
 import { VALID_SIGNS, type ValidSign } from '../../src/tools/zodiac/sign-profile';
-
-// Minimal schema for the reading output. Mirrors the snake_case shape that
-// reading:generate currently parses. PR C will introduce the canonical Zod
-// schema inside src/tools/reading and integrate it into reading:generate;
-// this script defines its own copy locally to keep PR B.5's scope narrow
-// (no production code change). Field-for-field equivalent to ReadingOutput
-// minus the post-call validators (sign/date/philosopher are injected by
-// the verb, not the model).
-const ReadingSchema = z.object({
-  message: z.string(),
-  best_match: z.string(),
-  inspirational_quote: z.string(),
-  quote_author: z.string(),
-  peaceful_thought: z.string(),
-});
 
 // ─── Config ─────────────────────────────────────────────────────────────
 
@@ -118,7 +103,7 @@ interface EvalRow {
   philosopher: string;
   modelId: string;
   modelLabel: string;
-  parsedReading: z.infer<typeof ReadingSchema> | null;
+  parsedReading: ReadingOutputModel | null;
   generationError: string | null;
   judge: JudgeResult | null;
   judgeError: string | null;
@@ -142,14 +127,13 @@ async function runOneCell(
 
   try {
     const prompt = buildReadingPrompt({ sign, philosopher, date: EVAL_DATE });
-    // generateObject + Zod is what PR C will adopt for reading:generate.
-    // Using it here makes the eval apples-to-apples across all four models —
-    // each model gets the same JSON-mode enforcement mechanism via the AI
-    // SDK's per-provider abstraction, instead of relying on prompt-only
-    // instructions which gpt-4o-mini in particular is unreliable about.
+    // generateObject + ReadingOutputModelSchema is the production transport
+    // (PR C). Using the canonical schema keeps the eval and the production
+    // verb on the same JSON-mode mechanism — apples-to-apples across all
+    // four models, single source of truth for the shape, no drift.
     const { object } = await generateObject({
       model: model.id,
-      schema: ReadingSchema,
+      schema: ReadingOutputModelSchema,
       prompt,
       maxOutputTokens: 800,
     });
@@ -159,9 +143,9 @@ async function runOneCell(
       row.judge = await judgeReading({
         reading: {
           message: object.message,
-          inspirationalQuote: object.inspirational_quote,
-          quoteAuthor: object.quote_author,
-          peacefulThought: object.peaceful_thought,
+          inspirationalQuote: object.inspirationalQuote,
+          quoteAuthor: object.quoteAuthor,
+          peacefulThought: object.peacefulThought,
         },
         sign,
         philosopher,
