@@ -355,6 +355,12 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
         // mode we're shipping in. When social posting goes live, either
         // flip the store to public OR generate signed URLs for Ayrshare.
         access: 'private',
+        // Allow re-runs on the same date to overwrite. Without this, a
+        // manual workflow_dispatch that re-renders aries on a day we
+        // already rendered fails the upload with "blob already exists".
+        // The path is deterministic by (date, sign), so the new render is
+        // always the canonical copy for that day — overwriting is correct.
+        allowOverwrite: true,
         token: blobToken,
         abortSignal: AbortSignal.timeout(120_000),
       });
