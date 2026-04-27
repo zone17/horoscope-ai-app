@@ -348,7 +348,13 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       const { put } = await import('@vercel/blob');
       const videoBuffer = fs.readFileSync(videoPath);
       const blob = await put(`videos/${today}/${sign}.mp4`, videoBuffer, {
-        access: 'public',
+        // Match the Vercel Blob store's configured access mode. The store is
+        // private until social posting is enabled — keeping uploads private
+        // means raw mp4s aren't directly fetchable by URL without a token,
+        // which is correct for the "save locally, no public distribution"
+        // mode we're shipping in. When social posting goes live, either
+        // flip the store to public OR generate signed URLs for Ayrshare.
+        access: 'private',
         token: blobToken,
         abortSignal: AbortSignal.timeout(120_000),
       });

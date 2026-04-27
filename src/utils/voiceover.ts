@@ -96,7 +96,9 @@ export async function generateVoiceover(
 
     await execFileAsync('edge-tts', [
       '--voice', VOICE,
-      '--rate', RATE,
+      // `--rate=${RATE}` (joined form) is required because Python argparse
+      // treats `-5%` as starting a new flag if passed as a separate arg.
+      `--rate=${RATE}`,
       '--text', text,
       '--write-media', audioPath,
       '--write-subtitles', subtitlePath,
