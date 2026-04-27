@@ -110,11 +110,23 @@ function sceneOpacity(frame: number, start: number, end: number): number {
   return fadeIn * fadeOut;
 }
 
-// Subtitle-synced text reveal — lines appear as voice speaks them
+/**
+ * Word-by-word reveal synced to the voiceover.
+ *
+ * Renders ONE active cue at a time (the one currently being spoken), with
+ * each word fading in at its interpolated speak-time. edge-tts SRT gives us
+ * cue-level (sentence) timestamps, not word-level — so within each cue we
+ * distribute word reveal times linearly across the cue's duration. This is
+ * an approximation but tracks the voice closely because edge-tts cues are
+ * short (~2-4s, ~5-10 words) and Ava's pace is even.
+ *
+ * Showing one cue at a time also fixes the previous "stacked wall of text
+ * that overflows the viewport" failure mode — readings with 5+ cues no
+ * longer get clipped because we never lay multiple cues out simultaneously.
+ */
 const SubtitleReveal: React.FC<{
   cues: Array<{ startMs: number; endMs: number; text: string }>;
   frame: number;
-  offsetMs?: number; // ms offset to align with scene start
   fontSize?: number;
   color?: string;
   lineHeight?: number;
@@ -122,13 +134,39 @@ const SubtitleReveal: React.FC<{
 }> = ({
   cues,
   frame,
-  offsetMs = 0,
   fontSize = 60,
   color = "#E0D8F0",
-  lineHeight = 1.8,
+  lineHeight = 1.4,
   italic = false,
 }) => {
   const fps = 30;
+  const currentMs = (frame / fps) * 1000;
+
+  // Pick the cue that's currently being spoken. We extend each cue's "active
+  // window" 200ms past its endMs so the last word doesn't blink off the
+  // moment voice finishes — natural reading lingers slightly past audio.
+  const activeCue = cues.find(
+    (c) => currentMs >= c.startMs - 100 && currentMs <= c.endMs + 200,
+  );
+  if (!activeCue) return null;
+
+  const cueDurMs = Math.max(activeCue.endMs - activeCue.startMs, 1);
+  const words = activeCue.text.split(/\s+/).filter(Boolean);
+  const msPerWord = cueDurMs / words.length;
+
+  // Container fade in/out at cue boundaries — soft transition between cues.
+  const cueStartFrame = (activeCue.startMs / 1000) * fps;
+  const cueEndFrame = (activeCue.endMs / 1000) * fps;
+  const containerOpacity = Math.min(
+    interpolate(frame, [cueStartFrame - 4, cueStartFrame + 4], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    }),
+    interpolate(frame, [cueEndFrame + 6, cueEndFrame + 14], [1, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    }),
+  );
 
   return (
     <div
@@ -137,33 +175,32 @@ const SubtitleReveal: React.FC<{
         fontFamily: BODY_FONT,
         color,
         lineHeight,
-        fontWeight: 300,
+        fontWeight: 400,
         fontStyle: italic ? "italic" : "normal",
         textAlign: "center",
-        maxWidth: 920,
+        maxWidth: 940,
+        opacity: containerOpacity,
       }}
     >
-      {cues.map((cue, i) => {
-        const cueFrame = ((cue.startMs - offsetMs) / 1000) * fps;
-        const opacity = interpolate(frame, [cueFrame, cueFrame + 10], [0, 1], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        });
-        const translateY = interpolate(frame, [cueFrame, cueFrame + 12], [10, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        });
+      {words.map((word, i) => {
+        const wordStartMs = activeCue.startMs + i * msPerWord;
+        const wordStartFrame = (wordStartMs / 1000) * fps;
+        // Each word fades in over ~5 frames (~167ms) — fast enough to feel
+        // "popping" with the voice, slow enough to look organic, not jittery.
+        const opacity = interpolate(
+          frame,
+          [wordStartFrame, wordStartFrame + 5],
+          [0, 1],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+        );
         return (
-          <div
-            key={i}
-            style={{
-              opacity,
-              transform: `translateY(${translateY}px)`,
-              marginBottom: 6,
-            }}
+          <span
+            key={`${activeCue.startMs}-${i}`}
+            style={{ opacity, display: "inline-block" }}
           >
-            {cue.text}
-          </div>
+            {word}
+            {i < words.length - 1 ? " " : ""}
+          </span>
         );
       })}
     </div>
