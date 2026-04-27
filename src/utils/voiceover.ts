@@ -103,7 +103,11 @@ export async function generateVoiceover(
       '--text', text,
       '--write-media', audioPath,
       '--write-subtitles', subtitlePath,
-    ], { timeout: 30000 });
+      // Microsoft's free TTS endpoint is variable — long readings (~600+
+      // chars) can take 30-60s. 90s gives ample headroom while still
+      // bounding the per-sign render time so a stuck call can't hold the
+      // whole pipeline indefinitely.
+    ], { timeout: 90_000 });
 
     // Parse SRT to get total duration
     let durationMs = 0;
