@@ -74,6 +74,14 @@ jobs:
         # edge-tts here keeps the gate's contract honest.
         run: pip3 install --user edge-tts
 
+      - name: Install ffmpeg (quality gate)
+        # ffprobe is part of ffmpeg. Without it, qualityCheck() short-circuits
+        # to "best-effort" and waves through any render that hits a sane file
+        # size — so a silent video would pass. With ffprobe present the gate
+        # actually verifies duration is 55-65s and an audio stream exists
+        # when voiceover was generated.
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Build CLI args
         id: args
         # Scheduled runs always pass --no-post. Manual runs honor the input
