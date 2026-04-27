@@ -36,10 +36,11 @@ export function buildNarrationScript(
   const signName = s.charAt(0).toUpperCase() + s.slice(1);
   const parts: string[] = [];
 
-  // Hook (scene 1)
-  parts.push(`${signName}. Stop scrolling.`);
+  // Hook (scene 1) — VOICE only says the sign name and the philosopher
+  // attribution. The "Stop scrolling" CTA is a visual-only line in the
+  // composition; including it in the narration was off-brand and on-the-nose.
+  parts.push(`${signName}.`);
 
-  // Philosopher attribution (scene 1 continued)
   const a = quoteAuthor?.trim();
   if (a) {
     parts.push(`Guided by ${a}.`);
