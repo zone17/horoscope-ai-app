@@ -54,6 +54,44 @@ if (rawSign && !SINGLE_SIGN) {
 const rampIndex = args.indexOf('--ramp');
 const RAMP_COUNT = Math.min(Math.max(rampIndex >= 0 ? parseInt(args[rampIndex + 1], 10) || 4 : 4, 1), 12);
 
+/**
+ * Group ElevenLabs word-level timings into cues. Each cue gets the words
+ * up to a sentence-ending punctuation OR ~5-8 words, whichever comes
+ * first. The composition treats one cue at a time; smaller cues = more
+ * frequent cross-fades. The `words` array on each cue carries through to
+ * Remotion so the active-word highlight uses real timestamps.
+ */
+function groupWordsIntoCues(
+  words: Array<{ text: string; startMs: number; endMs: number }>,
+): Array<{
+  startMs: number;
+  endMs: number;
+  text: string;
+  words: Array<{ text: string; startMs: number; endMs: number }>;
+}> {
+  const MAX_WORDS_PER_CUE = 7;
+  const cues: ReturnType<typeof groupWordsIntoCues> = [];
+  let buf: typeof words = [];
+
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    buf.push(w);
+    const endsSentence = /[.!?]$/.test(w.text);
+    const atMax = buf.length >= MAX_WORDS_PER_CUE;
+    const isLast = i === words.length - 1;
+    if (endsSentence || atMax || isLast) {
+      cues.push({
+        startMs: buf[0].startMs,
+        endMs: buf[buf.length - 1].endMs,
+        text: buf.map((b) => b.text).join(' '),
+        words: [...buf],
+      });
+      buf = [];
+    }
+  }
+  return cues;
+}
+
 function parseSrt(srt: string): Array<{ startMs: number; endMs: number; text: string }> {
   const blocks = srt.trim().split(/\n\n+/);
   return blocks
@@ -286,12 +324,20 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       props.voiceoverSrc = `audio/${sign}-voiceover.mp3`;
       (props as any).voiceoverDurationMs = voResult.durationMs;
 
-      // Parse SRT for subtitle cues — drives text-voice sync
-      if (fs.existsSync(voResult.subtitlePath)) {
+      // Build subtitle cues. ElevenLabs path provides word-level timings;
+      // we group consecutive words into ~1s cues (the composition's
+      // active-cue chooser still picks one cue at a time, but cue size
+      // determines how the cross-fades feel). edge-tts path uses the
+      // cue-level SRT it already wrote.
+      if ((voResult as any).wordTimings && Array.isArray((voResult as any).wordTimings) && (voResult as any).wordTimings.length > 0) {
+        const cues = groupWordsIntoCues((voResult as any).wordTimings);
+        (props as any).subtitleCues = cues;
+        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${cues.length} cues from ${(voResult as any).wordTimings.length} word timings (frame-accurate sync)`);
+      } else if (fs.existsSync(voResult.subtitlePath)) {
         const srt = fs.readFileSync(voResult.subtitlePath, 'utf-8');
         const cues = parseSrt(srt);
         (props as any).subtitleCues = cues;
-        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${cues.length} subtitle cues`);
+        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${cues.length} subtitle cues (interpolated word sync)`);
       }
     } else {
       console.warn(`[render] Voiceover generation failed for ${sign} — rendering without audio`);

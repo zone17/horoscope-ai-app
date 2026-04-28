@@ -14,6 +14,7 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.45.0",
     "@remotion/cli": "^4.0.447",
     "@remotion/google-fonts": "^4.0.447",
     "@remotion/media-utils": "^4.0.447",
