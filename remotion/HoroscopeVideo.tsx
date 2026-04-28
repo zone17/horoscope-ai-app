@@ -480,11 +480,13 @@ function buildContentScenes(
   const DEFAULT_HOOK_FRAMES = 90;
   const OUTRO_FRAMES = 120; // 4s outro for the CTA card
 
-  // Per-type linger after the last spoken word. Quote videos hold the
-  // full quote on screen for ~5s after the voice finishes so viewers
-  // can re-read; morning + night just need enough pad for the last
-  // cue's word reveal + scene cross-fade to land cleanly.
-  const CONTENT_TAIL_PAD = videoType === 'quote' ? 150 : 36;
+  // Per-type linger after the last spoken word. Quote and night videos
+  // hold their content on screen for ~5s after the voice finishes so
+  // viewers can re-read; morning paces over the longer body voice and
+  // just needs a small pad for the last cue's word reveal + scene
+  // cross-fade to land cleanly.
+  const CONTENT_TAIL_PAD =
+    videoType === 'quote' || videoType === 'night' ? 150 : 36;
 
   const hookEnd = hookEndMs && hookEndMs > 0
     ? Math.round((hookEndMs / 1000) * FPS) + 6
@@ -998,7 +1000,10 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         </AbsoluteFill>
       );
     }
-    // night
+    // night — full reflection visible on screen with karaoke active-word
+    // highlight, same pattern as the quote video. Karaoke gives viewers
+    // the whole thought to sit with rather than chasing the voice
+    // word-by-word.
     return (
       <AbsoluteFill
         style={{
@@ -1010,7 +1015,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         }}
       >
         {contentCues.length > 0 ? (
-          <WordReveal
+          <KaraokeReveal
             cues={contentCues}
             frame={frame}
             fps={fps}
