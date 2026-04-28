@@ -508,10 +508,13 @@ function buildContentScenes(
   const DEFAULT_HOOK_FRAMES = 90;
   const OUTRO_FRAMES = 120; // 4s outro for the CTA card
 
-  // All three video types use karaoke reveal (full text on screen with
-  // active-word highlight). 5s linger after the last spoken word lets
-  // viewers re-read whichever section they want before the outro.
-  const CONTENT_TAIL_PAD = 150;
+  // Quote and night videos hold their full content on screen with
+  // karaoke highlight, so they linger ~5s after voice ends to let
+  // viewers re-read. Morning uses WordReveal (one cue at a time,
+  // word-by-word), so no linger is needed — just enough pad for the
+  // last cue's word reveal + scene cross-fade to land cleanly.
+  const CONTENT_TAIL_PAD =
+    videoType === 'quote' || videoType === 'night' ? 150 : 36;
 
   const hookEnd = hookEndMs && hookEndMs > 0
     ? Math.round((hookEndMs / 1000) * FPS) + 6
@@ -921,28 +924,26 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
           }}
         >
           {contentCues.length > 0 ? (
-            <KaraokeReveal
+            <WordReveal
               cues={contentCues}
               frame={frame}
               fps={fps}
               fontFamily={inter}
-              // Morning bodies are ~80 words; smaller font fits the
-              // full reading in the safe zone without overflowing.
-              fontSize={48}
+              fontSize={62}
               fontWeight={600}
               accentColor={accent}
-              lineHeight={1.35}
+              lineHeight={1.3}
             />
           ) : (
             <div
               style={{
                 fontFamily: inter,
-                fontSize: 48,
+                fontSize: 62,
                 fontWeight: 600,
                 color: CREAM,
                 textAlign: "center",
                 maxWidth: 940,
-                lineHeight: 1.35,
+                lineHeight: 1.3,
                 textShadow: "0 2px 24px rgba(0,0,0,0.55)",
               }}
             >
