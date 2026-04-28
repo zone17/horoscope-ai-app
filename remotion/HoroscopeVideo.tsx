@@ -303,13 +303,27 @@ const KaraokeReveal: React.FC<{
 
   if (allWords.length === 0) return null;
 
+  // Group words into paragraphs at natural pause boundaries. ElevenLabs
+  // pauses noticeably longer where the narration script has \n\n (the
+  // paragraph separator we use in build*Narration). 400ms threshold
+  // catches those without splitting on every comma/period micro-pause.
+  // Each paragraph renders as its own block with vertical margin so
+  // the karaoke doesn't read as a wall-of-text.
+  const PARAGRAPH_GAP_MS = 400;
+  type Paragraph = Array<W & { globalIdx: number }>;
+  const paragraphs: Paragraph[] = [[]];
+  for (let i = 0; i < allWords.length; i++) {
+    const w = allWords[i];
+    const prev = i > 0 ? allWords[i - 1] : null;
+    if (prev && w.startMs - prev.endMs > PARAGRAPH_GAP_MS) {
+      paragraphs.push([]);
+    }
+    paragraphs[paragraphs.length - 1].push({ ...w, globalIdx: i });
+  }
+
   // Container fades in once at the start of the first word and stays
   // visible through the full content scene. The OUTER scene-level
-  // sceneOpacity handles the eventual fade-out into the outro, so the
-  // karaoke container itself just stays on at full opacity once the
-  // quote has fully appeared. This gives viewers the long linger they
-  // need to re-read after the voice finishes (~5s of dwell time per
-  // the per-type tail pad in buildContentScenes).
+  // sceneOpacity handles the eventual fade-out into the outro.
   const firstStart = (allWords[0].startMs / 1000) * fps;
   const containerOpacity = interpolate(
     frame,
@@ -321,6 +335,35 @@ const KaraokeReveal: React.FC<{
       easing: Easing.bezier(0.16, 1, 0.3, 1),
     },
   );
+
+  const renderWord = (word: W & { globalIdx: number }) => {
+    const wordStartFrame = (word.startMs / 1000) * fps;
+    const wordEndFrame = (word.endMs / 1000) * fps;
+    const isActive = frame >= wordStartFrame && frame <= wordEndFrame + 2;
+    const activePulse = isActive
+      ? spring({
+          frame: frame - wordStartFrame,
+          fps,
+          config: { damping: 18, stiffness: 220, mass: 0.4 },
+          durationInFrames: 8,
+        })
+      : 0;
+    const activeScale = 1 + activePulse * 0.06;
+    const finalColor = isActive ? accentColor : CREAM;
+    return (
+      <span
+        key={`k-${word.globalIdx}`}
+        style={{
+          display: "inline-block",
+          transform: `scale(${activeScale})`,
+          color: finalColor,
+          transition: "color 80ms linear",
+        }}
+      >
+        {word.text}
+      </span>
+    );
+  };
 
   return (
     <div
@@ -335,40 +378,25 @@ const KaraokeReveal: React.FC<{
         maxWidth: 940,
         opacity: containerOpacity,
         textShadow,
-        whiteSpace: "pre-wrap",
         wordSpacing: "0.05em",
       }}
     >
-      {allWords.map((word, i) => {
-        const wordStartFrame = (word.startMs / 1000) * fps;
-        const wordEndFrame = (word.endMs / 1000) * fps;
-        const isActive = frame >= wordStartFrame && frame <= wordEndFrame + 2;
-        const activePulse = isActive
-          ? spring({
-              frame: frame - wordStartFrame,
-              fps,
-              config: { damping: 18, stiffness: 220, mass: 0.4 },
-              durationInFrames: 8,
-            })
-          : 0;
-        const activeScale = 1 + activePulse * 0.06;
-        const finalColor = isActive ? accentColor : CREAM;
-        return (
-          <React.Fragment key={`k-${i}`}>
-            <span
-              style={{
-                display: "inline-block",
-                transform: `scale(${activeScale})`,
-                color: finalColor,
-                transition: "color 80ms linear",
-              }}
-            >
-              {word.text}
-            </span>
-            {i < allWords.length - 1 ? " " : ""}
-          </React.Fragment>
-        );
-      })}
+      {paragraphs.map((paragraph, pIdx) => (
+        <div
+          key={`p-${pIdx}`}
+          style={{
+            marginBottom: pIdx < paragraphs.length - 1 ? "0.7em" : 0,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {paragraph.map((word, i) => (
+            <React.Fragment key={`pw-${pIdx}-${i}`}>
+              {renderWord(word)}
+              {i < paragraph.length - 1 ? " " : ""}
+            </React.Fragment>
+          ))}
+        </div>
+      ))}
     </div>
   );
 };
