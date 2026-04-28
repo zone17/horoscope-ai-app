@@ -170,15 +170,23 @@ function aggregateAlignmentToWords(
   alignment: unknown,
 ): WordTiming[] {
   if (!alignment || typeof alignment !== 'object') return [];
+  // The official @elevenlabs/elevenlabs-js SDK normalizes the API's
+  // snake_case fields to camelCase. Reading snake_case here returns
+  // undefined → every word gets startMs/endMs of 0 → the composition's
+  // active-word highlight collapses to "all words spoken at frame 0",
+  // killing the karaoke effect. We accept both forms to be resilient
+  // across SDK major versions / direct REST consumers.
   type Alignment = {
     characters?: string[];
+    characterStartTimesSeconds?: number[];
+    characterEndTimesSeconds?: number[];
     character_start_times_seconds?: number[];
     character_end_times_seconds?: number[];
   };
   const a = alignment as Alignment;
   const chars = a.characters ?? [];
-  const starts = a.character_start_times_seconds ?? [];
-  const ends = a.character_end_times_seconds ?? [];
+  const starts = a.characterStartTimesSeconds ?? a.character_start_times_seconds ?? [];
+  const ends = a.characterEndTimesSeconds ?? a.character_end_times_seconds ?? [];
 
   const words: WordTiming[] = [];
   let buf = '';
