@@ -533,22 +533,11 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
               }),
             }}
           />
-          <div
-            style={{
-              fontFamily: inter,
-              fontSize: 28,
-              fontWeight: 400,
-              color: CREAM_DIM,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              opacity: interpolate(frame, [40, 70], [0, 1], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-            }}
-          >
-            Guided by {quoteAuthor}
-          </div>
+          {/* "Guided by {philosopher}" intentionally removed from the daily
+              horoscope video — that attribution lives on the daily-quote
+              video where the philosopher's quote is the main content.
+              Conflating them on the daily-horoscope made the video feel
+              like it was about the philosopher rather than about the sign. */}
           <div
             style={{
               fontFamily: fraunces_italic,
@@ -557,7 +546,10 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
               color: CREAM_DIM,
               fontStyle: "italic",
               marginTop: 14,
-              opacity: interpolate(frame, [55, 85], [0, 0.8], {
+              // Brought forward to frames 40-70 since the "Guided by" line
+              // (previously occupying 40-70) is gone — date now flows
+              // directly off the accent rule.
+              opacity: interpolate(frame, [40, 70], [0, 0.8], {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",
               }),
