@@ -30,6 +30,7 @@ import {
   Audio,
   spring,
   Easing,
+  Loop,
 } from "remotion";
 import { loadFont as loadFraunces } from "@remotion/google-fonts/Fraunces";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
@@ -49,6 +50,29 @@ const { fontFamily: inter } = loadInter("normal", {
 
 const CREAM = "#F5F1E8";
 const CREAM_DIM = "rgba(245, 241, 232, 0.55)";
+
+/**
+ * Per-sign zodiac background video duration in frames (30fps).
+ * The background OffthreadVideo gets wrapped in <Loop> using these
+ * values so it cycles through the full composition duration instead
+ * of freezing on the last frame. Computed via ffprobe on each MP4
+ * in public/videos/zodiac/; update if source files are replaced.
+ */
+const ZODIAC_VIDEO_FRAMES: Record<string, number> = {
+  aquarius:    634,  // 21.12s
+  aries:       600,  // 20.00s
+  cancer:      942,  // 31.41s
+  capricorn:   728,  // 24.28s
+  gemini:     1308,  // 43.61s
+  leo:         632,  // 21.06s
+  libra:       450,  // 15.00s
+  pisces:     1786,  // 59.53s
+  sagittarius: 801,  // 26.70s
+  scorpio:    1142,  // 38.08s
+  taurus:     1032,  // 34.40s
+  virgo:       543,  // 18.09s
+};
+const DEFAULT_ZODIAC_LOOP_FRAMES = 600; // 20s fallback
 
 export type VideoType = "morning" | "quote" | "night";
 
@@ -1055,18 +1079,25 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
   return (
     <AbsoluteFill style={{ backgroundColor: "#06050C" }}>
       <AbsoluteFill style={{ overflow: "hidden" }}>
-        <OffthreadVideo
-          src={staticFile(`videos/zodiac/${sign}.mp4`)}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: `scale(${kenBurnsScale})`,
-            transformOrigin: "center",
-            filter: "blur(18px) brightness(0.55) saturate(1.15)",
-          }}
-          muted
-        />
+        {/* Loop the zodiac MP4 so it cycles through the full composition
+            duration instead of freezing on the last frame. Source MP4s
+            are 15s–60s long; compositions are 22s–45s; without the
+            wrapper any composition longer than its zodiac video would
+            stop animating partway through. */}
+        <Loop durationInFrames={ZODIAC_VIDEO_FRAMES[sign] ?? DEFAULT_ZODIAC_LOOP_FRAMES}>
+          <OffthreadVideo
+            src={staticFile(`videos/zodiac/${sign}.mp4`)}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: `scale(${kenBurnsScale})`,
+              transformOrigin: "center",
+              filter: "blur(18px) brightness(0.55) saturate(1.15)",
+            }}
+            muted
+          />
+        </Loop>
       </AbsoluteFill>
 
       <AbsoluteFill style={{ overflow: "hidden" }}>
