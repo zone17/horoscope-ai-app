@@ -1,21 +1,31 @@
 name: Daily Video Pipeline
 
-# Renders 12 daily horoscope videos (1080x1920, 60s) and uploads them to
-# Vercel Blob. Social posting is intentionally OFF until the operator
-# connects social accounts and sets AYRSHARE_API_KEY — the script's
-# `--no-post` flag is hardcoded into the scheduled run and defaults to
-# `true` for manual dispatches.
+# Renders three vertical videos per sign per day:
+#   - morning : sign + reading body         (~30s, music: morning-music.mp3)
+#   - quote   : philosopher quote + author  (~22s)
+#   - night   : peaceful thought            (~28s)
+#
+# Each type runs as its own scheduled cron entry so they can drop at
+# different times of day. Manual workflow_dispatch lets ops render any
+# subset for testing.
 #
 # The per-sign Vercel cron at /api/cron/daily/[sign] runs at 0:00–0:11 UTC
-# and pre-populates the reading cache. This pipeline runs an hour later so
-# the API serves cache hits in <100ms per sign.
+# and pre-populates the reading cache. Video crons run at 1:00 UTC
+# (morning), 12:00 UTC (quote), and 22:00 UTC (night) so the API serves
+# cache hits in <100ms per sign.
 on:
   schedule:
-    # 1:00 UTC daily — one hour after the last per-sign cron tick (0:11 UTC)
-    # so all 12 readings are guaranteed cached before video render starts.
-    - cron: '0 1 * * *'
+    - cron: '0 1 * * *'   # morning videos — 1:00 UTC
+    - cron: '0 12 * * *'  # quote videos   — midday UTC
+    - cron: '0 22 * * *'  # night videos   — 22:00 UTC (~6pm ET)
   workflow_dispatch:
     inputs:
+      type:
+        description: 'Video type — morning (reading), quote (philosopher), or night (peaceful thought)'
+        required: false
+        default: 'morning'
+        type: choice
+        options: [morning, quote, night]
       sign:
         description: 'Render a single sign (leave empty for all 12)'
         required: false
@@ -31,15 +41,15 @@ on:
         type: boolean
         default: true
       ramp:
-        description: 'Number of signs to post (default 4) — only relevant if no_post is unchecked'
+        description: 'Number of signs to post (only relevant if no_post is unchecked)'
         required: false
         default: '4'
 
 concurrency:
-  # Serialize runs so a manual workflow_dispatch during a scheduled run
-  # cannot double-write blobs at videos/{today}/{sign}.mp4 or interleave
-  # public/audio/* writes. The second run waits rather than cancelling
-  # the first so a near-complete render is preserved.
+  # One pipeline at a time across all types — they share Blob upload paths
+  # under videos/{date}/ and ElevenLabs/edge-tts rate limits. Per-type
+  # parallelism would pin Anthropic/ElevenLabs RPMs simultaneously and
+  # overwrite shared public/audio/ files mid-flight.
   group: render-videos
   cancel-in-progress: false
 
@@ -61,34 +71,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Note: in Remotion 4.0.447 (this project's version) the `ensure-chrome`
-      # CLI was removed. `renderMedia()` lazy-installs Chromium on first call,
-      # which adds ~30-90s to the first sign's render. Acceptable cost for
-      # the simplicity of not pinning a separate browser-install step that
-      # rots with Remotion versions.
-
-      - name: Install edge-tts (voiceover)
-        # Without this, the script's voiceover step ENOENTs and falls back
-        # to silent video; the quality gate's audio check is conditional on
-        # `voiceoverGenerated`, so silent renders pass and ship. Installing
-        # edge-tts here keeps the gate's contract honest.
+      - name: Install edge-tts (voiceover fallback)
         run: pip3 install --user edge-tts
 
       - name: Install ffmpeg (quality gate)
-        # ffprobe is part of ffmpeg. Without it, qualityCheck() short-circuits
-        # to "best-effort" and waves through any render that hits a sane file
-        # size — so a silent video would pass. With ffprobe present the gate
-        # actually verifies duration is 55-65s and an audio stream exists
-        # when voiceover was generated.
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Build CLI args
         id: args
-        # Scheduled runs always pass --no-post. Manual runs honor the input
-        # (which defaults to true). Inputs are bound to env vars first to
-        # avoid shell-injection from any unsanitized input value.
         env:
           EVENT_NAME: ${{ github.event_name }}
+          # Schedule events expose the cron expression that fired so we can
+          # map it back to a video type without input plumbing.
+          CRON_EXPR: ${{ github.event.schedule }}
+          INPUT_TYPE: ${{ inputs.type }}
           INPUT_SIGN: ${{ inputs.sign }}
           INPUT_DRY_RUN: ${{ inputs.dry_run }}
           INPUT_NO_POST: ${{ inputs.no_post }}
@@ -96,12 +92,26 @@ jobs:
         run: |
           set -euo pipefail
           ARGS=""
+
+          # Pick the type. Schedule events use the cron expression; manual
+          # dispatches honor the input. Allowlist + default to morning so
+          # nothing typoed slips through.
           if [ "$EVENT_NAME" = "schedule" ]; then
-            ARGS="--no-post"
+            case "$CRON_EXPR" in
+              "0 1 * * *")  TYPE="morning" ;;
+              "0 12 * * *") TYPE="quote" ;;
+              "0 22 * * *") TYPE="night" ;;
+              *) TYPE="morning" ;;
+            esac
+            ARGS="--no-post --type $TYPE"
           else
+            case "$INPUT_TYPE" in
+              morning|quote|night) TYPE="$INPUT_TYPE" ;;
+              *) TYPE="morning" ;;
+            esac
+            ARGS="--type $TYPE"
             if [ "$INPUT_DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
             if [ "$INPUT_NO_POST" = "true" ]; then ARGS="$ARGS --no-post"; fi
-            # Validate sign against an allowlist before passing to the script.
             if [ -n "$INPUT_SIGN" ]; then
               case "$INPUT_SIGN" in
                 aries|taurus|gemini|cancer|leo|virgo|libra|scorpio|sagittarius|capricorn|aquarius|pisces)
@@ -113,7 +123,6 @@ jobs:
                   ;;
               esac
             fi
-            # Validate ramp is a small positive integer (1-12).
             RAMP_VALUE="${INPUT_RAMP:-4}"
             if ! echo "$RAMP_VALUE" | grep -Eq '^([1-9]|1[0-2])$'; then
               echo "::error::Invalid ramp input: $RAMP_VALUE"
@@ -121,35 +130,20 @@ jobs:
             fi
             ARGS="$ARGS --ramp $RAMP_VALUE"
           fi
+
           echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "type=$TYPE" >> "$GITHUB_OUTPUT"
+          echo "Rendering type: $TYPE"
 
       - name: Render videos
         env:
           ARGS: ${{ steps.args.outputs.args }}
-          # API source for readings — script fetches /api/horoscope?sign=X
-          # so it never needs Redis credentials directly.
           HOROSCOPE_API_URL: ${{ secrets.HOROSCOPE_API_URL || 'https://api.gettodayshoroscope.com' }}
-          # Required: Vercel Blob upload destination.
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-          # Primary voiceover path: ElevenLabs eleven_multilingual_v2 with
-          # char-level timestamps. When both API_KEY and VOICE_ID are set,
-          # voiceover.ts uses ElevenLabs and falls back to edge-tts only on
-          # failure. When either is missing, voiceover.ts skips ElevenLabs
-          # entirely and goes straight to edge-tts (free, sentence-level).
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
-          # Optional: legacy OpenAI key — not currently used by voiceover.ts
-          # but kept available for future backup paths.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Optional: daily spot-check notification with sample video.
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          #
-          # AYRSHARE_API_KEY is intentionally NOT exposed here. Social posting
-          # is off until the operator deliberately wires it up; absence of the
-          # secret in the env is the strongest guarantee that a script bug or
-          # a stray --no-post=false manual dispatch cannot leak posts. To
-          # enable social posting later, add the secret line back in the same
-          # PR that connects the social accounts and toggles the no_post
-          # default — that PR becomes the explicit "I am opting in" signal.
+          # AYRSHARE_API_KEY intentionally not exposed — see PR #75 commit msg.
         run: npx tsx scripts/render-and-post.ts $ARGS
