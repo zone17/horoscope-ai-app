@@ -1,26 +1,23 @@
 /**
- * HoroscopeVideo — premium vertical composition (1080×1920 @ 30fps, 60s)
+ * HoroscopeVideo — three vertical compositions in one shell (1080×1920 @ 30fps)
  *
- * Designed against the "premium short-form video" research synthesis:
- * - Editorial Fraunces (display) + Inter (caption) pairing
- * - Spring-driven word entry: damping 14, stiffness 180, mass 0.5 — snappy,
- *   no overshoot. Anti-pattern: bouncy springs (damping <10) read like a
- *   kids' app.
- * - Active-word highlight (the one currently being spoken): scale 1.06 +
- *   shift to per-sign accent color over ~4 frames. Spoken-but-passed words
- *   persist at 92% opacity instead of vanishing — keeps the line readable.
- * - Background discipline: zodiac loop blurred at 18px, brightness 0.55,
- *   saturation 1.15, slow Ken Burns scale 1.0 → 1.08 across the 60s. Text
- *   STAYS STILL. Background motion is the only motion in the frame outside
- *   the active word.
- * - Atmosphere: radial vignette + sparse star particles (50 max, blurred).
- * - Soft text-shadow scrim, never a hard outline stroke.
+ * Branches on `videoType`:
+ *   - "morning" : 30s — sign hook → reading body → outro
+ *   - "quote"   : 22s — sign hook + "TODAY'S WISDOM" → quote body + attribution → outro
+ *   - "night"   : 28s — "TONIGHT" hook → peaceful thought → outro
  *
- * The active-word timing is interpolated linearly within each cue's
- * startMs→endMs window. When ElevenLabs ships in this same branch its
- * char-level timestamps will be aggregated to true word boundaries and
- * dropped in via the same `cues[].words` shape — composition stays the
- * same, just gets more accurate sync.
+ * The shared shell (background, atmosphere, audio) is applied for every
+ * type; only scene content differs. Each type voices ONLY its own content
+ * — the morning voice doesn't say "Aries", the quote voice doesn't say
+ * the reading, etc.
+ *
+ * Design (motion + typography research synthesis):
+ * - Editorial Fraunces (display, italic) + Inter (body) pairing
+ * - Spring-driven word entry: damping 14, stiffness 180, mass 0.5
+ * - Active-word highlight: scale 1.06 + per-sign accent color
+ * - Spoken-but-past words persist at 92% opacity (research: keeps line readable)
+ * - Background discipline: zodiac loop blurred at 18px, slow Ken Burns 1.02→1.10
+ * - Atmosphere: radial vignette + sparse star particles + film grain
  */
 import React, { useMemo } from "react";
 import {
@@ -50,21 +47,20 @@ const { fontFamily: inter } = loadInter("normal", {
   subsets: ["latin"],
 });
 
-// Cream / charcoal palette — the only non-accent text colors we use.
 const CREAM = "#F5F1E8";
 const CREAM_DIM = "rgba(245, 241, 232, 0.55)";
+
+export type VideoType = "morning" | "quote" | "night";
 
 interface SubtitleCue {
   startMs: number;
   endMs: number;
   text: string;
-  /** Optional word-level timing (provided by ElevenLabs char-level
-   *  timestamps aggregated into words). When absent we interpolate
-   *  linearly within the cue. */
   words?: Array<{ text: string; startMs: number; endMs: number }>;
 }
 
 interface HoroscopeVideoProps {
+  videoType: VideoType;
   sign: string;
   date: string;
   message: string;
@@ -80,59 +76,10 @@ interface HoroscopeVideoProps {
   subtitleCues?: SubtitleCue[];
 }
 
-// ─── Scene timing ───────────────────────────────────────────────────────
-
 const FPS = 30;
-const TOTAL_FRAMES = 1800; // 60s
 
-const DEFAULT_SCENES = {
-  hook:     { start: 0,    end: 120 },
-  reading:  { start: 120,  end: 1020 },
-  quote:    { start: 1020, end: 1350 },
-  peaceful: { start: 1350, end: 1650 },
-  outro:    { start: 1650, end: 1800 },
-};
+// ─── Word-by-word reveal (shared across all types) ──────────────────────
 
-const msToFrame = (ms: number) => Math.round((ms / 1000) * FPS);
-
-/** Build scene timing from SRT cues. Heuristic: detect quote/peaceful cues
- *  by content patterns, snap scene boundaries to where each section is
- *  actually spoken. Falls back to even thirds when no cues. */
-function buildScenesFromCues(cues: SubtitleCue[]) {
-  if (!cues || cues.length === 0) return DEFAULT_SCENES;
-
-  const quoteIdx = cues.findIndex((c) =>
-    c.text.match(/^(Knowing|"|“)/i) || c.text.match(/intelligence|wisdom/i),
-  );
-  const peacefulIdx = cues.findIndex((c) =>
-    c.text.match(/^(As you|Tonight|Before sleep|When you close)/i),
-  );
-
-  // Hook ends when the FIRST reading-body cue starts.
-  const hookEnd = quoteIdx > 0 ? Math.max(msToFrame(cues[2]?.startMs ?? 4000), 90) : 120;
-  const readingEnd = quoteIdx > 0 ? msToFrame(cues[quoteIdx].startMs) : 1020;
-  const quoteEnd = peacefulIdx > 0
-    ? msToFrame(cues[peacefulIdx].startMs)
-    : Math.min(readingEnd + 330, TOTAL_FRAMES - 300);
-  const peacefulEnd = Math.min(msToFrame(cues[cues.length - 1].endMs) + 30, TOTAL_FRAMES - 60);
-
-  return {
-    hook:     { start: 0, end: hookEnd },
-    reading:  { start: hookEnd, end: readingEnd },
-    quote:    { start: readingEnd, end: quoteEnd },
-    peaceful: { start: quoteEnd, end: peacefulEnd },
-    outro:    { start: peacefulEnd, end: TOTAL_FRAMES },
-  };
-}
-
-// ─── Word reveal — the load-bearing component ───────────────────────────
-
-/**
- * Render an active cue word-by-word with spring-driven entry, active-word
- * highlight (scale + accent color), and persistent dim of already-spoken
- * words. Renders ONE active cue at a time with a soft cross-fade between
- * cues so we never stack a wall of text.
- */
 const WordReveal: React.FC<{
   cues: SubtitleCue[];
   frame: number;
@@ -158,15 +105,11 @@ const WordReveal: React.FC<{
 }) => {
   const currentMs = (frame / fps) * 1000;
 
-  // Pick the active cue (extending its window 220ms past endMs so the last
-  // word doesn't disappear the moment voice finishes).
   const activeCue = cues.find(
     (c) => currentMs >= c.startMs - 80 && currentMs <= c.endMs + 220,
   );
   if (!activeCue) return null;
 
-  // Words: prefer word-level timing if provided (ElevenLabs path); else
-  // distribute linearly across the cue's duration.
   const cueDurMs = Math.max(activeCue.endMs - activeCue.startMs, 1);
   const words = activeCue.words?.length
     ? activeCue.words
@@ -180,7 +123,6 @@ const WordReveal: React.FC<{
         }));
       })();
 
-  // Cue container fade — soft cue-to-cue cross-fade
   const cueStartFrame = (activeCue.startMs / 1000) * fps;
   const cueEndFrame = (activeCue.endMs / 1000) * fps;
   const containerOpacity = Math.min(
@@ -209,9 +151,6 @@ const WordReveal: React.FC<{
         maxWidth: 940,
         opacity: containerOpacity,
         textShadow,
-        // pre-wrap preserves explicit whitespace text nodes between word
-        // spans so inline-block siblings don't collapse the trailing space
-        // (the bug that produced the no-spacing output in the prior render).
         whiteSpace: "pre-wrap",
         wordSpacing: "0.05em",
       }}
@@ -220,7 +159,6 @@ const WordReveal: React.FC<{
         const wordStartFrame = (word.startMs / 1000) * fps;
         const wordEndFrame = (word.endMs / 1000) * fps;
 
-        // Spring-driven entry (snappy, no overshoot).
         const entryProgress = spring({
           frame: frame - wordStartFrame,
           fps,
@@ -242,7 +180,6 @@ const WordReveal: React.FC<{
         const isActive = frame >= wordStartFrame && frame <= wordEndFrame + 2;
         const hasBeenSpoken = frame > wordEndFrame + 2;
 
-        // Active-word emphasis — scale to 1.06, color to accent
         const activePulse = isActive
           ? spring({
               frame: frame - wordStartFrame,
@@ -253,8 +190,6 @@ const WordReveal: React.FC<{
           : 0;
         const activeScale = 1 + activePulse * 0.06;
 
-        // Spoken-but-past words dim to 92% opacity — keep readable for
-        // context but de-emphasized.
         const finalOpacity = hasBeenSpoken ? 0.92 : entryOpacity;
         const finalScale = entryScale * activeScale;
         const finalColor = isActive ? accentColor : CREAM;
@@ -280,9 +215,8 @@ const WordReveal: React.FC<{
   );
 };
 
-// ─── Atmosphere ─────────────────────────────────────────────────────────
+// ─── Atmosphere (shared) ────────────────────────────────────────────────
 
-/** Sparse star particles — disciplined: 50 max, blurred, screen-blend. */
 const Particles: React.FC<{ accentColor: string; frame: number }> = ({
   accentColor,
   frame,
@@ -339,7 +273,6 @@ const Vignette: React.FC = () => (
   />
 );
 
-/** Tiny SVG-driven fractal noise overlay — twinkles via opacity oscillation. */
 const FilmGrain: React.FC<{ frame: number }> = ({ frame }) => {
   const baseOpacity = 0.08;
   const oscillation = Math.sin(frame / 4) * 0.015;
@@ -359,19 +292,7 @@ const FilmGrain: React.FC<{ frame: number }> = ({ frame }) => {
   );
 };
 
-// ─── Cue-by-scene split ─────────────────────────────────────────────────
-
-function getCuesForScene(
-  allCues: SubtitleCue[],
-  sceneStartFrame: number,
-  sceneEndFrame: number,
-): SubtitleCue[] {
-  const sceneStartMs = (sceneStartFrame / FPS) * 1000;
-  const sceneEndMs = (sceneEndFrame / FPS) * 1000;
-  return allCues.filter(
-    (c) => c.startMs >= sceneStartMs - 300 && c.startMs < sceneEndMs,
-  );
-}
+// ─── Helpers ────────────────────────────────────────────────────────────
 
 function sceneOpacity(frame: number, start: number, end: number): number {
   const fadeIn = interpolate(frame, [start, start + 14], [0, 1], {
@@ -387,9 +308,288 @@ function sceneOpacity(frame: number, start: number, end: number): number {
   return fadeIn * fadeOut;
 }
 
+function buildContentScenes(
+  cues: SubtitleCue[],
+  totalFrames: number,
+): { hook: { start: number; end: number }; content: { start: number; end: number }; outro: { start: number; end: number } } {
+  // Hook: ~3s (90 frames). Content: hook-end → voice-end + small pad.
+  // Outro: content-end → totalFrames.
+  const HOOK_FRAMES = 90;
+  const OUTRO_FRAMES = 60;
+  if (!cues || cues.length === 0) {
+    return {
+      hook: { start: 0, end: HOOK_FRAMES },
+      content: { start: HOOK_FRAMES, end: totalFrames - OUTRO_FRAMES },
+      outro: { start: totalFrames - OUTRO_FRAMES, end: totalFrames },
+    };
+  }
+  const lastCueEndFrame = Math.round((cues[cues.length - 1].endMs / 1000) * FPS);
+  const contentEnd = Math.min(lastCueEndFrame + 24, totalFrames - OUTRO_FRAMES);
+  return {
+    hook: { start: 0, end: HOOK_FRAMES },
+    content: { start: HOOK_FRAMES, end: contentEnd },
+    outro: { start: contentEnd, end: totalFrames },
+  };
+}
+
+// ─── Per-type scene components ──────────────────────────────────────────
+
+const MorningHook: React.FC<{
+  signName: string;
+  date: string;
+  symbol: string;
+  accent: string;
+  frame: number;
+  fps: number;
+}> = ({ signName, date, symbol, accent, frame, fps }) => {
+  const entry = spring({
+    frame,
+    fps,
+    config: { damping: 16, stiffness: 120, mass: 0.4 },
+  });
+  const hookScale = interpolate(entry, [0, 1], [0.92, 1.0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return (
+    <div style={{ textAlign: "center", transform: `scale(${hookScale})` }}>
+      <div
+        style={{
+          fontSize: 180,
+          lineHeight: 1,
+          color: accent,
+          filter: `drop-shadow(0 0 60px ${accent}66)`,
+          marginBottom: 24,
+        }}
+      >
+        {symbol}
+      </div>
+      <div
+        style={{
+          fontFamily: fraunces,
+          fontSize: 140,
+          fontWeight: 600,
+          color: CREAM,
+          letterSpacing: "-0.02em",
+          lineHeight: 1,
+          textShadow: "0 4px 30px rgba(0,0,0,0.6)",
+        }}
+      >
+        {signName}
+      </div>
+      <div
+        style={{
+          width: 80,
+          height: 2,
+          background: accent,
+          margin: "32px auto",
+          opacity: interpolate(frame, [20, 50], [0, 0.85], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+        }}
+      />
+      <div
+        style={{
+          fontFamily: inter,
+          fontSize: 24,
+          fontWeight: 500,
+          color: accent,
+          letterSpacing: "0.32em",
+          textTransform: "uppercase",
+          marginBottom: 12,
+          opacity: interpolate(frame, [30, 60], [0, 0.9], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+        }}
+      >
+        Daily Horoscope
+      </div>
+      <div
+        style={{
+          fontFamily: fraunces_italic,
+          fontSize: 26,
+          fontWeight: 400,
+          color: CREAM_DIM,
+          fontStyle: "italic",
+          opacity: interpolate(frame, [40, 70], [0, 0.8], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+        }}
+      >
+        {date}
+      </div>
+    </div>
+  );
+};
+
+const QuoteHook: React.FC<{
+  signName: string;
+  symbol: string;
+  accent: string;
+  frame: number;
+  fps: number;
+}> = ({ signName, symbol, accent, frame, fps }) => {
+  const entry = spring({
+    frame,
+    fps,
+    config: { damping: 16, stiffness: 120, mass: 0.4 },
+  });
+  const scale = interpolate(entry, [0, 1], [0.94, 1.0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return (
+    <div style={{ textAlign: "center", transform: `scale(${scale})` }}>
+      <div
+        style={{
+          fontSize: 110,
+          lineHeight: 1,
+          color: accent,
+          filter: `drop-shadow(0 0 40px ${accent}55)`,
+          marginBottom: 18,
+          opacity: 0.85,
+        }}
+      >
+        {symbol}
+      </div>
+      <div
+        style={{
+          fontFamily: inter,
+          fontSize: 26,
+          fontWeight: 500,
+          color: accent,
+          letterSpacing: "0.36em",
+          textTransform: "uppercase",
+          marginBottom: 16,
+          opacity: interpolate(frame, [10, 40], [0, 0.95], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+        }}
+      >
+        Today&apos;s Wisdom
+      </div>
+      <div
+        style={{
+          fontFamily: fraunces,
+          fontSize: 64,
+          fontWeight: 600,
+          color: CREAM,
+          letterSpacing: "-0.01em",
+          opacity: interpolate(frame, [30, 60], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+        }}
+      >
+        {signName}
+      </div>
+    </div>
+  );
+};
+
+const NightHook: React.FC<{
+  signName: string;
+  symbol: string;
+  accent: string;
+  frame: number;
+  fps: number;
+}> = ({ signName, symbol, accent, frame, fps }) => {
+  const entry = spring({
+    frame,
+    fps,
+    config: { damping: 16, stiffness: 120, mass: 0.4 },
+  });
+  const scale = interpolate(entry, [0, 1], [0.94, 1.0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return (
+    <div style={{ textAlign: "center", transform: `scale(${scale})` }}>
+      <div
+        style={{
+          fontSize: 90,
+          lineHeight: 1,
+          color: accent,
+          filter: `drop-shadow(0 0 40px ${accent}55)`,
+          marginBottom: 22,
+          opacity: 0.7,
+        }}
+      >
+        {symbol}
+      </div>
+      <div
+        style={{
+          fontFamily: fraunces,
+          fontSize: 96,
+          fontWeight: 600,
+          fontStyle: "italic",
+          color: accent,
+          letterSpacing: "0.04em",
+          marginBottom: 14,
+          textShadow: "0 4px 30px rgba(0,0,0,0.6)",
+        }}
+      >
+        Tonight
+      </div>
+      <div
+        style={{
+          fontFamily: inter,
+          fontSize: 28,
+          fontWeight: 400,
+          color: CREAM_DIM,
+          letterSpacing: "0.20em",
+          textTransform: "uppercase",
+          opacity: interpolate(frame, [20, 50], [0, 0.85], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+        }}
+      >
+        For {signName}
+      </div>
+    </div>
+  );
+};
+
+const Outro: React.FC<{ symbol: string; accent: string }> = ({
+  symbol,
+  accent,
+}) => (
+  <div style={{ textAlign: "center" }}>
+    <div
+      style={{
+        fontSize: 110,
+        color: accent,
+        filter: `drop-shadow(0 0 40px ${accent}55)`,
+        opacity: 0.85,
+        marginBottom: 24,
+      }}
+    >
+      {symbol}
+    </div>
+    <div
+      style={{
+        fontFamily: fraunces,
+        fontSize: 32,
+        fontWeight: 600,
+        color: CREAM,
+        letterSpacing: "-0.01em",
+        opacity: 0.85,
+      }}
+    >
+      gettodayshoroscope
+    </div>
+  </div>
+);
+
 // ─── Main composition ───────────────────────────────────────────────────
 
 export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
+  videoType,
   sign,
   date,
   message,
@@ -403,45 +603,230 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
   subtitleCues,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const signName = sign.charAt(0).toUpperCase() + sign.slice(1);
 
+  // Per-type content text used as the visual fallback when SRT cues are
+  // missing (e.g., voiceover failed). Drives nothing when cues exist.
+  const contentText =
+    videoType === "morning"
+      ? message
+      : videoType === "quote"
+        ? `"${quote}"`
+        : peacefulThought;
+
   const SCENES = useMemo(
-    () => buildScenesFromCues(subtitleCues ?? []),
-    [subtitleCues],
+    () => buildContentScenes(subtitleCues ?? [], durationInFrames),
+    [subtitleCues, durationInFrames],
   );
 
-  const readingCues = subtitleCues
-    ? getCuesForScene(subtitleCues, SCENES.reading.start, SCENES.quote.start)
-    : [];
-  const quoteCues = subtitleCues
-    ? getCuesForScene(subtitleCues, SCENES.quote.start, SCENES.peaceful.start)
-    : [];
-  const peacefulCues = subtitleCues
-    ? getCuesForScene(subtitleCues, SCENES.peaceful.start, SCENES.outro.start)
-    : [];
+  const contentCues = subtitleCues ?? [];
 
   // Slow Ken Burns on background — text NEVER moves; background drifts.
-  const kenBurnsScale = interpolate(frame, [0, TOTAL_FRAMES], [1.02, 1.10], {
+  const kenBurnsScale = interpolate(frame, [0, durationInFrames], [1.02, 1.10], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.bezier(0.25, 0.1, 0.25, 1.0),
   });
 
-  // Hook entrance — sign symbol/name scale-in via spring
-  const hookEntry = spring({
-    frame,
-    fps,
-    config: { damping: 16, stiffness: 120, mass: 0.4 },
-  });
-  const hookScale = interpolate(hookEntry, [0, 1], [0.92, 1.0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Per-type content rendering
+  const contentScene = (() => {
+    if (videoType === "morning") {
+      return (
+        <AbsoluteFill
+          style={{
+            opacity: sceneOpacity(frame, SCENES.content.start, SCENES.content.end),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 70px",
+          }}
+        >
+          {contentCues.length > 0 ? (
+            <WordReveal
+              cues={contentCues}
+              frame={frame}
+              fps={fps}
+              fontFamily={inter}
+              fontSize={62}
+              fontWeight={600}
+              accentColor={accent}
+              lineHeight={1.3}
+            />
+          ) : (
+            <div
+              style={{
+                fontFamily: inter,
+                fontSize: 62,
+                fontWeight: 600,
+                color: CREAM,
+                textAlign: "center",
+                maxWidth: 940,
+                lineHeight: 1.3,
+                textShadow: "0 2px 24px rgba(0,0,0,0.55)",
+              }}
+            >
+              {contentText}
+            </div>
+          )}
+        </AbsoluteFill>
+      );
+    }
+    if (videoType === "quote") {
+      return (
+        <AbsoluteFill
+          style={{
+            opacity: sceneOpacity(frame, SCENES.content.start, SCENES.content.end),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 80px",
+          }}
+        >
+          <div style={{ maxWidth: 920, textAlign: "center" }}>
+            <div
+              style={{
+                fontFamily: fraunces,
+                fontSize: 100,
+                color: accent,
+                lineHeight: 0.5,
+                marginBottom: 30,
+                opacity: 0.55,
+              }}
+            >
+              &ldquo;
+            </div>
+            {contentCues.length > 0 ? (
+              <WordReveal
+                cues={contentCues}
+                frame={frame}
+                fps={fps}
+                fontFamily={fraunces_italic}
+                fontSize={70}
+                fontWeight={400}
+                italic
+                accentColor={accent}
+                lineHeight={1.35}
+              />
+            ) : (
+              <div
+                style={{
+                  fontFamily: fraunces_italic,
+                  fontSize: 70,
+                  fontStyle: "italic",
+                  color: CREAM,
+                  lineHeight: 1.35,
+                  textShadow: "0 2px 24px rgba(0,0,0,0.55)",
+                }}
+              >
+                {contentText}
+              </div>
+            )}
+            <div
+              style={{
+                width: 60,
+                height: 1,
+                background: accent,
+                margin: "44px auto 24px",
+                opacity: 0.5,
+              }}
+            />
+            <div
+              style={{
+                fontFamily: inter,
+                fontSize: 28,
+                fontWeight: 400,
+                color: CREAM_DIM,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+              }}
+            >
+              {quoteAuthor}
+            </div>
+          </div>
+        </AbsoluteFill>
+      );
+    }
+    // night
+    return (
+      <AbsoluteFill
+        style={{
+          opacity: sceneOpacity(frame, SCENES.content.start, SCENES.content.end),
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 80px",
+        }}
+      >
+        {contentCues.length > 0 ? (
+          <WordReveal
+            cues={contentCues}
+            frame={frame}
+            fps={fps}
+            fontFamily={fraunces_italic}
+            fontSize={54}
+            fontWeight={400}
+            italic
+            accentColor={accent}
+            lineHeight={1.4}
+          />
+        ) : (
+          <div
+            style={{
+              fontFamily: fraunces_italic,
+              fontSize: 54,
+              fontStyle: "italic",
+              color: CREAM,
+              textAlign: "center",
+              maxWidth: 880,
+              lineHeight: 1.4,
+              textShadow: "0 2px 24px rgba(0,0,0,0.55)",
+            }}
+          >
+            {contentText}
+          </div>
+        )}
+      </AbsoluteFill>
+    );
+  })();
+
+  const hookScene = (() => {
+    if (videoType === "morning") {
+      return (
+        <MorningHook
+          signName={signName}
+          date={date}
+          symbol={symbol}
+          accent={accent}
+          frame={frame}
+          fps={fps}
+        />
+      );
+    }
+    if (videoType === "quote") {
+      return (
+        <QuoteHook
+          signName={signName}
+          symbol={symbol}
+          accent={accent}
+          frame={frame}
+          fps={fps}
+        />
+      );
+    }
+    return (
+      <NightHook
+        signName={signName}
+        symbol={symbol}
+        accent={accent}
+        frame={frame}
+        fps={fps}
+      />
+    );
+  })();
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#06050C" }}>
-      {/* Background — blurred, dimmed, slowly zoomed */}
       <AbsoluteFill style={{ overflow: "hidden" }}>
         <OffthreadVideo
           src={staticFile(`videos/zodiac/${sign}.mp4`)}
@@ -457,14 +842,12 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         />
       </AbsoluteFill>
 
-      {/* Atmospheric layers */}
       <AbsoluteFill style={{ overflow: "hidden" }}>
         <Particles accentColor={accent} frame={frame} />
       </AbsoluteFill>
       <Vignette />
       <FilmGrain frame={frame} />
 
-      {/* Audio */}
       {voiceoverSrc && <Audio src={staticFile(voiceoverSrc)} volume={0.95} />}
       {ambientSrc && (
         <Audio
@@ -477,7 +860,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
             });
             const fadeOut = interpolate(
               f,
-              [TOTAL_FRAMES - 45, TOTAL_FRAMES],
+              [durationInFrames - 45, durationInFrames],
               [0.10, 0],
               { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
             );
@@ -486,247 +869,22 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         />
       )}
 
-      {/* SCENE 1 — Hook */}
+      {/* HOOK */}
       <AbsoluteFill
         style={{
           opacity: sceneOpacity(frame, SCENES.hook.start, SCENES.hook.end),
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          transform: `scale(${hookScale})`,
         }}
       >
-        <div style={{ textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: 180,
-              lineHeight: 1,
-              color: accent,
-              filter: `drop-shadow(0 0 60px ${accent}66)`,
-              marginBottom: 24,
-            }}
-          >
-            {symbol}
-          </div>
-          <div
-            style={{
-              fontFamily: fraunces,
-              fontSize: 140,
-              fontWeight: 600,
-              color: CREAM,
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-              textShadow: "0 4px 30px rgba(0,0,0,0.6)",
-            }}
-          >
-            {signName}
-          </div>
-          <div
-            style={{
-              width: 80,
-              height: 2,
-              background: accent,
-              margin: "32px auto",
-              opacity: interpolate(frame, [20, 50], [0, 0.85], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-            }}
-          />
-          {/* "Guided by {philosopher}" intentionally removed from the daily
-              horoscope video — that attribution lives on the daily-quote
-              video where the philosopher's quote is the main content.
-              Conflating them on the daily-horoscope made the video feel
-              like it was about the philosopher rather than about the sign. */}
-          <div
-            style={{
-              fontFamily: fraunces_italic,
-              fontSize: 26,
-              fontWeight: 400,
-              color: CREAM_DIM,
-              fontStyle: "italic",
-              marginTop: 14,
-              // Brought forward to frames 40-70 since the "Guided by" line
-              // (previously occupying 40-70) is gone — date now flows
-              // directly off the accent rule.
-              opacity: interpolate(frame, [40, 70], [0, 0.8], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-            }}
-          >
-            {date}
-          </div>
-        </div>
+        {hookScene}
       </AbsoluteFill>
 
-      {/* SCENE 2 — Reading body (word-by-word) */}
-      <AbsoluteFill
-        style={{
-          opacity: sceneOpacity(frame, SCENES.reading.start, SCENES.reading.end),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "0 70px",
-        }}
-      >
-        {readingCues.length > 0 ? (
-          <WordReveal
-            cues={readingCues}
-            frame={frame}
-            fps={fps}
-            fontFamily={inter}
-            fontSize={64}
-            fontWeight={600}
-            accentColor={accent}
-          />
-        ) : (
-          <div
-            style={{
-              fontFamily: inter,
-              fontSize: 64,
-              fontWeight: 600,
-              color: CREAM,
-              textAlign: "center",
-              maxWidth: 940,
-              lineHeight: 1.3,
-              textShadow: "0 2px 24px rgba(0,0,0,0.55)",
-            }}
-          >
-            {message}
-          </div>
-        )}
-      </AbsoluteFill>
+      {/* CONTENT */}
+      {contentScene}
 
-      {/* SCENE 3 — Pull quote (Fraunces italic, accent rule) */}
-      <AbsoluteFill
-        style={{
-          opacity: sceneOpacity(frame, SCENES.quote.start, SCENES.quote.end),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "0 80px",
-        }}
-      >
-        <div style={{ maxWidth: 920, textAlign: "center" }}>
-          <div
-            style={{
-              fontFamily: fraunces,
-              fontSize: 80,
-              color: accent,
-              lineHeight: 0.5,
-              marginBottom: 30,
-              opacity: 0.55,
-            }}
-          >
-            &ldquo;
-          </div>
-          {quoteCues.length > 0 ? (
-            <WordReveal
-              cues={quoteCues}
-              frame={frame}
-              fps={fps}
-              fontFamily={fraunces_italic}
-              fontSize={68}
-              fontWeight={400}
-              italic
-              accentColor={accent}
-              lineHeight={1.35}
-            />
-          ) : (
-            <div
-              style={{
-                fontFamily: fraunces_italic,
-                fontSize: 68,
-                fontStyle: "italic",
-                color: CREAM,
-                lineHeight: 1.35,
-                textShadow: "0 2px 24px rgba(0,0,0,0.55)",
-              }}
-            >
-              {quote}
-            </div>
-          )}
-          <div
-            style={{
-              width: 60,
-              height: 1,
-              background: accent,
-              margin: "40px auto 24px",
-              opacity: 0.5,
-            }}
-          />
-          <div
-            style={{
-              fontFamily: inter,
-              fontSize: 26,
-              fontWeight: 400,
-              color: CREAM_DIM,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-            }}
-          >
-            {quoteAuthor}
-          </div>
-        </div>
-      </AbsoluteFill>
-
-      {/* SCENE 4 — Peaceful thought */}
-      <AbsoluteFill
-        style={{
-          opacity: sceneOpacity(frame, SCENES.peaceful.start, SCENES.peaceful.end),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "0 80px",
-          flexDirection: "column",
-        }}
-      >
-        <div
-          style={{
-            fontFamily: inter,
-            fontSize: 24,
-            fontWeight: 500,
-            color: accent,
-            letterSpacing: "0.32em",
-            textTransform: "uppercase",
-            marginBottom: 40,
-            opacity: 0.85,
-          }}
-        >
-          Tonight
-        </div>
-        {peacefulCues.length > 0 ? (
-          <WordReveal
-            cues={peacefulCues}
-            frame={frame}
-            fps={fps}
-            fontFamily={fraunces_italic}
-            fontSize={52}
-            fontWeight={400}
-            italic
-            accentColor={accent}
-            lineHeight={1.4}
-          />
-        ) : (
-          <div
-            style={{
-              fontFamily: fraunces_italic,
-              fontSize: 52,
-              fontStyle: "italic",
-              color: CREAM,
-              textAlign: "center",
-              maxWidth: 880,
-              lineHeight: 1.4,
-              textShadow: "0 2px 24px rgba(0,0,0,0.55)",
-            }}
-          >
-            {peacefulThought}
-          </div>
-        )}
-      </AbsoluteFill>
-
-      {/* SCENE 5 — Outro */}
+      {/* OUTRO */}
       <AbsoluteFill
         style={{
           opacity: sceneOpacity(frame, SCENES.outro.start, SCENES.outro.end),
@@ -735,31 +893,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
           justifyContent: "center",
         }}
       >
-        <div style={{ textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: 140,
-              color: accent,
-              filter: `drop-shadow(0 0 40px ${accent}55)`,
-              opacity: 0.85,
-              marginBottom: 28,
-            }}
-          >
-            {symbol}
-          </div>
-          <div
-            style={{
-              fontFamily: fraunces,
-              fontSize: 36,
-              fontWeight: 600,
-              color: CREAM,
-              letterSpacing: "-0.01em",
-              opacity: 0.85,
-            }}
-          >
-            gettodayshoroscope
-          </div>
-        </div>
+        <Outro symbol={symbol} accent={accent} />
       </AbsoluteFill>
     </AbsoluteFill>
   );

@@ -54,6 +54,37 @@ if (rawSign && !SINGLE_SIGN) {
 const rampIndex = args.indexOf('--ramp');
 const RAMP_COUNT = Math.min(Math.max(rampIndex >= 0 ? parseInt(args[rampIndex + 1], 10) || 4 : 4, 1), 12);
 
+// --type morning|quote|night — picks composition, narration, music, blob path
+type VideoType = 'morning' | 'quote' | 'night';
+const ALLOWED_TYPES: VideoType[] = ['morning', 'quote', 'night'];
+const typeIndex = args.indexOf('--type');
+const rawType = typeIndex >= 0 ? args[typeIndex + 1]?.toLowerCase() : 'morning';
+const VIDEO_TYPE: VideoType = (ALLOWED_TYPES as string[]).includes(rawType ?? '')
+  ? (rawType as VideoType)
+  : 'morning';
+if (rawType && !(ALLOWED_TYPES as string[]).includes(rawType)) {
+  console.error(`[error] Invalid type: "${rawType}". Must be one of: ${ALLOWED_TYPES.join(', ')}`);
+  process.exit(1);
+}
+
+// --retention-days N — overrides cleanup retention. Defaults to 4 days
+// to fit the 3-video × 12-sign storage profile inside Hobby's 1 GB Blob
+// allowance (3 × 12 × ~6 MB × 4d ≈ 864 MB).
+const retentionIndex = args.indexOf('--retention-days');
+const RETENTION_DAYS = retentionIndex >= 0
+  ? Math.max(parseInt(args[retentionIndex + 1], 10) || 4, 1)
+  : 4;
+
+// Per-type config: composition ID, narration builder, music file
+const TYPE_CONFIG: Record<
+  VideoType,
+  { compositionId: string; musicFile: string; durationSeconds: number }
+> = {
+  morning: { compositionId: 'HoroscopeMorning', musicFile: 'audio/morning-music.mp3', durationSeconds: 30 },
+  quote:   { compositionId: 'HoroscopeQuote',   musicFile: 'audio/morning-music.mp3', durationSeconds: 22 }, // placeholder until quote-music.mp3 ships
+  night:   { compositionId: 'HoroscopeNight',   musicFile: 'audio/morning-music.mp3', durationSeconds: 28 }, // placeholder until night-music.mp3 ships
+};
+
 /**
  * Group ElevenLabs word-level timings into cues. Each cue gets the words
  * up to a sentence-ending punctuation OR ~5-8 words, whichever comes
@@ -293,7 +324,7 @@ async function fetchReading(sign: string): Promise<HoroscopeData | { error: stri
 
 async function renderSign(sign: string, today: string, tmpDir: string): Promise<RenderResult> {
   const start = Date.now();
-  console.log(`\n[render] Starting: ${sign}`);
+  console.log(`\n[render] Starting: ${sign} (${VIDEO_TYPE})`);
 
   try {
     // 1. Fetch reading from public API (cache hit when per-sign cron has run).
@@ -304,24 +335,44 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     }
 
     // 2. Transform to video props (HoroscopeData snake_case → HoroscopeVideoProps)
+    //    Sanitize the rendered fields so any em-dash / dash AI-tells the
+    //    LLM slipped past the prompt are stripped before the composition
+    //    sees them. The voice script also goes through the same strip.
     const { getSignVideoProps } = await import('../src/utils/video-helpers');
-    const props = getSignVideoProps(sign, fetched);
+    const { sanitizeForVideo, buildMorningNarration, buildQuoteNarration, buildNightlyNarration } =
+      await import('../src/utils/voiceover');
+    const baseProps = getSignVideoProps(sign, fetched);
+    const props = {
+      ...baseProps,
+      message: sanitizeForVideo(baseProps.message),
+      quote: sanitizeForVideo(baseProps.quote),
+      peacefulThought: sanitizeForVideo(baseProps.peacefulThought),
+      videoType: VIDEO_TYPE,
+    } as typeof baseProps & { videoType: VideoType };
 
     if (DRY_RUN) {
-      console.log(`[dry-run] Would render ${sign}: ${JSON.stringify(props).substring(0, 100)}...`);
+      console.log(`[dry-run] Would render ${sign} (${VIDEO_TYPE}): ${JSON.stringify(props).substring(0, 100)}...`);
       return { sign, duration: Date.now() - start };
     }
 
-    // 3. Generate voiceover (edge-tts, free) — outputs MP3 + SRT timing
-    const { generateVoiceover, buildNarrationScript } = await import('../src/utils/voiceover');
-    const narration = buildNarrationScript(sign, props.message, props.quote, props.quoteAuthor, props.peacefulThought);
-    const voResult = await generateVoiceover(narration, tmpDir, sign);
+    // 3. Build per-type narration script — voice reads ONLY this video's
+    //    content (morning: just the message; quote: quote + author; night:
+    //    just the peaceful thought). No "guided by" or cross-section bleed.
+    const narration = (() => {
+      if (VIDEO_TYPE === 'morning') return buildMorningNarration(props.message);
+      if (VIDEO_TYPE === 'quote') return buildQuoteNarration(props.quote, props.quoteAuthor);
+      return buildNightlyNarration(props.peacefulThought);
+    })();
+    const { generateVoiceover } = await import('../src/utils/voiceover');
+    const voResult = await generateVoiceover(narration, tmpDir, `${sign}-${VIDEO_TYPE}`);
 
     if (voResult) {
-      // Copy audio to public/ so Remotion can load via staticFile()
-      const publicVoPath = path.resolve('public', 'audio', `${sign}-voiceover.mp3`);
+      // Copy audio to public/ so Remotion can load via staticFile().
+      // Per-type voiceover filename so morning/quote/night don't overwrite
+      // each other when rendering all 3 in close succession.
+      const publicVoPath = path.resolve('public', 'audio', `${sign}-${VIDEO_TYPE}-voiceover.mp3`);
       fs.copyFileSync(voResult.audioPath, publicVoPath);
-      props.voiceoverSrc = `audio/${sign}-voiceover.mp3`;
+      props.voiceoverSrc = `audio/${sign}-${VIDEO_TYPE}-voiceover.mp3`;
       (props as any).voiceoverDurationMs = voResult.durationMs;
 
       // Build subtitle cues. ElevenLabs path provides word-level timings;
@@ -342,16 +393,12 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     } else {
       console.warn(`[render] Voiceover generation failed for ${sign} — rendering without audio`);
     }
-    // Ambient music
-    // Daily horoscope music — Lemon Pulse Bloom (uplifting indie-electronic,
-    // 100-115 BPM, no vocals). Matches the engagement-research brief for
-    // "positive, upbeat, modern, bubbly" while still respecting the
-    // contemplative tone. When the 3-video split lands, quote and night
-    // videos get their own track files.
-    props.ambientSrc = 'audio/morning-music.mp3';
+    // Per-type ambient music. Currently quote + night use morning's track
+    // as a placeholder until ops drops dedicated tracks at the named paths.
+    props.ambientSrc = TYPE_CONFIG[VIDEO_TYPE].musicFile;
 
     // 4. Render video via Remotion
-    console.log(`[render] Rendering video for ${sign}...`);
+    console.log(`[render] Rendering ${VIDEO_TYPE} video for ${sign}...`);
     const { bundle } = await import('@remotion/bundler');
     const { renderMedia, selectComposition } = await import('@remotion/renderer');
 
@@ -367,11 +414,11 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
 
     const composition = await selectComposition({
       serveUrl: bundleLocation,
-      id: 'HoroscopeDaily',
+      id: TYPE_CONFIG[VIDEO_TYPE].compositionId,
       inputProps: props,
     });
 
-    const videoPath = path.join(tmpDir, `${sign}-daily.mp4`);
+    const videoPath = path.join(tmpDir, `${sign}-${VIDEO_TYPE}.mp4`);
     await renderMedia({
       composition,
       serveUrl: bundleLocation,
@@ -398,7 +445,7 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     if (blobToken) {
       const { put } = await import('@vercel/blob');
       const videoBuffer = fs.readFileSync(videoPath);
-      const blob = await put(`videos/${today}/${sign}.mp4`, videoBuffer, {
+      const blob = await put(`videos/${today}/${VIDEO_TYPE}/${sign}.mp4`, videoBuffer, {
         // Match the Vercel Blob store's configured access mode. The store is
         // private until social posting is enabled — keeping uploads private
         // means raw mp4s aren't directly fetchable by URL without a token,
@@ -496,24 +543,27 @@ async function cleanupOldBlobs() {
     const { list, del } = await import('@vercel/blob');
     const { blobs } = await list({ prefix: 'videos/', token: blobToken });
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
 
-    // Only delete blobs whose pathname matches the pipeline's own naming
-    // pattern: `videos/YYYY-MM-DD/{sign}.mp4`. This prevents a foreign blob
-    // (e.g., a marketing upload sharing the same store) from being pruned
-    // as collateral damage. The expected sign list comes from the engagement
-    // order (canonical), keeping this list and the video output paths in sync.
-    const VIDEO_PATH_RE = new RegExp(
+    // Only delete blobs whose pathname matches the pipeline's naming pattern.
+    // Two formats are valid in the pre/post-3-video-split worlds:
+    //   `videos/YYYY-MM-DD/{sign}.mp4`        (pre-split, kept for orphan cleanup)
+    //   `videos/YYYY-MM-DD/{type}/{sign}.mp4` (post-split: type ∈ morning|quote|night)
+    // Foreign blobs (marketing uploads, ad-hoc backfills) are never pruned.
+    const PRE_SPLIT_RE = new RegExp(
       `^videos/\\d{4}-\\d{2}-\\d{2}/(${ENGAGEMENT_ORDER.join('|')})\\.mp4$`,
+    );
+    const POST_SPLIT_RE = new RegExp(
+      `^videos/\\d{4}-\\d{2}-\\d{2}/(morning|quote|night)/(${ENGAGEMENT_ORDER.join('|')})\\.mp4$`,
     );
     const old = blobs.filter(
       (b) =>
-        new Date(b.uploadedAt) < sevenDaysAgo &&
-        VIDEO_PATH_RE.test(b.pathname),
+        new Date(b.uploadedAt) < cutoff &&
+        (PRE_SPLIT_RE.test(b.pathname) || POST_SPLIT_RE.test(b.pathname)),
     );
     if (old.length > 0) {
-      console.log(`[cleanup] Deleting ${old.length} blobs older than 7 days`);
+      console.log(`[cleanup] Deleting ${old.length} blobs older than ${RETENTION_DAYS} days`);
       await del(old.map((b) => b.url), { token: blobToken });
     }
   } catch (error) {

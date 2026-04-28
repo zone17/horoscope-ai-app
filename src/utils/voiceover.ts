@@ -57,9 +57,53 @@ export interface VoiceoverResult {
 }
 
 /**
- * Build the narration script. The voice reads ONLY content the script
- * passes — visual-only CTAs ("Stop scrolling", platform CTAs) live in
- * the composition, not the narration.
+ * Strip AI-tell punctuation patterns from text before TTS / display. The
+ * reading prompt instructs Sonnet to avoid these but it doesn't follow
+ * reliably; post-processing is the durable fix.
+ *
+ * Currently strips:
+ *   - em-dashes (—) and en-dashes (–) used as parenthetical asides:
+ *     replaced with period+space so the voice gets a natural sentence
+ *     break instead of a suspended hanging beat
+ *   - double spaces collapsed to single
+ *   - leading/trailing whitespace
+ */
+export function sanitizeForVideo(text: string): string {
+  if (!text) return text;
+  return text
+    // " — " or " – " or "—" (with no spaces) → ". "
+    .replace(/\s*[—–]\s*/g, '. ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * Per-video-type narration builders. Each video voices ONLY its own
+ * content — morning doesn't say "guided by", quote doesn't read the
+ * full reading, night doesn't add a CTA.
+ */
+
+export function buildMorningNarration(message: string): string {
+  return sanitizeForVideo(message);
+}
+
+export function buildQuoteNarration(quote: string, quoteAuthor: string): string {
+  const q = sanitizeForVideo(quote ?? '').replace(/^["“”']+|["“”']+$/g, '');
+  const a = (quoteAuthor ?? '').trim();
+  if (q && a) return `${q}\n\n${a}.`;
+  if (q) return q;
+  return '';
+}
+
+export function buildNightlyNarration(peacefulThought: string): string {
+  return sanitizeForVideo(peacefulThought);
+}
+
+/**
+ * Legacy single-video narration kept for backwards-compatibility with
+ * any callers that still expect the old combined script. The 3-video
+ * pipeline uses the per-type builders above; this should not be invoked
+ * by render-and-post.ts in the split world.
  */
 export function buildNarrationScript(
   sign: string,
@@ -70,23 +114,14 @@ export function buildNarrationScript(
 ): string {
   const s = sign.trim().toLowerCase();
   const signName = s.charAt(0).toUpperCase() + s.slice(1);
-  const parts: string[] = [];
-
-  parts.push(`${signName}.`);
-
-  const a = quoteAuthor?.trim();
-  if (a) parts.push(`Guided by ${a}.`);
-
-  parts.push(message.trim());
-
-  const q = quote?.trim();
-  if (q && a) parts.push(`${q}. ${a}.`);
-
-  const p = peacefulThought?.trim();
+  const parts: string[] = [
+    `${signName}.`,
+    sanitizeForVideo(message),
+  ];
+  const q = sanitizeForVideo(quote ?? '');
+  if (q && quoteAuthor) parts.push(`${q} ${quoteAuthor}.`);
+  const p = sanitizeForVideo(peacefulThought ?? '');
   if (p) parts.push(p);
-
-  // Outro CTA — visual-only in the composition; not spoken aloud anymore.
-
   return parts.join('\n\n');
 }
 
