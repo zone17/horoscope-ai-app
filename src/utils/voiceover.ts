@@ -163,8 +163,23 @@ export function buildQuoteNarration(
   return lines.join('\n\n');
 }
 
-export function buildNightlyNarration(peacefulThought: string): string {
-  return sanitizeForVideo(peacefulThought);
+/**
+ * Nightly narration: announce the moment, then read the reflection.
+ *   "Aries. Tonight's reflection."
+ *   <pause>
+ *   "<peaceful thought>"
+ *
+ * Mirrors the morning + quote announce-then-content pattern. Visual
+ * hook (TONIGHT eyebrow + sign name) pairs with the spoken intro.
+ * The reflection content scene uses karaoke reveal (full text on
+ * screen with active-word highlight) like the quote video.
+ */
+export function buildNightlyNarration(sign: string, peacefulThought: string): string {
+  const s = sign.trim().toLowerCase();
+  const signName = s.charAt(0).toUpperCase() + s.slice(1);
+  const intro = `${signName}. Tonight's reflection.`;
+  const body = sanitizeForVideo(peacefulThought ?? '');
+  return body ? `${intro}\n\n${body}` : intro;
 }
 
 /**

@@ -192,6 +192,30 @@ function countQuoteIntroCues(
 }
 
 /**
+ * Count leading cues that match the night video's intro
+ * ("Aries. Tonight's reflection."). Allowlist: sign name + tonight /
+ * tonights / reflection.
+ */
+function countNightIntroCues(
+  cues: Array<{ startMs: number; endMs: number; text: string }>,
+  sign: string,
+): number {
+  const signLower = sign.toLowerCase();
+  const introTokens = new Set(['tonight', 'tonights', 'reflection']);
+  const stripped = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const isIntroToken = (text: string): boolean => {
+    const t = stripped(text);
+    if (!t) return false;
+    if (t === signLower) return true;
+    return t.split(/\s+/).every((tok) => tok === signLower || introTokens.has(tok));
+  };
+  let count = 0;
+  const max = Math.min(3, cues.length);
+  while (count < max && isIntroToken(cues[count].text)) count++;
+  return count;
+}
+
+/**
  * Count trailing cues at the end of the array that consist only of the
  * author's name (e.g., "Marcus Aurelius."). The voice reads the author
  * after the quote; the visual already shows it below the quote, so we
@@ -463,7 +487,7 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     const narration = (() => {
       if (VIDEO_TYPE === 'morning') return buildMorningNarration(sign, fetched.date, props.message);
       if (VIDEO_TYPE === 'quote') return buildQuoteNarration(sign, props.quote, props.quoteAuthor);
-      return buildNightlyNarration(props.peacefulThought);
+      return buildNightlyNarration(sign, props.peacefulThought);
     })();
     const { generateVoiceover } = await import('../src/utils/voiceover');
     const voResult = await generateVoiceover(narration, tmpDir, `${sign}-${VIDEO_TYPE}`);
@@ -516,6 +540,17 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
         if (introCues.length > 0) {
           (props as any).hookEndMs = introCues[introCues.length - 1].endMs;
           console.log(`[render] Quote intro: ${introCues.length} cue(s), hook ends at ${(introCues[introCues.length - 1].endMs / 1000).toFixed(1)}s; body=${bodyCues.length} cues, trailing author=${trailingAuthorCount} cue(s)`);
+        }
+      } else if (VIDEO_TYPE === 'night' && allCues.length > 0) {
+        // Night video: voice flows "Aries. Tonight's reflection." → reflection.
+        // Same announce-then-karaoke pattern as quote.
+        const introCount = countNightIntroCues(allCues, sign);
+        const introCues = allCues.slice(0, introCount);
+        const bodyCues = allCues.slice(introCount);
+        (props as any).subtitleCues = bodyCues;
+        if (introCues.length > 0) {
+          (props as any).hookEndMs = introCues[introCues.length - 1].endMs;
+          console.log(`[render] Night intro: ${introCues.length} cue(s), hook ends at ${(introCues[introCues.length - 1].endMs / 1000).toFixed(1)}s; body=${bodyCues.length} cues`);
         }
       } else {
         (props as any).subtitleCues = allCues;
