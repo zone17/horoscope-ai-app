@@ -81,7 +81,7 @@ const TYPE_CONFIG: Record<
   { compositionId: string; musicFile: string; durationSeconds: number }
 > = {
   morning: { compositionId: 'HoroscopeMorning', musicFile: 'audio/morning-music.mp3', durationSeconds: 45 },
-  quote:   { compositionId: 'HoroscopeQuote',   musicFile: 'audio/morning-music.mp3', durationSeconds: 22 }, // placeholder until quote-music.mp3 ships
+  quote:   { compositionId: 'HoroscopeQuote',   musicFile: 'audio/quote-music.mp3',   durationSeconds: 22 },
   night:   { compositionId: 'HoroscopeNight',   musicFile: 'audio/morning-music.mp3', durationSeconds: 28 }, // placeholder until night-music.mp3 ships
 };
 
