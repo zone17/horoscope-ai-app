@@ -35,7 +35,11 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="HoroscopeMorning"
         component={HoroscopeVideo}
-        durationInFrames={30 * 30} // 30 seconds at 30fps
+        // 45s total: ~3.7s intro ("Aries. Tuesday, April 28th.") +
+        // ~32s reading body voice + ~4s outro CTA + breathing room.
+        // Bumped from 30s after the voice was clipping at the end and
+        // the last words of the reading never appeared on screen.
+        durationInFrames={45 * 30}
         fps={30}
         width={1080}
         height={1920}

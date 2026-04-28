@@ -446,12 +446,16 @@ function buildContentScenes(
   hookEndMs: number | undefined,
 ): { hook: { start: number; end: number }; content: { start: number; end: number }; outro: { start: number; end: number } } {
   // Hook: stays on screen through the spoken intro when hookEndMs is
-  // provided (morning video path); falls back to ~3s default for quote
-  // and night videos which don't have a separate spoken intro.
-  // Content: hook-end → voice-end + small pad.
-  // Outro: content-end → totalFrames.
+  // provided (morning + quote video paths); falls back to ~3s default
+  // for night which doesn't have a separate spoken intro.
+  // Content: hook-end → voice-end + 36-frame pad (gives the last cue's
+  //   word reveal + cross-fade time to land before the scene fades out).
+  // Outro: 4s branded CTA at the END of the video, regardless of where
+  //   content ends. Voice is silent during the outro — the user-facing
+  //   CTA is visual only (research: voiced CTAs hurt completion).
   const DEFAULT_HOOK_FRAMES = 90;
-  const OUTRO_FRAMES = 60;
+  const OUTRO_FRAMES = 120; // 4s outro for the CTA card
+  const CONTENT_TAIL_PAD = 36; // 1.2s after the last word so reveals don't clip
   const hookEnd = hookEndMs && hookEndMs > 0
     ? Math.round((hookEndMs / 1000) * FPS) + 6 // small pad for the cross-fade
     : DEFAULT_HOOK_FRAMES;
@@ -464,7 +468,7 @@ function buildContentScenes(
     };
   }
   const lastCueEndFrame = Math.round((cues[cues.length - 1].endMs / 1000) * FPS);
-  const contentEnd = Math.min(lastCueEndFrame + 24, totalFrames - OUTRO_FRAMES);
+  const contentEnd = Math.min(lastCueEndFrame + CONTENT_TAIL_PAD, totalFrames - OUTRO_FRAMES);
   return {
     hook: { start: 0, end: hookEnd },
     content: { start: hookEnd, end: contentEnd },
@@ -695,36 +699,112 @@ const NightHook: React.FC<{
   );
 };
 
-const Outro: React.FC<{ symbol: string; accent: string }> = ({
-  symbol,
-  accent,
-}) => (
-  <div style={{ textAlign: "center" }}>
-    <div
-      style={{
-        fontSize: 110,
-        color: accent,
-        filter: `drop-shadow(0 0 40px ${accent}55)`,
-        opacity: 0.85,
-        marginBottom: 24,
-      }}
-    >
-      {symbol}
+const Outro: React.FC<{
+  symbol: string;
+  accent: string;
+  frame: number;
+  fps: number;
+  outroStartFrame: number;
+}> = ({ symbol, accent, frame, fps, outroStartFrame }) => {
+  // Stagger the CTA elements in for a "satisfying payoff" feel rather
+  // than dropping them all at once. Each element fades up on a slight
+  // delay relative to the outro start.
+  const local = frame - outroStartFrame;
+  const symbolOpacity = interpolate(local, [0, 12], [0, 0.85], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
+  });
+  const ctaOpacity = interpolate(local, [10, 28], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
+  });
+  const taglineOpacity = interpolate(local, [22, 42], [0, 0.85], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
+  });
+  const ctaScale = spring({
+    frame: local - 8,
+    fps,
+    config: { damping: 16, stiffness: 140, mass: 0.45 },
+  });
+  const ctaScaleValue = interpolate(ctaScale, [0, 1], [0.92, 1.0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  return (
+    <div style={{ textAlign: "center", maxWidth: 940, padding: "0 60px" }}>
+      <div
+        style={{
+          fontSize: 90,
+          color: accent,
+          filter: `drop-shadow(0 0 36px ${accent}55)`,
+          opacity: symbolOpacity,
+          marginBottom: 32,
+        }}
+      >
+        {symbol}
+      </div>
+      <div
+        style={{
+          fontFamily: inter,
+          fontSize: 22,
+          fontWeight: 500,
+          color: accent,
+          letterSpacing: "0.32em",
+          textTransform: "uppercase",
+          marginBottom: 18,
+          opacity: ctaOpacity,
+        }}
+      >
+        Daily Readings, In Your Inbox
+      </div>
+      <div
+        style={{
+          fontFamily: fraunces,
+          fontSize: 56,
+          fontWeight: 600,
+          color: CREAM,
+          letterSpacing: "-0.01em",
+          lineHeight: 1.1,
+          opacity: ctaOpacity,
+          transform: `scale(${ctaScaleValue})`,
+          marginBottom: 24,
+          textShadow: "0 4px 30px rgba(0,0,0,0.6)",
+        }}
+      >
+        gettodayshoroscope.com
+      </div>
+      <div
+        style={{
+          width: 80,
+          height: 1,
+          background: accent,
+          margin: "0 auto 24px",
+          opacity: taglineOpacity * 0.5,
+        }}
+      />
+      <div
+        style={{
+          fontFamily: fraunces_italic,
+          fontSize: 28,
+          fontWeight: 400,
+          fontStyle: "italic",
+          color: CREAM_DIM,
+          lineHeight: 1.4,
+          opacity: taglineOpacity,
+        }}
+      >
+        Sign up for daily readings
+        <br />
+        delivered to your inbox.
+      </div>
     </div>
-    <div
-      style={{
-        fontFamily: fraunces,
-        fontSize: 32,
-        fontWeight: 600,
-        color: CREAM,
-        letterSpacing: "-0.01em",
-        opacity: 0.85,
-      }}
-    >
-      gettodayshoroscope
-    </div>
-  </div>
-);
+  );
+};
 
 // ─── Main composition ───────────────────────────────────────────────────
 
@@ -1025,7 +1105,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
       {/* CONTENT */}
       {contentScene}
 
-      {/* OUTRO */}
+      {/* OUTRO — branded CTA: website + signup tagline */}
       <AbsoluteFill
         style={{
           opacity: sceneOpacity(frame, SCENES.outro.start, SCENES.outro.end),
@@ -1034,7 +1114,13 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
           justifyContent: "center",
         }}
       >
-        <Outro symbol={symbol} accent={accent} />
+        <Outro
+          symbol={symbol}
+          accent={accent}
+          frame={frame}
+          fps={fps}
+          outroStartFrame={SCENES.outro.start}
+        />
       </AbsoluteFill>
     </AbsoluteFill>
   );
