@@ -131,8 +131,15 @@ jobs:
           HOROSCOPE_API_URL: ${{ secrets.HOROSCOPE_API_URL || 'https://api.gettodayshoroscope.com' }}
           # Required: Vercel Blob upload destination.
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-          # Optional: voiceover via OpenAI TTS as a backup if edge-tts fails.
-          # The primary voiceover path is edge-tts (free, installed above).
+          # Primary voiceover path: ElevenLabs eleven_multilingual_v2 with
+          # char-level timestamps. When both API_KEY and VOICE_ID are set,
+          # voiceover.ts uses ElevenLabs and falls back to edge-tts only on
+          # failure. When either is missing, voiceover.ts skips ElevenLabs
+          # entirely and goes straight to edge-tts (free, sentence-level).
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+          # Optional: legacy OpenAI key — not currently used by voiceover.ts
+          # but kept available for future backup paths.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           # Optional: daily spot-check notification with sample video.
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
