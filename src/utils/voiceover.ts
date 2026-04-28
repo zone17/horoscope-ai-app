@@ -135,12 +135,32 @@ export function buildMorningNarration(
   return `${intro}\n\n${sanitizeForVideo(message)}`;
 }
 
-export function buildQuoteNarration(quote: string, quoteAuthor: string): string {
+/**
+ * Quote narration: announce the moment, then read the quote, then read
+ * the author. Voice flows:
+ *   "Aries. Today's wisdom."
+ *   <pause>
+ *   "<quote>"
+ *   <pause>
+ *   "<author>."
+ *
+ * The composition pairs the voice intro with the visible TODAY'S WISDOM
+ * hook, then reveals the full quote on screen with an active-word
+ * highlight (karaoke) tracking the voice through the body.
+ */
+export function buildQuoteNarration(
+  sign: string,
+  quote: string,
+  quoteAuthor: string,
+): string {
+  const s = sign.trim().toLowerCase();
+  const signName = s.charAt(0).toUpperCase() + s.slice(1);
   const q = sanitizeForVideo(quote ?? '').replace(/^["“”']+|["“”']+$/g, '');
   const a = (quoteAuthor ?? '').trim();
-  if (q && a) return `${q}\n\n${a}.`;
-  if (q) return q;
-  return '';
+  const lines: string[] = [`${signName}. Today's wisdom.`];
+  if (q) lines.push(q);
+  if (a) lines.push(`${a}.`);
+  return lines.join('\n\n');
 }
 
 export function buildNightlyNarration(peacefulThought: string): string {

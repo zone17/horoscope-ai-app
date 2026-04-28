@@ -166,6 +166,58 @@ function countMorningIntroCues(
   return count;
 }
 
+/**
+ * Count leading cues that match the quote video's intro
+ * ("Aries. Today's wisdom."). Heuristic: tokens are sign name OR
+ * weekday/month tokens (none for this video) OR the words "today",
+ * "today's", "wisdom", "from".
+ */
+function countQuoteIntroCues(
+  cues: Array<{ startMs: number; endMs: number; text: string }>,
+  sign: string,
+): number {
+  const signLower = sign.toLowerCase();
+  const introTokens = new Set(['todays', 'today', 'wisdom']);
+  const stripped = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const isIntroToken = (text: string): boolean => {
+    const t = stripped(text);
+    if (!t) return false;
+    if (t === signLower) return true;
+    return t.split(/\s+/).every((tok) => tok === signLower || introTokens.has(tok));
+  };
+  let count = 0;
+  const max = Math.min(3, cues.length);
+  while (count < max && isIntroToken(cues[count].text)) count++;
+  return count;
+}
+
+/**
+ * Count trailing cues at the end of the array that consist only of the
+ * author's name (e.g., "Marcus Aurelius."). The voice reads the author
+ * after the quote; the visual already shows it below the quote, so we
+ * exclude this cue from the karaoke body to keep the on-screen quote
+ * clean.
+ */
+function countTrailingAuthorCues(
+  cues: Array<{ startMs: number; endMs: number; text: string }>,
+  author: string,
+): number {
+  if (!author) return 0;
+  const authorLower = author.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const stripped = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  let count = 0;
+  for (let i = cues.length - 1; i >= 0; i--) {
+    const t = stripped(cues[i].text);
+    // Exact match OR the author name appears as the cue's only content.
+    if (t === authorLower || (t.length > 0 && authorLower.includes(t))) {
+      count++;
+    } else {
+      break;
+    }
+  }
+  return count;
+}
+
 function parseSrt(srt: string): Array<{ startMs: number; endMs: number; text: string }> {
   const blocks = srt.trim().split(/\n\n+/);
   return blocks
@@ -410,7 +462,7 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     //    Quote reads quote + author. Night reads just the peaceful thought.
     const narration = (() => {
       if (VIDEO_TYPE === 'morning') return buildMorningNarration(sign, fetched.date, props.message);
-      if (VIDEO_TYPE === 'quote') return buildQuoteNarration(props.quote, props.quoteAuthor);
+      if (VIDEO_TYPE === 'quote') return buildQuoteNarration(sign, props.quote, props.quoteAuthor);
       return buildNightlyNarration(props.peacefulThought);
     })();
     const { generateVoiceover } = await import('../src/utils/voiceover');
@@ -450,6 +502,20 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
         if (introCues.length > 0) {
           (props as any).hookEndMs = introCues[introCues.length - 1].endMs;
           console.log(`[render] Morning intro: ${introCues.length} cue(s), hook ends at ${(introCues[introCues.length - 1].endMs / 1000).toFixed(1)}s`);
+        }
+      } else if (VIDEO_TYPE === 'quote' && allCues.length > 0) {
+        // Quote video: voice flows "Aries. Today's wisdom." → quote → author.
+        // Hook covers the intro; the karaoke component shows the full quote
+        // on screen at once; the trailing author cue plays voice-only (the
+        // author element is always visible on screen during the quote).
+        const introCount = countQuoteIntroCues(allCues, sign);
+        const trailingAuthorCount = countTrailingAuthorCues(allCues, props.quoteAuthor);
+        const introCues = allCues.slice(0, introCount);
+        const bodyCues = allCues.slice(introCount, allCues.length - trailingAuthorCount);
+        (props as any).subtitleCues = bodyCues;
+        if (introCues.length > 0) {
+          (props as any).hookEndMs = introCues[introCues.length - 1].endMs;
+          console.log(`[render] Quote intro: ${introCues.length} cue(s), hook ends at ${(introCues[introCues.length - 1].endMs / 1000).toFixed(1)}s; body=${bodyCues.length} cues, trailing author=${trailingAuthorCount} cue(s)`);
         }
       } else {
         (props as any).subtitleCues = allCues;
