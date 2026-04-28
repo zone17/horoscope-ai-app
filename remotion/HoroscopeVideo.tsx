@@ -279,21 +279,23 @@ const KaraokeReveal: React.FC<{
 
   if (allWords.length === 0) return null;
 
-  // Container fades in once at the start of the first word and out after
-  // the last. Words themselves stay at full opacity through the body.
+  // Container fades in once at the start of the first word and stays
+  // visible through the full content scene. The OUTER scene-level
+  // sceneOpacity handles the eventual fade-out into the outro, so the
+  // karaoke container itself just stays on at full opacity once the
+  // quote has fully appeared. This gives viewers the long linger they
+  // need to re-read after the voice finishes (~5s of dwell time per
+  // the per-type tail pad in buildContentScenes).
   const firstStart = (allWords[0].startMs / 1000) * fps;
-  const lastEnd = (allWords[allWords.length - 1].endMs / 1000) * fps;
-  const containerOpacity = Math.min(
-    interpolate(frame, [firstStart - 8, firstStart + 6], [0, 1], {
+  const containerOpacity = interpolate(
+    frame,
+    [firstStart - 8, firstStart + 6],
+    [0, 1],
+    {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.bezier(0.16, 1, 0.3, 1),
-    }),
-    interpolate(frame, [lastEnd + 12, lastEnd + 24], [1, 0], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.bezier(0.16, 1, 0.3, 1),
-    }),
+    },
   );
 
   return (
@@ -444,20 +446,24 @@ function buildContentScenes(
   cues: SubtitleCue[],
   totalFrames: number,
   hookEndMs: number | undefined,
+  videoType: VideoType,
 ): { hook: { start: number; end: number }; content: { start: number; end: number }; outro: { start: number; end: number } } {
   // Hook: stays on screen through the spoken intro when hookEndMs is
   // provided (morning + quote video paths); falls back to ~3s default
   // for night which doesn't have a separate spoken intro.
-  // Content: hook-end → voice-end + 36-frame pad (gives the last cue's
-  //   word reveal + cross-fade time to land before the scene fades out).
-  // Outro: 4s branded CTA at the END of the video, regardless of where
-  //   content ends. Voice is silent during the outro — the user-facing
-  //   CTA is visual only (research: voiced CTAs hurt completion).
+  // Content: hook-end → voice-end + per-type tail pad.
+  // Outro: 4s branded CTA at the END of the video.
   const DEFAULT_HOOK_FRAMES = 90;
   const OUTRO_FRAMES = 120; // 4s outro for the CTA card
-  const CONTENT_TAIL_PAD = 36; // 1.2s after the last word so reveals don't clip
+
+  // Per-type linger after the last spoken word. Quote videos hold the
+  // full quote on screen for ~5s after the voice finishes so viewers
+  // can re-read; morning + night just need enough pad for the last
+  // cue's word reveal + scene cross-fade to land cleanly.
+  const CONTENT_TAIL_PAD = videoType === 'quote' ? 150 : 36;
+
   const hookEnd = hookEndMs && hookEndMs > 0
-    ? Math.round((hookEndMs / 1000) * FPS) + 6 // small pad for the cross-fade
+    ? Math.round((hookEndMs / 1000) * FPS) + 6
     : DEFAULT_HOOK_FRAMES;
 
   if (!cues || cues.length === 0) {
@@ -837,8 +843,8 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         : peacefulThought;
 
   const SCENES = useMemo(
-    () => buildContentScenes(subtitleCues ?? [], durationInFrames, hookEndMs),
-    [subtitleCues, durationInFrames, hookEndMs],
+    () => buildContentScenes(subtitleCues ?? [], durationInFrames, hookEndMs, videoType),
+    [subtitleCues, durationInFrames, hookEndMs, videoType],
   );
 
   const contentCues = subtitleCues ?? [];
