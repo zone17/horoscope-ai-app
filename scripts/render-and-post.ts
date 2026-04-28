@@ -343,7 +343,12 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       console.warn(`[render] Voiceover generation failed for ${sign} — rendering without audio`);
     }
     // Ambient music
-    props.ambientSrc = 'audio/ambient-lofi.mp3';
+    // Daily horoscope music — Lemon Pulse Bloom (uplifting indie-electronic,
+    // 100-115 BPM, no vocals). Matches the engagement-research brief for
+    // "positive, upbeat, modern, bubbly" while still respecting the
+    // contemplative tone. When the 3-video split lands, quote and night
+    // videos get their own track files.
+    props.ambientSrc = 'audio/morning-music.mp3';
 
     // 4. Render video via Remotion
     console.log(`[render] Rendering video for ${sign}...`);
