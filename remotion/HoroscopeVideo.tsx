@@ -221,6 +221,132 @@ const WordReveal: React.FC<{
   );
 };
 
+/**
+ * Karaoke-style reveal: the FULL text is visible from the moment the
+ * content scene fades in; the active word (the one currently being
+ * spoken) lights up in the accent color and pulses up 6%. Spoken-but-
+ * past words and not-yet-spoken words both stay at full opacity in
+ * cream — distinct from the WordReveal pattern (one cue at a time,
+ * progressive entry) used elsewhere.
+ *
+ * Use this for the QUOTE video where the whole quote is short enough
+ * to fit on screen and the user wants to read ahead.
+ */
+const KaraokeReveal: React.FC<{
+  cues: SubtitleCue[];
+  frame: number;
+  fps: number;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight?: number;
+  italic?: boolean;
+  accentColor: string;
+  lineHeight?: number;
+  textShadow?: string;
+}> = ({
+  cues,
+  frame,
+  fps,
+  fontFamily,
+  fontSize,
+  fontWeight = 400,
+  italic = false,
+  accentColor,
+  lineHeight = 1.35,
+  textShadow = "0 2px 24px rgba(0,0,0,0.55), 0 0 8px rgba(0,0,0,0.4)",
+}) => {
+  // Flatten ALL words across cues. Karaoke shows the whole text;
+  // we only need cues to drive per-word timing.
+  type W = { text: string; startMs: number; endMs: number; cueIdx: number };
+  const allWords: W[] = [];
+  cues.forEach((cue, cueIdx) => {
+    if (cue.words?.length) {
+      cue.words.forEach((w) => allWords.push({ ...w, cueIdx }));
+    } else {
+      const tokens = cue.text.split(/\s+/).filter(Boolean);
+      const cueDur = Math.max(cue.endMs - cue.startMs, 1);
+      const msPerWord = cueDur / tokens.length;
+      tokens.forEach((text, i) => {
+        allWords.push({
+          text,
+          startMs: cue.startMs + i * msPerWord,
+          endMs: cue.startMs + (i + 1) * msPerWord,
+          cueIdx,
+        });
+      });
+    }
+  });
+
+  if (allWords.length === 0) return null;
+
+  // Container fades in once at the start of the first word and out after
+  // the last. Words themselves stay at full opacity through the body.
+  const firstStart = (allWords[0].startMs / 1000) * fps;
+  const lastEnd = (allWords[allWords.length - 1].endMs / 1000) * fps;
+  const containerOpacity = Math.min(
+    interpolate(frame, [firstStart - 8, firstStart + 6], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+    }),
+    interpolate(frame, [lastEnd + 12, lastEnd + 24], [1, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+    }),
+  );
+
+  return (
+    <div
+      style={{
+        fontFamily,
+        fontSize,
+        fontWeight,
+        fontStyle: italic ? "italic" : "normal",
+        color: CREAM,
+        lineHeight,
+        textAlign: "center",
+        maxWidth: 940,
+        opacity: containerOpacity,
+        textShadow,
+        whiteSpace: "pre-wrap",
+        wordSpacing: "0.05em",
+      }}
+    >
+      {allWords.map((word, i) => {
+        const wordStartFrame = (word.startMs / 1000) * fps;
+        const wordEndFrame = (word.endMs / 1000) * fps;
+        const isActive = frame >= wordStartFrame && frame <= wordEndFrame + 2;
+        const activePulse = isActive
+          ? spring({
+              frame: frame - wordStartFrame,
+              fps,
+              config: { damping: 18, stiffness: 220, mass: 0.4 },
+              durationInFrames: 8,
+            })
+          : 0;
+        const activeScale = 1 + activePulse * 0.06;
+        const finalColor = isActive ? accentColor : CREAM;
+        return (
+          <React.Fragment key={`k-${i}`}>
+            <span
+              style={{
+                display: "inline-block",
+                transform: `scale(${activeScale})`,
+                color: finalColor,
+                transition: "color 80ms linear",
+              }}
+            >
+              {word.text}
+            </span>
+            {i < allWords.length - 1 ? " " : ""}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+};
+
 // ─── Atmosphere (shared) ────────────────────────────────────────────────
 
 const Particles: React.FC<{ accentColor: string; frame: number }> = ({
@@ -712,25 +838,25 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
               &ldquo;
             </div>
             {contentCues.length > 0 ? (
-              <WordReveal
+              <KaraokeReveal
                 cues={contentCues}
                 frame={frame}
                 fps={fps}
                 fontFamily={fraunces_italic}
-                fontSize={70}
+                fontSize={66}
                 fontWeight={400}
                 italic
                 accentColor={accent}
-                lineHeight={1.35}
+                lineHeight={1.4}
               />
             ) : (
               <div
                 style={{
                   fontFamily: fraunces_italic,
-                  fontSize: 70,
+                  fontSize: 66,
                   fontStyle: "italic",
                   color: CREAM,
-                  lineHeight: 1.35,
+                  lineHeight: 1.4,
                   textShadow: "0 2px 24px rgba(0,0,0,0.55)",
                 }}
               >
