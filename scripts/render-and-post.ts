@@ -158,14 +158,16 @@ interface QualityResult {
 async function qualityCheck(
   videoPath: string,
   sign: string,
-  voiceoverGenerated: boolean
+  voiceoverGenerated: boolean,
+  expectedDurationSec: number,
 ): Promise<QualityResult> {
   const fileSizeBytes = fs.statSync(videoPath).size;
   const fileSizeMB = fileSizeBytes / (1024 * 1024);
 
-  // Check 1: File size sanity (2-15 MB for a 60s video)
-  if (fileSizeMB < 1) {
-    return { pass: false, reason: 'File too small (<1 MB) — likely corrupted render', summary: '', fileSizeMB, durationSec: 0, hasAudio: false };
+  // File size sanity. Lower bound 0.4 MB allows the shorter 22s quote
+  // video; upper bound stays 20 MB for the longer types.
+  if (fileSizeMB < 0.4) {
+    return { pass: false, reason: `File too small (${fileSizeMB.toFixed(2)} MB) — likely corrupted render`, summary: '', fileSizeMB, durationSec: 0, hasAudio: false };
   }
   if (fileSizeMB > 20) {
     return { pass: false, reason: 'File too large (>20 MB) — abnormal render', summary: '', fileSizeMB, durationSec: 0, hasAudio: false };
@@ -193,8 +195,13 @@ async function qualityCheck(
     return { pass: true, reason: undefined, summary: `${fileSizeMB.toFixed(1)} MB (ffprobe unavailable)`, fileSizeMB, durationSec: 0, hasAudio: voiceoverGenerated };
   }
 
-  if (durationSec < 55 || durationSec > 65) {
-    return { pass: false, reason: `Duration ${durationSec.toFixed(1)}s outside 55-65s range`, summary: '', fileSizeMB, durationSec, hasAudio };
+  // Duration tolerance: expected ± 3s. Catches stuck-on-frame-zero
+  // renders and runaway over-long renders without false-failing the
+  // ~0.1s rounding margin Remotion typically introduces.
+  const minDuration = expectedDurationSec - 3;
+  const maxDuration = expectedDurationSec + 3;
+  if (durationSec < minDuration || durationSec > maxDuration) {
+    return { pass: false, reason: `Duration ${durationSec.toFixed(1)}s outside ${minDuration}-${maxDuration}s range (expected ~${expectedDurationSec}s)`, summary: '', fileSizeMB, durationSec, hasAudio };
   }
 
   // Check 3: Audio stream must exist if voiceover was generated
@@ -430,7 +437,7 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     });
 
     // 4b. Quality gate — reject bad renders before uploading
-    const qc = await qualityCheck(videoPath, sign, !!voResult);
+    const qc = await qualityCheck(videoPath, sign, !!voResult, TYPE_CONFIG[VIDEO_TYPE].durationSeconds);
     if (!qc.pass) {
       console.error(`[quality] FAILED for ${sign}: ${qc.reason}`);
       return { sign, error: `Quality check failed: ${qc.reason}`, duration: Date.now() - start };
