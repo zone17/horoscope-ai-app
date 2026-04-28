@@ -123,6 +123,49 @@ function groupWordsIntoCues(
   return cues;
 }
 
+/**
+ * Count how many leading cues belong to the morning video's intro
+ * announcement ("Aries. Tuesday, April 28th."). The intro lives in the
+ * hook scene (visual), so the content scene's WordReveal must skip these
+ * cues — otherwise we'd visually re-render the sign + date that the hook
+ * is already showing. Returns the count of cues to slice off the front.
+ *
+ * Heuristic: a cue is "intro" if its text consists only of:
+ *   - the sign name (e.g., "Aries.")
+ *   - a weekday name ("Tuesday,")
+ *   - a month + ordinal day ("April 28th." / "April 28")
+ * Stop scanning at the first cue that doesn't match.
+ */
+function countMorningIntroCues(
+  cues: Array<{ startMs: number; endMs: number; text: string }>,
+  sign: string,
+): number {
+  const signLower = sign.toLowerCase();
+  const weekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const stripped = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const isIntroToken = (text: string): boolean => {
+    const t = stripped(text);
+    if (!t) return false;
+    if (t === signLower) return true;
+    const tokens = t.split(/\s+/);
+    // Accept short cues that consist only of weekday/month/digits/ordinals
+    return tokens.every((tok) => {
+      if (weekdays.includes(tok)) return true;
+      if (months.includes(tok)) return true;
+      if (/^\d+(st|nd|rd|th)?$/.test(tok)) return true;
+      return false;
+    });
+  };
+  let count = 0;
+  // Cap at 3 cues — the intro is at most "Aries." + "Tuesday," + "April 28th."
+  // After that any further cue is reading body, even if it happens to start
+  // with a number or a weekday somehow.
+  const maxIntro = Math.min(3, cues.length);
+  while (count < maxIntro && isIntroToken(cues[count].text)) count++;
+  return count;
+}
+
 function parseSrt(srt: string): Array<{ startMs: number; endMs: number; text: string }> {
   const blocks = srt.trim().split(/\n\n+/);
   return blocks
@@ -363,10 +406,10 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
     }
 
     // 3. Build per-type narration script — voice reads ONLY this video's
-    //    content (morning: just the message; quote: quote + author; night:
-    //    just the peaceful thought). No "guided by" or cross-section bleed.
+    //    content. Morning announces sign + day, then reads the message.
+    //    Quote reads quote + author. Night reads just the peaceful thought.
     const narration = (() => {
-      if (VIDEO_TYPE === 'morning') return buildMorningNarration(props.message);
+      if (VIDEO_TYPE === 'morning') return buildMorningNarration(sign, fetched.date, props.message);
       if (VIDEO_TYPE === 'quote') return buildQuoteNarration(props.quote, props.quoteAuthor);
       return buildNightlyNarration(props.peacefulThought);
     })();
@@ -382,20 +425,34 @@ async function renderSign(sign: string, today: string, tmpDir: string): Promise<
       props.voiceoverSrc = `audio/${sign}-${VIDEO_TYPE}-voiceover.mp3`;
       (props as any).voiceoverDurationMs = voResult.durationMs;
 
-      // Build subtitle cues. ElevenLabs path provides word-level timings;
-      // we group consecutive words into ~1s cues (the composition's
-      // active-cue chooser still picks one cue at a time, but cue size
-      // determines how the cross-fades feel). edge-tts path uses the
-      // cue-level SRT it already wrote.
+      // Build subtitle cues from word timings (or fall back to SRT).
+      let allCues: Array<{ startMs: number; endMs: number; text: string; words?: Array<{ text: string; startMs: number; endMs: number }> }> = [];
       if ((voResult as any).wordTimings && Array.isArray((voResult as any).wordTimings) && (voResult as any).wordTimings.length > 0) {
-        const cues = groupWordsIntoCues((voResult as any).wordTimings);
-        (props as any).subtitleCues = cues;
-        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${cues.length} cues from ${(voResult as any).wordTimings.length} word timings (frame-accurate sync)`);
+        allCues = groupWordsIntoCues((voResult as any).wordTimings);
+        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${allCues.length} cues from ${(voResult as any).wordTimings.length} word timings (frame-accurate sync)`);
       } else if (fs.existsSync(voResult.subtitlePath)) {
         const srt = fs.readFileSync(voResult.subtitlePath, 'utf-8');
-        const cues = parseSrt(srt);
-        (props as any).subtitleCues = cues;
-        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${cues.length} subtitle cues (interpolated word sync)`);
+        allCues = parseSrt(srt);
+        console.log(`[render] Voiceover ready: ${(voResult.durationMs / 1000).toFixed(1)}s, ${allCues.length} subtitle cues (interpolated word sync)`);
+      }
+
+      // For the morning video, the voice announces "Aries. Tuesday, April 28th."
+      // before the reading. Split those intro cues out: the hook scene plays
+      // (visually) while the voice speaks them; the content scene's WordReveal
+      // only renders the reading body cues. Without this split the reading
+      // scene would WordReveal "Aries" and the date again, doubling them
+      // visually with the hook.
+      if (VIDEO_TYPE === 'morning' && allCues.length > 0) {
+        const introCount = countMorningIntroCues(allCues, sign);
+        const introCues = allCues.slice(0, introCount);
+        const contentCues = allCues.slice(introCount);
+        (props as any).subtitleCues = contentCues;
+        if (introCues.length > 0) {
+          (props as any).hookEndMs = introCues[introCues.length - 1].endMs;
+          console.log(`[render] Morning intro: ${introCues.length} cue(s), hook ends at ${(introCues[introCues.length - 1].endMs / 1000).toFixed(1)}s`);
+        }
+      } else {
+        (props as any).subtitleCues = allCues;
       }
     } else {
       console.warn(`[render] Voiceover generation failed for ${sign} — rendering without audio`);

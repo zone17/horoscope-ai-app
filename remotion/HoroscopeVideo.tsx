@@ -74,6 +74,12 @@ interface HoroscopeVideoProps {
   ambientSrc?: string;
   voiceoverDurationMs?: number;
   subtitleCues?: SubtitleCue[];
+  /** Morning videos only: ms timestamp at which the spoken intro
+   *  ("Aries. Tuesday, April 28th.") finishes. The hook scene stays on
+   *  screen through this point so the visual sign+date matches the voice;
+   *  the content scene picks up immediately after. When unset, the hook
+   *  scene falls back to a fixed 90-frame default. */
+  hookEndMs?: number;
 }
 
 const FPS = 30;
@@ -311,23 +317,31 @@ function sceneOpacity(frame: number, start: number, end: number): number {
 function buildContentScenes(
   cues: SubtitleCue[],
   totalFrames: number,
+  hookEndMs: number | undefined,
 ): { hook: { start: number; end: number }; content: { start: number; end: number }; outro: { start: number; end: number } } {
-  // Hook: ~3s (90 frames). Content: hook-end → voice-end + small pad.
+  // Hook: stays on screen through the spoken intro when hookEndMs is
+  // provided (morning video path); falls back to ~3s default for quote
+  // and night videos which don't have a separate spoken intro.
+  // Content: hook-end → voice-end + small pad.
   // Outro: content-end → totalFrames.
-  const HOOK_FRAMES = 90;
+  const DEFAULT_HOOK_FRAMES = 90;
   const OUTRO_FRAMES = 60;
+  const hookEnd = hookEndMs && hookEndMs > 0
+    ? Math.round((hookEndMs / 1000) * FPS) + 6 // small pad for the cross-fade
+    : DEFAULT_HOOK_FRAMES;
+
   if (!cues || cues.length === 0) {
     return {
-      hook: { start: 0, end: HOOK_FRAMES },
-      content: { start: HOOK_FRAMES, end: totalFrames - OUTRO_FRAMES },
+      hook: { start: 0, end: hookEnd },
+      content: { start: hookEnd, end: totalFrames - OUTRO_FRAMES },
       outro: { start: totalFrames - OUTRO_FRAMES, end: totalFrames },
     };
   }
   const lastCueEndFrame = Math.round((cues[cues.length - 1].endMs / 1000) * FPS);
   const contentEnd = Math.min(lastCueEndFrame + 24, totalFrames - OUTRO_FRAMES);
   return {
-    hook: { start: 0, end: HOOK_FRAMES },
-    content: { start: HOOK_FRAMES, end: contentEnd },
+    hook: { start: 0, end: hookEnd },
+    content: { start: hookEnd, end: contentEnd },
     outro: { start: contentEnd, end: totalFrames },
   };
 }
@@ -601,6 +615,7 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
   voiceoverSrc,
   ambientSrc,
   subtitleCues,
+  hookEndMs,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -616,8 +631,8 @@ export const HoroscopeVideo: React.FC<HoroscopeVideoProps> = ({
         : peacefulThought;
 
   const SCENES = useMemo(
-    () => buildContentScenes(subtitleCues ?? [], durationInFrames),
-    [subtitleCues, durationInFrames],
+    () => buildContentScenes(subtitleCues ?? [], durationInFrames, hookEndMs),
+    [subtitleCues, durationInFrames, hookEndMs],
   );
 
   const contentCues = subtitleCues ?? [];

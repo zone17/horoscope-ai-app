@@ -83,8 +83,56 @@ export function sanitizeForVideo(text: string): string {
  * full reading, night doesn't add a CTA.
  */
 
-export function buildMorningNarration(message: string): string {
-  return sanitizeForVideo(message);
+/**
+ * Speech-friendly date format. Input can be either an ISO date string
+ * ("2026-04-28") or a pre-formatted display date ("April 28, 2026") —
+ * we normalise to a Date and return "Tuesday, April 28th".
+ */
+export function formatDateForSpeech(dateInput: string): string {
+  if (!dateInput) return '';
+  // Try ISO first; fall back to Date constructor for "April 28, 2026" etc.
+  let d: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+    d = new Date(dateInput + 'T12:00:00Z');
+  } else {
+    d = new Date(dateInput);
+  }
+  if (isNaN(d.getTime())) return dateInput;
+
+  const dayOfWeek = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+  const month = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+  const day = d.getUTCDate();
+  const ordinal = (n: number): string => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+  return `${dayOfWeek}, ${month} ${ordinal(day)}`;
+}
+
+/**
+ * Morning narration: announce the sign and the day first, then transition
+ * into the reading. Voice flows:
+ *   "Aries. Tuesday, April 28th."
+ *   <pause>
+ *   "<reading body>"
+ *
+ * The double newline introduces a natural sentence break in TTS so the
+ * shift from intro to reading reads as a deliberate transition, not a
+ * run-on. The composition uses the cue boundaries from this script to
+ * extend the hook scene through the intro and start the reading scene
+ * exactly when the voice does.
+ */
+export function buildMorningNarration(
+  sign: string,
+  date: string,
+  message: string,
+): string {
+  const s = sign.trim().toLowerCase();
+  const signName = s.charAt(0).toUpperCase() + s.slice(1);
+  const spokenDate = formatDateForSpeech(date);
+  const intro = spokenDate ? `${signName}. ${spokenDate}.` : `${signName}.`;
+  return `${intro}\n\n${sanitizeForVideo(message)}`;
 }
 
 export function buildQuoteNarration(quote: string, quoteAuthor: string): string {
