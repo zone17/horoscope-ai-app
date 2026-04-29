@@ -1,5 +1,7 @@
 # Handoff: Today's Horoscope — Philosophy Engine
 
+> **⚠️ SUPERSEDED FOR STRATEGIC DECISIONS**: This doc reflects the 2026-04-26 video-work sprint and is partially stale (notably it claims the critique loop isn't wired into cron — it has been since PR #67). For the current product-level audit, PRD-vs-reality gap analysis, and prioritized backlog, read [`HANDOFF_2026-04-29_AUDIT.md`](./HANDOFF_2026-04-29_AUDIT.md) FIRST. This doc remains useful as a code-level reference for the video pipeline and tool architecture but should not drive next-session priorities on its own.
+
 > **Date**: 2026-04-26
 > **Main at**: post-PR #67 (`f50faa9`) · **PRs shipped**: 67 total · **This sprint added**: #57, #58, #59, #60, #61, #62, #63, #64, #65, #66, #67
 > **Active initiative**: Reading Authenticity + AI SDK Migration — **Phase 1 is functionally complete (1a/1b/1b.5/1c/1e shipped, 1d blocked on a strategic decision)**

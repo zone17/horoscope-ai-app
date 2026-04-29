@@ -52,7 +52,8 @@ Two Vercel projects deploy from this repo via CI/CD (`.github/workflows/deploy.y
 
 | Doc | Purpose |
 |-----|---------|
-| [`docs/HANDOFF.md`](./docs/HANDOFF.md) | **Start here** — current architecture, tool tree, next steps |
+| [`docs/HANDOFF_2026-04-29_AUDIT.md`](./docs/HANDOFF_2026-04-29_AUDIT.md) | **START HERE** — comprehensive audit + PRD-vs-reality gap + prioritized next steps + domain-expert team brief for next session |
+| [`docs/HANDOFF.md`](./docs/HANDOFF.md) | Prior sprint's video-work handoff — useful as code-level reference, partially stale on production state |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System diagrams, data flow, constraints |
 | [`docs/PROJECT_CONTEXT.md`](./docs/PROJECT_CONTEXT.md) | Full context — design system, SEO, competitive positioning |
 | [`docs/AGENT_HANDOFF.md`](./docs/AGENT_HANDOFF.md) | Historical (pre-migration) — retained for design/SEO reference |
