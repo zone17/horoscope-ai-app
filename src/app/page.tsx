@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
 import HeroIntro from '@/components/seo/HeroIntro';
 import FAQSection from '@/components/seo/FAQSection';
@@ -31,7 +32,12 @@ export default function Home() {
 
       <FAQSection />
 
-      <footer className="text-center py-6 text-indigo-200/80 text-sm">
+      <footer className="text-center py-8 text-indigo-200/70 text-sm space-y-3">
+        <nav className="flex justify-center gap-5">
+          <Link href="/about" className="hover:text-indigo-200 transition-colors">About</Link>
+          <Link href="/privacy" className="hover:text-indigo-200 transition-colors">Privacy</Link>
+          <Link href="/terms" className="hover:text-indigo-200 transition-colors">Terms</Link>
+        </nav>
         <p>&copy; {new Date().getFullYear()} Get Today&apos;s Horoscope. All rights reserved.</p>
       </footer>
     </main>

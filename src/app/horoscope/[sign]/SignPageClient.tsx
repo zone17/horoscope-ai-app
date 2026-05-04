@@ -23,19 +23,27 @@ interface HoroscopeData {
 interface SignPageClientProps {
   sign: string;
   symbol: string;
+  /** Reading fetched server-side for SSR. When provided, the client skips
+   *  the on-mount fetch and uses this directly — search engines and the
+   *  user both see the reading in the initial HTML. */
+  initialReading?: HoroscopeData | null;
 }
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
-  const [horoscope, setHoroscope] = useState<HoroscopeData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export default function SignPageClient({ sign, symbol, initialReading }: SignPageClientProps) {
+  // When SSR provides initial data, render it immediately (no loading flash,
+  // no client-side re-fetch). When SSR fails (network error, cache miss
+  // beyond the ISR window), fall back to the on-mount fetch path.
+  const [horoscope, setHoroscope] = useState<HoroscopeData | null>(initialReading ?? null);
+  const [isLoading, setIsLoading] = useState(!initialReading);
   const [isError, setIsError] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (initialReading) return; // SSR populated; nothing to do.
     async function fetchData() {
       try {
         setIsLoading(true);
@@ -61,7 +69,7 @@ export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
     }
 
     fetchData();
-  }, [sign]);
+  }, [sign, initialReading]);
 
   const shareUrl =
     typeof window !== 'undefined'
