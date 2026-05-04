@@ -139,33 +139,37 @@ async function fetchHoroscope(sign: string, type: string = 'daily'): Promise<Hor
       console.error(`Error fetching horoscope for ${sign}:`, data);
       return null;
     }
-    
-    // Make sure the returned data structure matches HoroscopeData interface
-    const horoscopeData: HoroscopeData = data.data;
-    console.log(`Returning horoscope data for ${sign}:`, {
-      type: typeof horoscopeData,
-      keys: Object.keys(horoscopeData),
-      hasRequiredFields: horoscopeData.message && horoscopeData.best_match && horoscopeData.inspirational_quote && horoscopeData.quote_author
-    });
-    
-    // Ensure all required fields are present and of the right type
-    if (!horoscopeData.message) {
-      console.error(`Missing required message field in horoscope data for ${sign}`, horoscopeData);
+
+    // The API now returns the v2 shape: { sign, date, morning_reading,
+    // evening_reading, best_match, quote: { text, quote_philosopher, source } }.
+    // The 12-sign zodiac grid (ZodiacCard) still consumes the legacy shape;
+    // bridge by remapping v2 fields onto legacy fieldnames here. The main
+    // reading surfaces (ReadingDisplay, SignPageClient) consume the v2 shape
+    // directly via their own fetches and do not use this service.
+    // See docs/research/2026-04-29-readings-resonance.md §10.
+    const v2 = data.data as {
+      sign: string;
+      date: string;
+      morning_reading?: string;
+      evening_reading?: string;
+      best_match?: string;
+      quote?: { text: string; quote_philosopher: string; source?: string };
+    };
+
+    if (!v2.morning_reading) {
+      console.error(`Missing morning_reading for ${sign}`, v2);
       return null;
     }
-    
-    // Normalize data types to ensure consistency and map API fields to expected frontend fields
+
     return {
-      ...horoscopeData,
-      message: String(horoscopeData.message),
-      best_match: horoscopeData.best_match || "None specified",
-      inspirational_quote: horoscopeData.inspirational_quote || "",
-      quote_author: horoscopeData.quote_author || "Daily Wisdom",
-      lucky_number: horoscopeData.lucky_number,
-      lucky_color: horoscopeData.lucky_color,
-      peaceful_thought: horoscopeData.peaceful_thought ? String(horoscopeData.peaceful_thought) : undefined,
-      mood: horoscopeData.mood ? String(horoscopeData.mood) : undefined,
-      compatibility: horoscopeData.compatibility ? String(horoscopeData.compatibility) : undefined,
+      sign: v2.sign,
+      type,
+      date: v2.date,
+      message: String(v2.morning_reading),
+      best_match: v2.best_match || 'None specified',
+      inspirational_quote: v2.quote?.text || '',
+      quote_author: v2.quote?.quote_philosopher || 'Daily Wisdom',
+      peaceful_thought: v2.evening_reading ? String(v2.evening_reading) : undefined,
     };
   } catch (error) {
     console.error(`Error fetching horoscope for ${sign}:`, error);

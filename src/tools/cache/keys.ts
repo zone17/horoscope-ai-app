@@ -57,3 +57,35 @@ export function buildCacheKey(params: CacheKeyParams): string {
 
   return `horoscope:daily:${sign}:${date}:${philosopher}`;
 }
+
+// ─── v2 cache key (current architecture) ────────────────────────────────
+
+export interface CacheKeyV2Params {
+  sign: string;
+  date: string;
+  /** User council; empty array or undefined uses the "default" key. */
+  council?: string[];
+}
+
+/**
+ * v2 cache key.
+ *
+ * One entry per (sign, council, date) containing both morning_reading and
+ * evening_reading plus the quote. No philosopher in the key — the v2
+ * architecture has no per-philosopher variation; the council shapes the
+ * reading via deep injection, and the council hash discriminates entries.
+ *
+ * Format:
+ *   - No council:    reading-v2:default:{sign}:{date}
+ *   - With council:  reading-v2:personalized:{sign}:{date}:{councilHash}
+ */
+export function buildCacheKeyV2(params: CacheKeyV2Params): string {
+  const sign = params.sign.toLowerCase().trim();
+  const date = params.date.trim();
+
+  if (params.council && params.council.length > 0) {
+    const councilHash = hashCouncil(params.council);
+    return `reading-v2:personalized:${sign}:${date}:${councilHash}`;
+  }
+  return `reading-v2:default:${sign}:${date}`;
+}
