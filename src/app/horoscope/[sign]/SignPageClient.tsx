@@ -4,14 +4,20 @@ import { useEffect, useState, useCallback } from 'react';
 import { Share2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+/**
+ * v2 shape per docs/research/2026-04-29-readings-resonance.md §10.
+ * Anonymous reading; quote keeps attribution; two reading surfaces (morning + evening).
+ */
 interface HoroscopeData {
   sign: string;
-  message: string;
+  morning_reading: string;
+  evening_reading: string;
   best_match?: string;
-  inspirational_quote?: string;
-  quote_author?: string;
-  peaceful_thought?: string;
-  mood?: string;
+  quote?: {
+    text: string;
+    quote_philosopher: string;
+    source?: string;
+  };
 }
 
 interface SignPageClientProps {
@@ -65,7 +71,7 @@ export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
   const handleShare = useCallback(async () => {
     const shareData = {
       title: `${capitalize(sign)} Horoscope Today ${symbol}`,
-      text: horoscope?.message?.slice(0, 140) ?? `Today's ${capitalize(sign)} horoscope`,
+      text: horoscope?.morning_reading?.slice(0, 140) ?? `Today's ${capitalize(sign)} horoscope`,
       url: shareUrl,
     };
 
@@ -128,18 +134,18 @@ export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
           Daily Horoscope &bull; {today}
         </p>
 
-        <p className="text-white/90 text-base sm:text-lg font-light leading-relaxed">
-          {horoscope.message}
+        <p className="text-white/90 text-base sm:text-lg font-light leading-relaxed whitespace-pre-line">
+          {horoscope.morning_reading}
         </p>
 
-        {horoscope.peaceful_thought && (
+        {horoscope.evening_reading && (
           <>
             <div className="my-6 border-t border-white/10" />
             <p className="text-indigo-200/70 text-sm uppercase tracking-widest mb-3 font-light">
-              Nightly Reflection
+              Tonight
             </p>
-            <p className="text-white/80 text-base italic font-light leading-relaxed">
-              &ldquo;{horoscope.peaceful_thought}&rdquo;
+            <p className="text-white/80 text-base font-light leading-relaxed whitespace-pre-line">
+              {horoscope.evening_reading}
             </p>
           </>
         )}
@@ -155,17 +161,17 @@ export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
             <p className="text-white text-lg font-light capitalize">{horoscope.best_match}</p>
           </div>
         )}
-        {horoscope.inspirational_quote && (
+        {horoscope.quote?.text && (
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-wider text-indigo-100/60 mb-1 font-light">
               Quote
             </p>
             <p className="text-white text-sm italic font-light line-clamp-3">
-              &ldquo;{horoscope.inspirational_quote}&rdquo;
+              &ldquo;{horoscope.quote.text}&rdquo;
             </p>
-            {horoscope.quote_author && (
+            {horoscope.quote.quote_philosopher && (
               <p className="text-indigo-200/60 text-xs mt-1 font-light">
-                — {horoscope.quote_author}
+                {horoscope.quote.quote_philosopher}
               </p>
             )}
           </div>

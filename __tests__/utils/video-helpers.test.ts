@@ -4,17 +4,19 @@ import {
   getSignVideoProps,
 } from '@/utils/video-helpers';
 import { VALID_SIGNS, SIGN_META } from '@/constants/zodiac';
-import type { HoroscopeData } from '@/utils/horoscope-generator';
+import type { ReadingV2 } from '@/tools/reading/types';
 
-const SAMPLE_DATA: HoroscopeData = {
+const SAMPLE_DATA: ReadingV2 = {
   sign: 'scorpio',
-  type: 'daily',
   date: '2026-04-08',
-  message: 'You already know what you are avoiding.',
+  morning_reading: 'You already know what you are avoiding.',
+  evening_reading: 'As you close your eyes tonight, consider the darkness as fertile ground.',
   best_match: 'cancer, pisces',
-  inspirational_quote: 'Knowing others is intelligence; knowing yourself is true wisdom.',
-  quote_author: 'Lao Tzu',
-  peaceful_thought: 'As you close your eyes tonight, consider the darkness as fertile ground.',
+  quote: {
+    text: 'Knowing others is intelligence; knowing yourself is true wisdom.',
+    quote_philosopher: 'Lao Tzu',
+    source: 'Tao Te Ching, Chapter 33',
+  },
 };
 
 describe('ELEMENT_COLORS', () => {
@@ -50,16 +52,19 @@ describe('getSignElementColor', () => {
 });
 
 describe('getSignVideoProps', () => {
-  it('maps HoroscopeData fields to video props', () => {
+  it('maps ReadingV2 fields to video props', () => {
     const props = getSignVideoProps('scorpio', SAMPLE_DATA);
 
     expect(props.sign).toBe('scorpio');
     expect(props.date).toBe('April 8, 2026');
-    expect(props.message).toBe(SAMPLE_DATA.message);
-    expect(props.quote).toBe(SAMPLE_DATA.inspirational_quote);
-    expect(props.quoteAuthor).toBe(SAMPLE_DATA.quote_author);
-    expect(props.peacefulThought).toBe(SAMPLE_DATA.peaceful_thought);
-    expect(props.elementColor).toBe('#A78BFA'); // Water
+    expect(props.message).toBe(SAMPLE_DATA.morning_reading);
+    expect(props.quote).toBe(SAMPLE_DATA.quote.text);
+    expect(props.quoteAuthor).toBe(SAMPLE_DATA.quote.quote_philosopher);
+    expect(props.peacefulThought).toBe(SAMPLE_DATA.evening_reading);
+    // elementColor returns getSignAccentColor (per-sign accent), not the
+    // element-based color — single-accent-per-video discipline. Scorpio's
+    // accent is garnet, not Water purple.
+    expect(props.elementColor).toBe('#8B3A4A'); // Scorpio garnet
     expect(props.symbol).toBe(SIGN_META.scorpio.symbol);
   });
 

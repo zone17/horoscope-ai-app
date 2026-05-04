@@ -8,17 +8,22 @@ import { capitalize } from '@/lib/utils';
 import Link from 'next/link';
 import ShareButton from './ShareButton';
 
+/**
+ * v2 shape per docs/research/2026-04-29-readings-resonance.md §10.
+ * The reading itself has no philosopher attribution; the quote keeps it.
+ * Two readings per day: morning_reading and evening_reading.
+ */
 interface HoroscopeData {
   sign: string;
-  type: string;
   date: string;
-  message: string;
+  morning_reading: string;
+  evening_reading: string;
   best_match?: string;
-  inspirational_quote?: string;
-  quote_author?: string;
-  peaceful_thought?: string;
-  mood?: string;
-  compatibility?: string;
+  quote?: {
+    text: string;
+    quote_philosopher: string;
+    source?: string;
+  };
 }
 
 interface ReadingDisplayProps {
@@ -88,11 +93,12 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
     year: 'numeric',
   });
 
-  // Choose day vs night content
-  const content =
-    mode === 'night' && data?.peaceful_thought
-      ? data.peaceful_thought
-      : data?.message;
+  // v2: morning_reading is the main surface during day mode;
+  // evening_reading is the main surface at night.
+  const primaryContent =
+    mode === 'night' ? data?.evening_reading : data?.morning_reading;
+  // During day mode, the evening_reading is shown below as a secondary surface.
+  const showSecondary = mode !== 'night' && Boolean(data?.evening_reading);
 
   // Loading skeleton
   if (loading) {
@@ -197,25 +203,25 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
         {/* Divider */}
         <div className="w-12 h-px bg-indigo-400/20 mx-auto mb-6" />
 
-        {/* Full reading text */}
+        {/* Primary reading text */}
         <div className="mb-6">
           <p className="text-[#F0EEFF]/90 text-base font-light leading-relaxed font-sans whitespace-pre-line">
-            {content}
+            {primaryContent}
           </p>
         </div>
 
-        {/* Inspirational quote */}
-        {data.inspirational_quote && (
+        {/* Inspirational quote (separate surface, attributed) */}
+        {data.quote?.text && (
           <blockquote className="border-l-2 border-indigo-400/30 pl-4 my-6">
             <p className="text-indigo-100/80 text-sm italic font-light leading-relaxed">
-              &ldquo;{data.inspirational_quote}&rdquo;
+              &ldquo;{data.quote.text}&rdquo;
             </p>
-            {data.quote_author && (
+            {data.quote.quote_philosopher && (
               <cite className="block text-indigo-200/50 text-xs mt-2 not-italic">
-                &mdash; {data.quote_author}
+                {data.quote.quote_philosopher}
                 {selectedPhilosophers.length > 0 &&
                   !selectedPhilosophers.some(
-                    (p) => p.toLowerCase() === data.quote_author!.toLowerCase()
+                    (p) => p.toLowerCase() === data.quote!.quote_philosopher.toLowerCase()
                   ) && (
                     <span className="ml-2 text-amber-400/60">
                       &middot; A new voice for today
@@ -226,14 +232,14 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
           </blockquote>
         )}
 
-        {/* Peaceful thought */}
-        {data.peaceful_thought && mode !== 'night' && (
+        {/* Evening reading — shown during day mode as a secondary surface */}
+        {showSecondary && (
           <div className="bg-white/[0.03] rounded-lg p-4 mb-6">
             <p className="text-indigo-200/50 text-xs uppercase tracking-wider mb-2">
-              Tonight&apos;s Reflection
+              Tonight
             </p>
-            <p className="text-indigo-100/70 text-sm italic font-light leading-relaxed">
-              {data.peaceful_thought}
+            <p className="text-indigo-100/80 text-sm font-light leading-relaxed whitespace-pre-line">
+              {data.evening_reading}
             </p>
           </div>
         )}
@@ -243,8 +249,8 @@ export default function ReadingDisplay({ onEditCouncil }: ReadingDisplayProps) {
           <ShareButton
             sign={userSign}
             date={formattedDate}
-            quote={data.inspirational_quote}
-            quoteAuthor={data.quote_author}
+            quote={data.quote?.text}
+            quoteAuthor={data.quote?.quote_philosopher}
           />
         </div>
 

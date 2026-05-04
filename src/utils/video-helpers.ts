@@ -1,10 +1,13 @@
 /**
  * Video rendering helpers — maps zodiac signs to element colors and transforms
- * HoroscopeData into Remotion HoroscopeVideoProps.
+ * the v2 reading payload into Remotion HoroscopeVideoProps. The Remotion
+ * compositions still use legacy prop names (message, quote, quoteAuthor,
+ * peacefulThought); this helper renames v2 fields into those props so the
+ * compositions don't have to change.
  */
 
 import { SIGN_META, VALID_SIGNS, type ValidSign, isValidSign } from '@/constants/zodiac';
-import type { HoroscopeData } from '@/tools/reading/types';
+import type { ReadingV2 } from '@/tools/reading/types';
 
 /** Element-to-hex color map matching the site's design system */
 export const ELEMENT_COLORS: Record<string, string> = {
@@ -72,12 +75,20 @@ export interface HoroscopeVideoProps {
 }
 
 /**
- * Transforms a HoroscopeData object (from Redis) into props for the Remotion
- * HoroscopeVideo composition.
+ * Transforms a ReadingV2 object (from the API or Redis) into props for the
+ * Remotion HoroscopeVideo composition. The Remotion props still use legacy
+ * names (message / quote / quoteAuthor / peacefulThought); this rename keeps
+ * compositions stable while the v2 shape lands in the data path.
+ *
+ * Field mapping:
+ *   - data.morning_reading       → props.message
+ *   - data.quote.text            → props.quote
+ *   - data.quote.quote_philosopher → props.quoteAuthor
+ *   - data.evening_reading       → props.peacefulThought
  */
 export function getSignVideoProps(
   sign: string,
-  data: HoroscopeData
+  data: ReadingV2
 ): HoroscopeVideoProps {
   const normalized = sign.toLowerCase();
   const meta = isValidSign(normalized) ? SIGN_META[normalized] : null;
@@ -99,13 +110,10 @@ export function getSignVideoProps(
   return {
     sign: normalized,
     date: displayDate,
-    message: data.message,
-    quote: data.inspirational_quote,
-    quoteAuthor: data.quote_author,
-    peacefulThought: data.peaceful_thought,
-    // The composition reads `elementColor` but it's now the per-sign
-    // accent — single-accent-per-video discipline. Field name kept for
-    // backwards compatibility with existing Remotion props shape.
+    message: data.morning_reading,
+    quote: data.quote.text,
+    quoteAuthor: data.quote.quote_philosopher,
+    peacefulThought: data.evening_reading,
     elementColor: getSignAccentColor(normalized),
     symbol: meta?.symbol ?? '✦',
   };

@@ -19,7 +19,7 @@ config({ path: '.env.local' });
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import type { HoroscopeData } from '../src/tools/reading/types';
+import type { ReadingV2 } from '../src/tools/reading/types';
 
 // Signs ordered by engagement priority (research-backed)
 const ENGAGEMENT_ORDER = [
@@ -406,38 +406,36 @@ async function sendTelegramSummary(
  */
 const API_BASE = process.env.HOROSCOPE_API_URL ?? 'https://api.gettodayshoroscope.com';
 
-/** Required string fields on the API response that downstream consumers
- *  (getSignVideoProps + buildNarrationScript) read directly. Missing any of
- *  these would crash mid-render with a confusing TypeError; we'd rather
- *  fail fast at the boundary with a precise message. */
-const REQUIRED_READING_FIELDS = [
-  'message',
-  'inspirational_quote',
-  'quote_author',
-  'peaceful_thought',
-  'date',
-] as const;
+/** Required fields on the v2 API response that downstream consumers read
+ *  directly. Missing any of these would crash mid-render with a confusing
+ *  TypeError; we'd rather fail fast at the boundary with a precise message. */
+function validateReadingV2Shape(data: unknown): data is ReadingV2 {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  if (typeof d.morning_reading !== 'string' || d.morning_reading.trim() === '') return false;
+  if (typeof d.evening_reading !== 'string' || d.evening_reading.trim() === '') return false;
+  if (typeof d.date !== 'string' || d.date.trim() === '') return false;
+  if (!d.quote || typeof d.quote !== 'object') return false;
+  const q = d.quote as Record<string, unknown>;
+  if (typeof q.text !== 'string' || q.text.trim() === '') return false;
+  if (typeof q.quote_philosopher !== 'string' || q.quote_philosopher.trim() === '') return false;
+  return true;
+}
 
 /** Fetch with a hard upper-bound on wait time. Without this, a slow upstream
  *  LLM cold-start (cache miss + on-demand generation) can hold the serial
  *  render loop indefinitely, eventually losing the entire 90-min job to a
  *  single hung sign. 60s gives generous headroom while bounding blast
  *  radius — on timeout the sign is skipped and the loop continues. */
-async function fetchReading(sign: string): Promise<HoroscopeData | { error: string }> {
+async function fetchReading(sign: string): Promise<ReadingV2 | { error: string }> {
   try {
     const url = `${API_BASE}/api/horoscope?sign=${encodeURIComponent(sign)}`;
     const resp = await fetch(url, { signal: AbortSignal.timeout(60_000) });
     if (!resp.ok) return { error: `API ${resp.status} on ${sign}` };
-    const json = (await resp.json()) as { success?: boolean; data?: HoroscopeData; error?: string };
+    const json = (await resp.json()) as { success?: boolean; data?: unknown; error?: string };
     if (!json.success || !json.data) return { error: json.error ?? 'API returned no data' };
-    // Validate required fields present and non-empty — protects against API
-    // contract drift (partial cache state, schema change in flight) producing
-    // 12 identical confusing TypeErrors deep in narration generation.
-    const missing = REQUIRED_READING_FIELDS.filter(
-      (f) => typeof json.data?.[f] !== 'string' || (json.data[f] as string).trim() === '',
-    );
-    if (missing.length > 0) {
-      return { error: `API response missing required fields: ${missing.join(', ')}` };
+    if (!validateReadingV2Shape(json.data)) {
+      return { error: 'API response missing required v2 fields (morning_reading, evening_reading, date, quote.text, quote.quote_philosopher)' };
     }
     return json.data;
   } catch (err) {

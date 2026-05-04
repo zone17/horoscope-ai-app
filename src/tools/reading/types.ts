@@ -62,7 +62,7 @@ const _MODEL_MATCHES_READING_OUTPUT: _AssertModelMatchesReadingOutput = true;
 // evaluate the conditional type at module load.
 void _MODEL_MATCHES_READING_OUTPUT;
 
-/** API/frontend snake_case shape */
+/** API/frontend snake_case shape (legacy v1 — kept for rollback) */
 export interface HoroscopeData {
   sign: string;
   type: string;
@@ -73,4 +73,27 @@ export interface HoroscopeData {
   quote_author: string;
   peaceful_thought: string;
   [key: string]: unknown;
+}
+
+// ─── v2 types (current architecture) ────────────────────────────────────
+// See docs/research/2026-04-29-readings-resonance.md §10.
+// Anonymous voice. Two readings per day. Quote separated as its own
+// attributed surface. No top-level philosopher field.
+
+/**
+ * v2 reading payload returned by /api/horoscope and stored in the v2 cache.
+ * The morning_reading and evening_reading are anonymous (no attribution);
+ * only the quote keeps a `quote_philosopher` field.
+ */
+export interface ReadingV2 {
+  sign: string;
+  date: string;
+  morning_reading: string;
+  evening_reading: string;
+  best_match: string;
+  quote: {
+    text: string;
+    quote_philosopher: string;
+    source: string;
+  };
 }
