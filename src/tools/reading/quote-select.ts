@@ -68,17 +68,30 @@ const DEFAULT_ROTATION: string[] = [
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 /**
+ * Strip combining diacritical marks for a Unicode-normalized comparison.
+ * Without this, "Pema Chödrön" (deep-briefs canonical) does not match
+ * "Pema Chodron" (verified-quotes key), and the council member is silently
+ * skipped via the no-quotes-fallback path. This bug skewed default-council
+ * quote distribution to 8/12 Naval before it was caught.
+ */
+function normalizeForComparison(s: string): string {
+  // Combining diacritical marks block: U+0300..U+036F. Explicit char-range
+  // works under ES5 target where the \p{Diacritic} Unicode-property flag
+  // is unavailable.
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/**
  * Resolve a council member name to its canonical key in VERIFIED_QUOTES.
- * Tries exact match first, then case-insensitive match. Returns undefined
- * if no quotes exist for this philosopher (council member with no bank
- * coverage falls through to the next in rotation).
+ * Tries exact match first, then Unicode-normalized comparison (handles the
+ * Pema Chödrön / Pema Chodron mismatch and any future diacritic drift).
+ * Returns undefined if no quotes exist for this philosopher (council member
+ * with no bank coverage falls through to the next in rotation).
  */
 function resolveQuoteBankKey(name: string): string | undefined {
   if (VERIFIED_QUOTES[name]) return name;
-  const ci = Object.keys(VERIFIED_QUOTES).find(
-    k => k.toLowerCase() === name.toLowerCase(),
-  );
-  return ci;
+  const target = normalizeForComparison(name);
+  return Object.keys(VERIFIED_QUOTES).find(k => normalizeForComparison(k) === target);
 }
 
 function dayNumber(date: Date): number {

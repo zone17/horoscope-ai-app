@@ -24,11 +24,20 @@ export interface CacheKeyParams {
 /**
  * Produces a short, deterministic hash of a sorted council array.
  * Uses SHA-256 truncated to 12 hex chars — collision-safe for our key space.
+ *
+ * Dedups + Unicode-normalizes before hashing so logically-equivalent councils
+ * share a cache entry: ['Marcus', 'Marcus'] and ['Marcus'] hash the same;
+ * 'Pema Chödrön' and 'Pema Chodron' hash the same. Without this, duplicate
+ * entries or diacritic drift produced separate cache entries for the same
+ * logical council (Wave 1C QA finding 2.13).
  */
 function hashCouncil(council: string[]): string {
-  const normalized = [...council].map((p) => p.toLowerCase().trim()).sort();
+  const normalized = council
+    .map((p) => p.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim())
+    .filter((p) => p.length > 0);
+  const deduped = Array.from(new Set(normalized)).sort();
   const digest = createHash('sha256')
-    .update(normalized.join('|'))
+    .update(deduped.join('|'))
     .digest('hex');
   return digest.slice(0, 12);
 }

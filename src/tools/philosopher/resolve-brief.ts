@@ -82,19 +82,32 @@ const FINE_TRADITION_OVERRIDES: Record<string, FineTradition> = {
 // ─── Public API ─────────────────────────────────────────────────────────
 
 /**
+ * Strip diacritics for Unicode-normalized comparison. Same normalization the
+ * quote bank and cache keys use — keeps "Pema Chödrön" and "Pema Chodron"
+ * equivalent across all lookups.
+ */
+function normalize(s: string): string {
+  // Combining diacritical marks block: U+0300..U+036F. Explicit char-range
+  // works under ES5 target where the \p{Diacritic} Unicode-property flag
+  // is unavailable.
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/**
  * Resolve a council member display name to a deep brief.
  * Strategy:
  *   1. Exact-name lookup in DEEP_BRIEFS (priority subset). Best quality.
- *   2. Case-insensitive match in DEEP_BRIEFS.
+ *   2. Diacritic-normalized match in DEEP_BRIEFS.
  *   3. Per-philosopher fine-tradition override → fallback brief.
  *   4. Coarse registry tradition → fallback brief.
- *   5. Last-resort 'unknown' fallback.
+ *   5. Last-resort 'unknown' fallback (logs a warning so unknown
+ *      philosophers are visible to ops; Wave 1C QA finding 2.12).
  */
 export function resolveBrief(name: string): PhilosopherDeepBrief {
-  // 1. Priority subset, exact
-  const target = name.toLowerCase().trim();
+  // 1. Priority subset, normalized
+  const target = normalize(name);
   for (const brief of Object.values(DEEP_BRIEFS)) {
-    if (brief.name.toLowerCase() === target) return brief;
+    if (normalize(brief.name) === target) return brief;
   }
 
   // 2. Per-philosopher override → fallback
@@ -107,6 +120,12 @@ export function resolveBrief(name: string): PhilosopherDeepBrief {
     return buildFallbackBrief(name, COARSE_MAP[reg.tradition]);
   }
 
-  // 4. Last-resort 'unknown' fallback
+  // 4. Last-resort 'unknown' fallback. Log a warning so silent fallbacks
+  //    are visible in cron / API logs. Without this, an unknown council
+  //    member produces a generic-but-plausible reading and the operator
+  //    has no signal that the deep injection is degraded.
+  console.warn(
+    `[resolve-brief] unknown philosopher "${name}" — falling back to generic brief. Add to DEEP_BRIEFS or FINE_TRADITION_OVERRIDES for proper coverage.`,
+  );
   return buildFallbackBrief(name, undefined);
 }
