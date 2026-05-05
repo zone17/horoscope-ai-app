@@ -21,9 +21,9 @@ export default function HeroIntro() {
       </p>
       <Link
         href="#horoscope"
-        className="inline-block px-6 py-2.5 rounded-full bg-indigo-500/40 border border-indigo-400/30 text-sm text-white hover:bg-indigo-500/60 transition-all duration-300 font-medium shadow-sm"
+        className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-indigo-500/40 border border-indigo-400/30 text-sm text-white hover:bg-indigo-500/60 transition-all duration-300 font-medium shadow-sm min-h-[44px]"
       >
-        Build your council
+        Pick your sign
       </Link>
     </section>
   );

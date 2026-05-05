@@ -142,6 +142,9 @@ export default function EmailGate({ onUnlocked }: EmailGateProps) {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-300/40" />
             <input
               type="email"
+              name="email"
+              autoComplete="email"
+              inputMode="email"
               required
               placeholder="your@email.com"
               value={inputEmail}
@@ -149,13 +152,13 @@ export default function EmailGate({ onUnlocked }: EmailGateProps) {
                 setInputEmail(e.target.value);
                 if (status === 'error') setStatus('idle');
               }}
-              className="w-full rounded-lg bg-white/5 border border-white/10 pl-10 pr-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-indigo-400/50 transition-colors font-light"
+              className="w-full rounded-lg bg-white/5 border border-white/10 pl-10 pr-3 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:border-indigo-400/50 transition-colors font-light min-h-[44px]"
             />
           </div>
           <button
             type="submit"
             disabled={status === 'loading'}
-            className="px-6 py-2.5 rounded-lg bg-indigo-500/30 border border-indigo-400/30 text-sm text-indigo-100 hover:bg-indigo-500/50 transition-all duration-300 disabled:opacity-50 font-medium whitespace-nowrap"
+            className="px-6 py-3 rounded-lg bg-indigo-500/30 border border-indigo-400/30 text-sm text-indigo-100 hover:bg-indigo-500/50 transition-all duration-300 disabled:opacity-50 font-medium whitespace-nowrap min-h-[44px]"
           >
             {status === 'loading' ? (
               <span className="flex items-center gap-2 justify-center">

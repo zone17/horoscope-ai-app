@@ -1,6 +1,4 @@
 import { MetadataRoute } from 'next';
-import { getValidMonthSlugs } from '@/utils/monthly-content';
-import { getArchiveDateRange } from '@/utils/daily-archive';
 import { VALID_SIGNS } from '@/constants/zodiac';
 
 /**
@@ -10,15 +8,19 @@ import { VALID_SIGNS } from '@/constants/zodiac';
  * URL counts:
  *  1  home
  * 12  sign pages
- * 24  monthly pages (12 signs × 2 months)
+ *  3  legal/about (about, privacy, terms)
  *  1  about/author
  * ──
- * 38  total
+ * 17  total
+ *
+ * The previous sitemap included 1080+ daily archive URLs and 24 monthly
+ * URLs that pointed at routes which never properly rendered (Wave 1B QA
+ * findings 1.5, 1.6). Those routes were removed in PR #92; rebuilding
+ * archive surfaces is tracked as a separate feature.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const today = new Date();
   const baseUrl = 'https://www.gettodayshoroscope.com';
-  const monthSlugs = getValidMonthSlugs();
 
   const home: MetadataRoute.Sitemap = [
     {
@@ -36,26 +38,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  const monthlyPages: MetadataRoute.Sitemap = VALID_SIGNS.flatMap((sign) =>
-    monthSlugs.map((monthSlug) => ({
-      url: `${baseUrl}/horoscope/${sign}/monthly/${monthSlug}`,
+  const legalPages: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/about`,
       lastModified: today,
-      changeFrequency: 'monthly' as const,
-      priority: 0.7,
-    }))
-  );
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: today,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: today,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+  ];
 
-  const archiveDates = getArchiveDateRange(90);
-  const archivePages: MetadataRoute.Sitemap = VALID_SIGNS.flatMap((sign) =>
-    archiveDates.map((date) => ({
-      url: `${baseUrl}/horoscope/${sign}/daily/${date}`,
-      lastModified: new Date(date + 'T00:00:00Z'),
-      changeFrequency: 'yearly' as const,
-      priority: 0.5,
-    }))
-  );
-
-  const aboutPage: MetadataRoute.Sitemap = [
+  const aboutAuthorPage: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/about/author`,
       lastModified: today,
@@ -64,5 +68,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  return [...home, ...signPages, ...monthlyPages, ...archivePages, ...aboutPage];
+  return [...home, ...signPages, ...legalPages, ...aboutAuthorPage];
 }

@@ -126,7 +126,7 @@ export default function PhilosopherStep({
       <div className="flex flex-wrap justify-center gap-2 mb-6">
         <button
           onClick={() => setActiveFilter('all')}
-          className={`text-xs px-3 py-1.5 rounded-full border transition-all duration-200 ${
+          className={`text-xs px-3 py-2.5 min-h-[44px] inline-flex items-center rounded-full border transition-all duration-200 ${
             activeFilter === 'all'
               ? 'bg-white/10 border-white/20 text-white'
               : 'bg-white/[0.02] border-white/10 text-indigo-200/60 hover:bg-white/5 hover:text-indigo-200'
@@ -138,7 +138,7 @@ export default function PhilosopherStep({
           <button
             key={t}
             onClick={() => setActiveFilter(t)}
-            className={`text-xs px-3 py-1.5 rounded-full border transition-all duration-200 ${
+            className={`text-xs px-3 py-2.5 min-h-[44px] inline-flex items-center rounded-full border transition-all duration-200 ${
               activeFilter === t
                 ? 'bg-white/10 border-white/20 text-white'
                 : 'bg-white/[0.02] border-white/10 text-indigo-200/60 hover:bg-white/5 hover:text-indigo-200'

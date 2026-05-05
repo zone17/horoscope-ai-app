@@ -32,9 +32,15 @@ export async function GET(request: NextRequest) {
       : [];
     const council = userCouncil.length > 0 ? userCouncil : DEFAULT_COUNCIL;
 
-    if (!sign || !isValidSign(sign)) {
+    if (!sign) {
       return NextResponse.json(
-        { success: false, error: `Invalid sign. Must be one of: ${VALID_SIGNS.join(', ')}` },
+        { success: false, error: `Missing required ?sign= parameter. Provide one of: ${VALID_SIGNS.join(', ')}` },
+        { status: 400 },
+      );
+    }
+    if (!isValidSign(sign)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid sign "${sign}". Must be one of: ${VALID_SIGNS.join(', ')}` },
         { status: 400 },
       );
     }
