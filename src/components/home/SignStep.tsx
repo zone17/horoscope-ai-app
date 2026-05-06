@@ -5,6 +5,7 @@ import { useMode } from '@/hooks/useMode';
 import { VALID_SIGNS, SIGN_META, type ValidSign } from '@/constants/zodiac';
 import { capitalize } from '@/lib/utils';
 import { ConstellationIcon, USE_CONSTELLATION_ICONS } from '@/components/icons/ConstellationIcon';
+import { SignTileVideo } from './SignTileVideo';
 
 /** Element to accent color mapping */
 const ELEMENT_COLORS: Record<string, string> = {
@@ -71,6 +72,7 @@ export default function SignStep({ onSignSelected }: SignStepProps) {
               whileTap={{ scale: 0.95 }}
               onClick={() => handleSelect(sign)}
               className={`
+                relative overflow-hidden min-h-[112px]
                 flex flex-col items-center gap-1.5 p-4 rounded-xl border
                 transition-all duration-300 cursor-pointer select-none backdrop-blur-md
                 ${
@@ -80,17 +82,20 @@ export default function SignStep({ onSignSelected }: SignStepProps) {
                 }
               `}
             >
-              {USE_CONSTELLATION_ICONS ? (
-                <ConstellationIcon sign={sign} size={32} className="text-amber-400" />
-              ) : (
-                <span className="text-3xl leading-none">{meta.symbol}</span>
-              )}
-              <span className="font-display text-sm tracking-wide">
-                {capitalize(sign)}
-              </span>
-              <span className="text-[10px] text-indigo-200/50 font-light">
-                {meta.dateRange}
-              </span>
+              <SignTileVideo sign={sign} />
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                {USE_CONSTELLATION_ICONS ? (
+                  <ConstellationIcon sign={sign} size={32} className="text-amber-400" />
+                ) : (
+                  <span className="text-3xl leading-none">{meta.symbol}</span>
+                )}
+                <span className="font-display text-sm tracking-wide">
+                  {capitalize(sign)}
+                </span>
+                <span className="text-[11px] text-indigo-200/70 font-light">
+                  {meta.dateRange}
+                </span>
+              </div>
             </motion.button>
           );
         })}

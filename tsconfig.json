@@ -23,5 +23,17 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "scripts", "remotion", "deploy-packages", "packages"]
+  "exclude": [
+    "node_modules",
+    "scripts",
+    "remotion",
+    "deploy-packages",
+    "packages",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "__tests__",
+    "__mocks__"
+  ]
 }

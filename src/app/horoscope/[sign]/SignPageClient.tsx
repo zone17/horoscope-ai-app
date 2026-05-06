@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { Share2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -23,19 +24,24 @@ interface HoroscopeData {
 interface SignPageClientProps {
   sign: string;
   symbol: string;
+  /** Reading fetched server-side for SSR. When provided, the client skips
+   *  the on-mount fetch and uses this directly so search engines and the
+   *  user both see the reading in the initial HTML. */
+  initialReading?: HoroscopeData | null;
 }
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
-  const [horoscope, setHoroscope] = useState<HoroscopeData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export default function SignPageClient({ sign, symbol, initialReading }: SignPageClientProps) {
+  const [horoscope, setHoroscope] = useState<HoroscopeData | null>(initialReading ?? null);
+  const [isLoading, setIsLoading] = useState(!initialReading);
   const [isError, setIsError] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (initialReading) return;
     async function fetchData() {
       try {
         setIsLoading(true);
@@ -61,7 +67,7 @@ export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
     }
 
     fetchData();
-  }, [sign]);
+  }, [sign, initialReading]);
 
   const shareUrl =
     typeof window !== 'undefined'
@@ -178,12 +184,18 @@ export default function SignPageClient({ sign, symbol }: SignPageClientProps) {
         )}
       </div>
 
-      {/* Share button */}
-      <div className="flex justify-end">
+      {/* Actions: edit council + share */}
+      <div className="flex justify-between items-center">
+        <Link
+          href="/#horoscope"
+          className="text-sm text-indigo-200/70 hover:text-indigo-200 transition-colors underline underline-offset-2 min-h-[44px] inline-flex items-center"
+        >
+          Edit your council
+        </Link>
         <Button
           onClick={handleShare}
           variant="outline"
-          className="gap-2 border-white/10 hover:border-white/20 text-white/70 hover:text-white transition-all"
+          className="gap-2 border-white/10 hover:border-white/20 text-white/70 hover:text-white transition-all min-h-[44px]"
         >
           {copied ? (
             <>

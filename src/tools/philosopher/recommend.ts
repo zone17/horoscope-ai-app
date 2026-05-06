@@ -88,6 +88,25 @@ const ELEMENT_REASONS: Record<SignProfile['element'], Record<string, string>> = 
 
 const WILDCARD_REASON_PREFIX = 'A surprising pairing:';
 
+/**
+ * Per-philosopher reason overrides. When two philosophers share the same
+ * (element, tradition) pair, the element-tradition template makes their
+ * recommendations identical (Wave 1A QA finding 2.3 caught this for
+ * Epictetus/Cato and Nietzsche/Hesse). Per-philosopher overrides
+ * differentiate without requiring a full rewrite of the template system.
+ * Add entries here whenever the QA agent finds another duplicate pair.
+ */
+const PHILOSOPHER_REASON_OVERRIDES: Record<string, string> = {
+  Epictetus:
+    'His Discourses turn fire into freedom, by drawing the line at what is actually yours to control.',
+  'Cato the Younger':
+    'Cato\'s stubborn integrity matches the part of you that would rather lose well than win wrong.',
+  'Friedrich Nietzsche':
+    'His hammer-blow aphorisms are the test your fire has been waiting for.',
+  'Hermann Hesse':
+    'Hesse\'s inward journeys give your forward motion something to find when it slows.',
+};
+
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 /**
@@ -117,6 +136,12 @@ function buildReason(
   if (isWildcard) {
     return `${WILDCARD_REASON_PREFIX} ${philosopher.name}'s ${philosopher.tradition.toLowerCase()} perspective offers a fresh lens that complements your ${element.toLowerCase()} sign energy.`;
   }
+
+  // Per-philosopher override beats the element-tradition template — keeps
+  // recommendations distinct when two philosophers share an element-tradition
+  // pair.
+  const override = PHILOSOPHER_REASON_OVERRIDES[philosopher.name];
+  if (override) return override;
 
   const traditionKey = philosopher.tradition as string;
   const templateReason = ELEMENT_REASONS[element]?.[traditionKey];

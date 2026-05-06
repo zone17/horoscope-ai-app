@@ -46,6 +46,16 @@ export default function PushPrompt({ sign }: PushPromptProps) {
 
   if (!visible || permission !== 'default') return null;
 
+  // Push-delivery server infra is deferred. The permission request works
+  // (browser-level), but no server is currently configured to send pushes,
+  // so even granted permissions yield no notifications. Hiding the prompt
+  // until delivery ships avoids the misleading-CTA pattern flagged by Wave
+  // 1A QA finding 3.3 / punch list 3.3. Re-enable by removing this guard
+  // once /api/push/subscribe is wired.
+  return null;
+
+  // Disabled UI preserved below for the re-enable path.
+  // eslint-disable-next-line no-unreachable
   return (
     <div className="mt-6 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-4 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <Bell className="h-5 w-5 text-indigo-300 shrink-0 mt-0.5" />
