@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { Share2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -185,12 +186,12 @@ export default function SignPageClient({ sign, symbol, initialReading }: SignPag
 
       {/* Actions: edit council + share */}
       <div className="flex justify-between items-center">
-        <a
+        <Link
           href="/#horoscope"
           className="text-sm text-indigo-200/70 hover:text-indigo-200 transition-colors underline underline-offset-2 min-h-[44px] inline-flex items-center"
         >
           Edit your council
-        </a>
+        </Link>
         <Button
           onClick={handleShare}
           variant="outline"
