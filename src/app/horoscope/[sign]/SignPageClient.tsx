@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Share2, Copy, Check } from 'lucide-react';
+import { Share2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**

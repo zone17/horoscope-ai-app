@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { symbol, dateRange } = SIGN_META[lower];
   const title = `${capitalize(lower)} Horoscope Today ${symbol} | Get Today's Horoscope`;
-  const description = `Daily horoscope for ${capitalize(lower)} (${dateRange}). Discover what the stars have in store for you today \u2014 love, career, and personal growth.`;
+  const description = `Daily horoscope for ${capitalize(lower)} (${dateRange}). Philosophy that meets you where you are: today's reading, blended from your council of thinkers.`;
   const url = `https://www.gettodayshoroscope.com/horoscope/${lower}`;
   const ogImage = `https://www.gettodayshoroscope.com/api/og/${lower}`;
 
