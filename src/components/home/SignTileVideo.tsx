@@ -57,10 +57,12 @@ export function SignTileVideo({ sign }: { sign: string }) {
         muted
         playsInline
         preload="metadata"
-        className="absolute inset-0 w-full h-full object-cover opacity-40 brightness-90"
+        className="absolute inset-0 w-full h-full object-cover opacity-70"
       />
-      {/* Dark overlay so foreground text and constellation icon stay legible */}
-      <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/40 via-indigo-950/55 to-indigo-950/85" />
+      {/* Subtle dark gradient at the bottom so the date-range text stays legible
+          against bright video frames; lets the video texture come through up top
+          where the constellation sits. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/15 via-indigo-950/25 to-indigo-950/65" />
     </div>
   );
 }
